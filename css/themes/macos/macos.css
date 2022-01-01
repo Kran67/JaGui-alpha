@@ -1,0 +1,2142 @@
+body[data-ie="true"] .csr_default[data-theme="macos"],
+body[data-ie="true"] .csr_auto[data-theme="macos"],
+body[data-ie="true"] .csr_initial[data-theme="macos"] {
+  cursor: url(../../css/themes/macos/default.cur), auto;
+}
+
+body[data-ie="true"] .csr_alias[data-theme="macos"] {
+  cursor: url(../../css/themes/macos/alias.cur), auto;
+}
+
+body[data-ie="true"] .csr_allScroll[data-theme="macos"],
+body[data-ie="true"] .csr_move[data-theme="macos"] {
+  cursor: url(../../css/themes/macos/move.cur), auto;
+}
+
+body[data-ie="true"] .csr_cell[data-theme="macos"] {
+  cursor: url(../../css/themes/macos/cell.cur), auto;
+}
+
+body[data-ie="true"] .csr_colResize[data-theme="macos"] {
+  cursor: url(../../css/themes/macos/col-resize.cur), auto;
+}
+
+body[data-ie="true"] .csr_copy[data-theme="macos"] {
+  cursor: url(../../css/themes/macos/copy.cur), auto;
+}
+
+body[data-ie="true"] .csr_crosshair[data-theme="macos"] {
+  cursor: url(../../css/themes/macos/crosshair.cur), auto;
+}
+
+body[data-ie="true"] .csr_eResize[data-theme="macos"],
+body[data-ie="true"] .csr_ewResize[data-theme="macos"],
+body[data-ie="true"] .csr_wResize[data-theme="macos"] {
+  cursor: url(../../css/themes/macos/e-resize.cur), auto;
+}
+
+body[data-ie="true"] .csr_help[data-theme="macos"] {
+  cursor: url(../../css/themes/macos/help.cur), auto;
+}
+
+body[data-ie="true"] .csr_nResize[data-theme="macos"],
+body[data-ie="true"] .csr_nsResize[data-theme="macos"],
+body[data-ie="true"] .csr_sResize[data-theme="macos"] {
+  cursor: url(../../css/themes/macos/n-resize.cur), auto;
+}
+
+body[data-ie="true"] .csr_neResize[data-theme="macos"],
+body[data-ie="true"] .csr_neswResize[data-theme="macos"],
+body[data-ie="true"] .csr_swResize[data-theme="macos"] {
+  cursor: url(../../css/themes/macos/ne-resize.cur), auto;
+}
+
+body[data-ie="true"] .csr_nwResize[data-theme="macos"],
+body[data-ie="true"] .csr_nwseResize[data-theme="macos"],
+body[data-ie="true"] .csr_seResize[data-theme="macos"] {
+  cursor: url(../../css/themes/macos/nw-resize.cur), auto;
+}
+
+body[data-ie="true"] .csr_noDrop[data-theme="macos"],
+body[data-ie="true"] .csr_notAllowed[data-theme="macos"] {
+  cursor: url(../../css/themes/macos/not-allowed.cur), auto;
+}
+
+body[data-ie="true"] .csr_pointer[data-theme="macos"] {
+  cursor: url(../../css/themes/macos/pointer.cur), auto;
+}
+
+body[data-ie="true"] .csr_progress[data-theme="macos"] {
+  cursor: url(../../css/themes/macos/progress.ani) 10 10, auto;
+}
+
+body[data-ie="true"] .csr_rowResize[data-theme="macos"] {
+  cursor: url(../../css/themes/macos/row-resize.cur), auto;
+}
+
+body[data-ie="true"] .csr_text[data-theme="macos"] {
+  cursor: url(../../css/themes/macos/text.cur), auto;
+}
+
+body[data-ie="true"] .csr_verticalText[data-theme="macos"] {
+  cursor: url(../../css/themes/macos/text_vert.cur), auto;
+}
+
+body[data-ie="true"] .csr_wait[data-theme="macos"] {
+  cursor: url(../../css/themes/macos/wait.ani) 9 9, auto;
+}
+
+body[data-ie="true"] .csr_zoomIn[data-theme="macos"] {
+  cursor: url(../../css/themes/macos/zoom-in.cur), auto;
+}
+
+body[data-ie="true"] .csr_zoomOut[data-theme="macos"] {
+  cursor: url(../../css/themes/macos/zoom-out.cur), auto;
+}
+
+.csr_alias[data-theme="macos"] {
+  /*cursor: url(), auto;*/
+}
+
+.csr_allScroll[data-theme="macos"], .csr_move[data-theme="macos"] {
+  cursor: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABkAAAAaCAYAAABCfffNAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAG2SURBVEhLrZXNbsJADIRT9UdVi6DcqlIkHoCXKQfOCCr1BO9/o/Ntx2XZJDShGWm0xvZ6kni9VB1xI96LT0eB1b/xD4IQGFuAhXVs/7+FagLBoYRaBYJDCN2KozaBoOMjkfzeuBNfUpUM8tk6gTzn9wabJuKHuBH3LhiF9/YTJ6+TCN+UVyYZPojP4lSci8tCZGk/cfLIj73UqfUompx6AGTHxtR8cWF/xBf2E08PlAKCbHp0dhhCoJwDnhA/eBRnRXxmPyBvWsTPTt2ZALTNpyCRQnzzpjfBT5y8ecSh7RBqHrQ2dInndbSOk5UHhqbrV6tS6BK6xPM6Wldi9Spu8gTbB/FL/PR6iJy/4tA2c0T91Jx3cRdJXpkDmsspYm2ak0vxnUhd6v+cLju2KUOQfdXpArK3Ygik0/U7J+KbuBa5KnrPicg+9lMnBGoDyaRy2fGEvSdeZB/7axMfwFG7u1LFDPLZOoE851+8u5pA8sRFWuk4b0B+b7CJV1+3CdlPD67+P+GV+bY0MZ06raUAp4j41f+McRhobtMc5XPQ2OSuKIXiZmCSBxEI5EJcEdxFrB0FquobGJEz0mh+IJAAAAAASUVORK5CYII=) 12 12, auto;
+}
+
+.csr_auto[data-theme="macos"], .csr_default[data-theme="macos"], .csr_initial[data-theme="macos"] {
+  cursor: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAsAAAARCAYAAAAL4VbbAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAC+SURBVChThZK7CsJAEEVHJUFBFPGBFhax8Af8C1sLwUcjNlZ2/r6e0dmwq7Nx4JCdybnZvORpJSJ9KKAFfpkYAgPIB4Jsy+ZALFubD3zLNvIDnmxjPaaBnKz8BJpkJQn8k5U6kJO9SmRnfYcr7GFby3Z8hD6arWEBw8+EornBxtaxvAR9wDJc+QgVrOBiszigcge4F5EpjGAMlSNPQN+19IwSuqDB09uyop/ZeWkb+kl1K/2v53CAM+yAXaV4AW0J6JZx9gpcAAAAAElFTkSuQmCC), auto;
+}
+
+.csr_cell[data-theme="macos"] {
+  /*cursor: url() 7 7, auto;*/
+}
+
+.csr_colResize[data-theme="macos"] {
+  /*cursor: url() 10 10, auto;*/
+}
+
+.csr_copy[data-theme="macos"] {
+  /*cursor: url(), auto;*/
+}
+
+.csr_crosshair[data-theme="macos"] {
+  cursor: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMAAAAUCAYAAABvVQZ0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAC2SURBVDhP7ZS/CoMwGMQDRZQuxU1w8QF8m25dugjdfP9N79KLhG9I+LCT9AeH5rjckH+hwA26bxkcy3fTQL1KUlkv300LDaZskO+mg0ZTNsp3c7Ey7g4XlaFcD2gyZZN8m+X85puqgKD+ysQUw2d1lNVI4RrIhSf0hhajD7QqlMKrfJvlfPbEK8KTzZ3KxcWeTdks32Y5nz0/3M0CDP2vkw8uanzPEhzLdxNfWojn56Vv4aUNYQcBGE1JBXwKvgAAAABJRU5ErkJggg==) 9 9, auto;
+}
+
+/*Horizontal*/
+.csr_eResize[data-theme="macos"], .csr_ewResize[data-theme="macos"], .csr_wResize[data-theme="macos"] {
+  cursor: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAKCAYAAACuaZ5oAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAADESURBVDhPrZNBCoMwFEQjpVBEBHelrdADeJm66Fq00J3337Vv0h/RIASlA4984sxkYeJMGRyh+JiYczhASvLkFlOuAHWp0yuUl2YIxsr2U5KnirKl7ftDFuXC5lr7cEogT72SD4csy8VexR2spZ/mH/6Jdbs2PmSv4g7WFtwZurnB5hHe8Eogz7iS70Dd/mfcYAgmWxu4wzWBPE2UHUCd6v7dItvovQMxb75FEnMPodzfoukdwAWe8IBN7wCUUVYdVu6yL5Y5ItoOFthPAAAAAElFTkSuQmCC) 12 4, auto;
+}
+
+.csr_help[data-theme="macos"] {
+  cursor: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAATCAYAAACUef2IAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAGuSURBVDhPhZRNSwNBDIa3ip9oRapia4W2aE/e/BdeBIUerKW04kEPevPv6/vMJm123NXAwyR5M5nZ2dktvmVFUeyJLdESTYa2KajbEbsBYvLoZQ8aY3Lboqk5ObQDK681dKtr+Y5dqGvuTdte20SlRyyuCOvmPF7aqcZKrVue19iuNK4I6+aMnVhn/od4Z4wapDhProR1c15ON9aZfyOuGaMGKc6TFbFsfij6sc78oTgXo6hBivNkxLQzMYh15g9E5UmCNv2zMZg+Tk4wz9XULkXv38ZgNQvxaizyeRa/iL74fSucOlP+SjTtlAUvReM9jv6nYMKTuBenovIiwWIWPRblNfUiG788Drmx6Ioj4yLWgMXsdl+UH1bKyuS+iVvz8wk83rZgYi8JmSnP4vyMSrPkVHAvR2JpudicxnzaNOf6zb3Gxrnl0Vd2Jzg7zqcjhj4JzD8RnB2cRB2ympXxLwZW4/NlkedUbabYd8Ou2f3E8q5PLI++sg2DQ09/MsGnyk2YiUfhb5s6zhl9Zk2pISaPXmv+N6M5x8JOacokFnWd3dHswUZi8uWNKIriB0EkDSD7jE8lAAAAAElFTkSuQmCC), auto;
+}
+
+/*Vertical*/
+.csr_nResize[data-theme="macos"], .csr_nsResize[data-theme="macos"], .csr_sResize[data-theme="macos"] {
+  cursor: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAkAAAAYCAYAAAAoG9cuAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAACySURBVDhP3ZOxCoNAEETXIiAphHQhJuAH+DOxsBat/f8ymdnMHueFI30Gnouzr/BETWnACZxfCKfu2XtC6CRwcHbqXTwIQSF+C0ESa0Lge79miUUedPYEC9hVxGJXz71dwAOMhTSq5/5zOjAU0qDeT8e0oC+kXn3K/0q/35M3WULK4w0XNbS3uSaqn4HdwFqKul8B9/5wd7CFqLmp5z6djsUigd9RCP4VpL8FXMGkKcGaNw7AFrnkjUyoAAAAAElFTkSuQmCC) 4 12, auto;
+}
+
+.csr_neResize[data-theme="macos"], .csr_neswResize[data-theme="macos"], .csr_swResize[data-theme="macos"] {
+  cursor: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAASCAYAAAC9+TVUAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAADoSURBVDhPlZLLCsIwEEXrC6SgdeOmol/gzxTBjaig4t7/X+g96UQ0bdL2wiGZZHKbziTroYnI3wnVaWlNxdKSGwwyEVWbUV+TkeCX5uIUGvU1GQsM1t7Ajz/zpLjFTHxrYuMriKOKGdzEXjzdgqR5q2IGF7ETpdiKo6hEQymDjShELhZiZbFrIdABipgyoNXsk0d+fdZlSQpw5guFxX49NOCm/woOlEHcbYD8IZsON0D+oMdi2kgXKFraAIUmtsRIG6kRRUyrzcSWGSk2XUjLZUekbd4BbezUQVzFw7iLs+AlUpMOkyz7AMvSCQMQrP7GAAAAAElFTkSuQmCC) 8 8, auto;
+}
+
+.csr_nwResize[data-theme="macos"], .csr_nwseResize[data-theme="macos"], .csr_seResize[data-theme="macos"] {
+  cursor: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABEAAAASCAYAAAC9+TVUAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAADfSURBVDhPlZJdCsIwEITXvxeh2ueKnsDLiOCbCioewPuDzheTIq3dJgMfzYbNmMxqb0dmthQz4Ss294j7azEXvv6ZxL2TqEW5SayfYisqUfactI7fRpDJVPjqHHx1ajJZiIkYVuiWtOQJe3GLddpfiVGjgyBEMuAJO3EpNeLKTIEQyYB6I4qMGCEwBUKkkQOeEX30p7M98UueETflxlXYkLT+qzGjplMPaswoywQlI57A1NrxJ3JMECGSQfuEX3JNmEIIUd8euSaMsA7dA/q2+cKETPhnn8VdPCJXMzt+ANQaCUBT6yAvAAAAAElFTkSuQmCC) 8 8, auto;
+}
+
+.csr_noDrop[data-theme="macos"], .csr_notAllowed[data-theme="macos"] {
+  cursor: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAVCAYAAABG1c6oAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAGCSURBVDhPjZXdSgNBDEZXxJ+LoiJURLSU9qo3vlEptGqpgvr+N/qd2aSkmdlq4DCZJPM1k223XbITcSouxNXPgJGzGmo50zQSZ2Jk5zjYxE3+SHCmEnWx0pXWf2G1dHsgelQsWyuv9UC0KeYm/1NsxZv4sHBVq9VF+5mRyFj8WczExNaVeM9nbM9Mu3FMRj/s78W1uBF3Yi62sdb8cfE86Aksx7QieGncinmzLgbN/xZfMR5yzOlcIEqnq1hX/CrQz2whXmMObI8oglx/FmuKXwX6wTOzJ7GJebA914dJzBe/CvRP0w88iiFRPvR4h/tgfx2uxfUGRbEc09otY8J8Bo4gD2BQNGK5peimudD2fDUQBa7PTKsH5Vh8KvRlTF2Cm3yujyAzW1i4qtVKd2iVn8uDWOdCyNbKa10LNMpPr7wcxJ9zyljtRnAWjfJy2L++BInSKSa/iZt8Ooti9TtR0Drz2Nm5yshZDbWVmJuLMgeGyxPjEF28GPjEyFGT/gK67hfNlDD0gOHC6AAAAABJRU5ErkJggg==) 10 9, auto;
+}
+
+.csr_pointer[data-theme="macos"] {
+  cursor: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA8AAAARCAYAAAACCvahAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAFDSURBVDhPhZNBSsRAEEUjo+giiDAo6uCgLuI+x8jegKIow3iJHCCHySlygqxc5Ri5QPyvp6tpookFb6rTXf93V0+SRHEkTkRaFMWoDKmfY20xVsIJh2EYx/E7NmBtMdhhnee5hEQQr/3aYpyKmz/EW3Hu1zHhFL/aOBObqZjnLMtG2vF3YUauFX6OBb1tYzHFTdOEsRl6E+qTtCxL567xk4m5tLqu/eWNbhybUJcgJNq2Dcf8L7quc7UJxX3f++nDsQjmODI7x5kIYsVLbGCZAuanGRM7JeKN2HN864+YE3M6+jfxhXhkAUczmBOTvfAdMf/ZJQ9Tg6qq3DjO9K1auBeHd1rcit3UgGBsqAY+xJUIXxNvzp34on8MDHYztG67Uu/CDOj/gd2V53gTtEm7ITBggq/oWXyKfcROvIproTaT1Q8dF5/+xb/jZQAAAABJRU5ErkJggg==) 5 0, auto;
+}
+
+.csr_progress0[data-theme="macos"] {
+  cursor: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABsAAAARCAYAAAAsT9czAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAOMSURBVEhLlZX9U0xRHId3scaOlzRiYrxMjZeRyvswg8YM8hJKZRe1UYrSZrNt2U3p1VLU7vays7spu9RutUJSkpCpjPE6BsMYw3/A+IEfGvr4ntuNYqM+M8/cc8+95zz3nHPvuQLwEQgEEwgRISRGGtZmDDGWh/UzihgcXtQvnESMVCjynD7DOyIqThuwKaxzZUBwV6hkvzNwy/YAujae+N1Xv4wvjkQoFIlE7mF7ok9FyzORX1QF5427aGl/AIPFgXilFrFJJ+7N8fJeQff2jXKgjD8dlpBEE+KOKK1bd8u/nzVWo7GtE45rt1Fy4TJ0FXWosDdBclCNiFjV6ykeU+dSE+FfMsYwhMLFy1bJtoYn9uyKVMFou8qNiqE+bYLmjAmXrtzC8dwybA5PxMEEVRu1EbuUMf4jFCcos+8HSRXYFiKH9FA68gw21F1vR0pOGbKKLnCyDBLv3KNESFTK15Wr1gQOKWP8Q+geFa/p2RWRip3SY2DHUFkakjRFiEspQJ7eCo3WjPAoNXbsToYkVtPr47dc9U8Zw5Vw/oKFnpGJ2VCcLEGuzgp9ZT3OmWuhyi3niEnWIpREIftSITmQjmhFPtZtDD75XxnjT+EiX/8ZSeqC3vySapTaGmGoakB8WhGO5ZlxOL2EqztrdtDUXkJWsY3W0YKgYMnQMlehejExavJk90nZ50zv9ReboLU04HCmEYo8C+pau6HUVkKjq0FNcyeqWzpRZr+JM2Znz9r1G2SDZC7KCiKWkBLbCE5GjE5OzSiocN76kWOsh1pXjfMN7bjz6CV13oJ0vR2ZpQ6YnbdhbeyAJqfwo5//0tm/ZPwxrf98QN18YjrhRowjuA909Zp1vqf15i+26x0wOdvQ1PUUHc9fo7nrGQz2ZhhrW7kHsDiacOiIImacWCzq65FC7ROI5Xx5oGwWwdaL7XmjCe4loakcExcvDzCYrR/qW++i+9VbPHzzDg/fvkPbkxdo7n6MmmutSFZpshb6+E5kbfpHFkF4Ed5EDF83UMhkTDQobm5uIulemX92fmFpcbnlU5X98rfaxpZeg6nyc6Gu/Fni0ZRgn0V+fSI+bC2mEu7EFMLLhcyDYG+iqwjZky9esmymXKEKUR3PSAvcHDTPz3+JB23Q7E8wKGzRGWya2JowcSRn4UPn0/jrw4mr7e1X2IIz2E1sqth/zZPYR8iIMIKNeqiRDTMCwU+SrVa+pD/fqgAAAABJRU5ErkJggg==), auto;
+  -webkit-animation-iteration-count: 5;
+  -moz-animation-iteration-count: 5;
+  -o-animation-iteration-count: 5;
+  animation-iteration-count: 5;
+  -webkit-animation-delay:2s;
+  -moz-animation-delay:2s;
+  -o-animation-delay:2s;
+  animation-delay:2s;
+}
+
+.csr_progress1[data-theme="macos"] {
+  cursor: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABsAAAARCAYAAAAsT9czAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAOfSURBVEhLlZX9T1NXHIdbtYuNL0hAg0ZnIJuLCMhwxiUqMVHBTR2dyItggSIdFgqVUqlAoS1j7SjKrdDirJZRoaaV+QIIImS8iMqYRrOYLcYs8z/Q7If5A1E+fk+5ONCi8Eme9Jxz7znPPefcnisAH4FAsJgQEUJirmF9FhAf8bBx5hHTw4smhUuJuQpFIStXhaVnyE2xuxOHN8cm3D6QnNkWt2dfLF1bRPw/1qSML85FKBSJRIGJqTKzTFkBS4MLPf0j6P71LjiHB5mKSuQoywfWhoZ9QfdOzHKqjK/OSkiixfI8dXO8JPelodaB9pu30Ds4ipYrvTh51oMqazOSZFqk52j+DApe/gl1Eb4jY8xCKNwYs0X61cH8sfhvjuJIkQmWRjc6+4bhcHegsOI0TA0XoK2yYU+SEkcUml7qI/YrY3xAKFaoDUP70oogSVUjTVGBTFU17K6rqDvnRX55HZoudcNQew4HZScgySj+b/OWrXEzyhjvEQZmKErHslQ/oKCcg87igNpog7zYjAIdB/1JJ2p/8kChPYVvD5cgJad0PDxyk+a9MoY/4brP1odIC4worrLDwP2MShq8SG+j5av3tck1FhzK1UOSfhzJWWXIVFZh2679lR+UMd4WboiIWlVwombcaHUhv6weaXnVyCvj8KP9IrRmB0y2Vsg0p2h5v0e2ugaFOiv2JiTPLPMXahcT85YtC1xqsDT+Xcm14rtyG9QmJy713AHn6kRh9Xl4qey9eRfOK32oa+6A+Yx3bNuOndJpMj9lFZFDpBBfEz4ZMf/YcV2NzX39ld7mgatjEL2//QHn1X5U2L3gWrrQPnQfbX0jaLk+hFKj5Wlk1Ocfv5HxvyWT9Slt64iVRACxkPD9Qb/cuj3CbD377wUarOvOA/Tff0SCe2j09sDq7oKrcwiXB0bR1NaF3DxV9kKxWDQxIoX6K4hNfHmqbA3B9oudefMJ30tCS7lAflQZW+9w/dMxMIyRv57g9qPHuPH7Q3SPPqQHuAf3tR4c05Tq14dHLGF9JmeWToQSYUQ23zZVyGRMNC0BAQGilEPSKGO1paHO7njWdPGXF5727vHTZ5zPLZz9QX5hcUL4hsgJER+2F8uJQCKICPUjCybYm+gvQvbkG6NjVitVGolGqyuJi9/7aWRUdDAd0OxLMC1s0xlsmdieMPFhn4UP1Vfw12cTf8fbm7ANZ7Cb2FKx71oIkUZIiUSCzXqmmc0yAsFrTZhWTkJKRgIAAAAASUVORK5CYII=), auto;
+}
+
+.csr_progress2[data-theme="macos"] {
+  cursor: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABsAAAARCAYAAAAsT9czAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAOPSURBVEhLlZXpT1NZGIdbtcbGBYlowDW4RgTcxmjimqigMiNuAy4UKspS6CaUYm1BkeKlCFVoq6EIg6IGKjGKFaQEkVRhmDASY/SDMfofaPygH4jy8z2Xi4IWhV/ypOeee895es57FxGEiESiSYSEEBOjDRszjhgvwOYZQwyNIBoQTiFGK5QEBs1aEJeQfG7z9gPeNRt3P94Xk3ArYsefm+jcROL7XAMyoTkaoVgikfjvP3i0QK4wwVJ2Fc1tnXjU0YOyKy7Ep+bguPJU27zg+X/Qtf2rHCwTDkckJNGkpLSM6sg9KZ/TsotRXXcfnkddaCGqqG3gyhEVo8KRY5kvpgVMX0hDxD/JGCMQipevWivbeSC9N3J3KuQaM9SmC6iqdeOux4uCshqk6IuwN16PHX8rcUyh89AYqU8Z4zdCqSLjTHt0XCYS0s8i86wdipPF0OU74LrXiowzNsioP/2UFbFJRpLqPq5Zuz5iWBnjF0L/eIWh9+iJAmhPl4FzXAdnvw6l0YocixOHU3KQZXbwW5mks+BgqqkvJGy17pcyhi/h4iVLA2WqPBLZoMm1QZFdgkQtB5WxlF+l2lTKi1TGi5CrzZCr8rFh21+5v5UxfhQuCw2fqdRzfSpDCQ4pzEQ+9AXlKHG6kHWuAllcJeLVhYhJzoNcW8jXMyo6ZniZr1C/lBgzdar/FBNnf20quYZkox2csx53Wv9DUeUdZBRW43ZrFy7fbEKOtQaG89XIvXCtd8OWrbIhMh9tDXGciCV2EbyMGKvNMlnsN9xfLBW30dDeDc+/z+Coa0buJRdqm5/A7X2KWy2dqHG3w5BX9DYsfOXcbzLhVz9wPKhvMRFE+BETCP4BXbd+Yyh3sfyDy9OBps4ePOx+jhtNj+GofQBnfQsan/SgwduNf+obkZKmSZwglUr6Z6TQeAWxWmgPls0hWL3YO28swd8ktJXjklKVm2wVV980tHnR+fIV2p+9RGNXD8+Djv9R5/ZAqzOcXhoSOpmNGVjZESKYmE8kCn2DhUzGREPi5+cniT0kC88zF9msDue7qpv1n2rvNvaVXq58X2i1P01XZ0aHLAvrFwlhtZhO+BPTiGAfsgCC3Ym+Imb/fPmKVbOVGt0eXbZJHxEZtSgsfEVAYNBM9iUYElZ0BtsmVhMmjuMtQuh4hnB+JPH1evsWVnAGu4htFfuuBRKHCRmxn2CrHm5lI4xI9BXZO1WUWPn2/QAAAABJRU5ErkJggg==), auto;
+}
+
+.csr_progress3[data-theme="macos"] {
+  cursor: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABsAAAARCAYAAAAsT9czAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAOWSURBVEhLlZXrU4xRHMd3saYGaUlqjDFlhFo1GIxLvBDGLZeSUrK7dseutNnabbPtVtOWtKx2pZRalHSRW6nWpY1iIncxXnjhT8AbZhj19Tv1RLFR35nPPOc8z3POZ37nPBceuPB4vImEgOATow0bM44Yz8HmGUMMDScaEHoQoxUKfHxn+MfGy02rw3Y+WBIa/nDHrvjadRs2h9K1CcTvuQZkXHM0Qr5AIPDcGS3JiZWl9RjzinDL2YmOR69QUdsEcWJWr/TgEecsP//FdG9/lYNlXHdEQhJNlCnV5zZsV/xQaM3IP1ODqmu3cbf9CRxtncguOI/NUYnYsz/5zVSvabNpCP8vGWMEQn7IoqVxW6JV3yPFOmizi5BosCLdfBbXWu7jcpMTCekWhO9OwrptByBVaBw0xt2ljPEfobsyOfNepDgNCTozymnZCsrqoNRbUFJ1AzZ7PaLkBpKpERGvw474lC9Llq0IG1bG+IdQuFd55JtEnYskoxUm2wWSXYYut4Q4A4kqlwSpOKDJh5yIVhh6A0WLNP+UMVwJ5wTM84lRGrEvwYRd+/SIEOsRJcuEymBDSvZpHM604URpLfJOV0F3tBQybT5Wrt1q/K+M8adwfqDIV5Fi6pFrjiNGmYPEzGKcrWlClrUS2baLkKedhERthuRwPmSpFqio+o1bIoeXuQqddyfGCIVTPNKPFr43WCqRVViD+juduO7sQlJOGcqvOlFW3wpFRjGkqVak5NmRUVDxbdWatbFDZC7aSYSM2E1sIvpkxFiVRp9XXN3Sc6m5A43tz1DteAhjUR3KrzvR2tWNK87HOH6hEdbKm0jLMn8QLQiZ+UvGHVMH+oPOBRC+xGTCjeh7QZctXyU6Zi393ND+FI5HL1FH1dkuNeNcQxtan3bj9uNXaOx4Bnt9M+QKldjNzU3QPyOFxiuJxVx7sGwmwfaLffPGEn0PiaencJxUpggtLKv40HjvAdpevEVL10s4iI7X73D/RTe9b3ehStZlzAsMmsTGDFQWS/gR/oSUOzdYyGRMNCQeHpMFUTFxwRmmYzbLqZKP9uorX2sbWnptJfZP5oKi58pD6vDAoAX9Ii5sL6YRQmIq4edC5kWwJ9FV+AFz508KDlk4gybflqzVa8PWb5wTJAr28vaezv4EQ8I2ncGWie0JE8f1WbhQ35u7PpK4+rz9CttwBruJLRX7r/kQe4i9RATBqh6ushGGx/sJulRVNJVflWoAAAAASUVORK5CYII=), auto;
+}
+
+.csr_progress4[data-theme="macos"] {
+  cursor: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABsAAAARCAYAAAAsT9czAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAOYSURBVEhLlZXrT1NJHIZbtRsbXZGIBnTV4HqJCHiPmyjERBfNgoCIXKSFWLG2CoI9FQpiCytgYYFaKCJFGoRyqeKlFamKgXrDOxqjJhqj/8EaP+x+ILu8/qYcFLQovMmTMzPnzDxnZs5FAD4CgWAqISKExHjD+kwifuJh40wgRoYXDQmnEeMVinz95vwqSZEXh26Oub02JPJOTFzKubCtEaF0bgrxZawhGV8cj1AoEom8dyTsLkpK1SC3sAbtHd1w9fbhTFsHlNxxpKYd6Znvv2ANXTs4y+EyvjomIYmm7t2vatgae+A/TmtE6ak2GE7b0N7ZA2d3L+qsdkQnHkLSHu7lDJ+ZC6mL8BsZYwxC4fJV66QRiQf7JYqjqGu5jLLaVnB/mlBRZ8PFqy5U1p9FVIIKv0fKIVOqr1MfsUcZ4wdCsVKVfzMmORtyVTFqmuyw2W9AW26BrrwezRevYQ+1h8emI2JnBqKTuX/WrlsfNqqM8R2hd7Iipz9Gmo3IOBUSZbnYx5VCU1yDTF0l3YAe2+JViE06jJT0Y0hQ5A0EBK1Wf1fG8CRcvGSpLw0AiTwf2yVZ2J1eiMyjRhzSGWkpq8EVVKGoqhH6aity9GYoNWUI2Ryl/aGM8bVwWWDwbAV3bECZXYYCYxNO267A3OJAurYa+pOtkKnLUWBoQIm5HUWmZveMw6PiRpd5CrWLiQnTp3tP0+pNb8stF2C51I025x3kVFhxhHC4HtGxCTKN0U1WST10hsb+DRs3SUfIPJQziFQinviDcMuIiZmH80osF7r+b3XeRaPDhVxDM05Yr6Dr/nM4bj2GzmSDhtoqGhzQFJS+DwpeOe+zjD9mDdWHtS0m/AgvYjLhfkF/Wx8SWFJp/mi/+QjWzluobOlE7fkbcD19gZ6+F+i4/QRN1F5LyyvfnyGbLBaLBkekUH8lsZovD5fNJdh+sW/eRML9kNBSTtqrSAutqjvz7vx1F5wPn8H54Cl6X77GvVdv4Op7jrMdXchU5+iWBgT+zPoMzSyJ8CcWEDK+bbiQyZhoRLy8vETxidLg/MLSqgqT+W9LS/u/bfbOAeMpy4e/DNV9Bw5yUQHLggZFfNhezCS8iRmEvweZD8GeRE8RsjtfvmLVL2kZ6mh1dl5W2JbwRUHBK3x8/WazP8GIsE1nsGVie8LEEreFD9Vn8efHEk+ft89hG85gF7GlYv81X2IXISV2EGzWo81sjBEIPgGopVavkqxi2gAAAABJRU5ErkJggg==), auto;
+}
+
+.csr_progress5[data-theme="macos"] {
+  cursor: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABsAAAARCAYAAAAsT9czAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAOUSURBVEhLlZXrT1NJHIZbtcZGVyTiBo2rgXiJCOjqGk1UYqKiggqC3KxABMEWasvSlra0aL1QhAq1ItBaLlUKYosIyF3BazSridFEjVHj/gdu9oN+IC7v/qYcFLQovMmTMzPnzDydmdM5PHDh8XizCAHBJyYb1mcaMZ2DjTOFGBtONCKcTUxWKPCfvyBQlJJhDNsee39dWNSDmPhUd/jO3WF0bybxdawRGVecjJAvEAh8YxMPFaZKdMgvtMJ1ox9d/Q9R3dAGiaIIh4/qbi8OCPyDnh2e5WgZV52QkESzMrJyHbvipJ9LKp241NyNc9VXUe5ohrtzAHVNHYhPU0OUrng512/eEurC/07GmICQv2rN+uTdSbLBg+IC1FzthKu9H0UX6qE2VsHh6kTD9T5kyAuxfW8m0iTKPuoj9Cpj/EQolOQa7kYmyBGTpEB+kQ12Wjqbsw3SgnNwuLtgtrsQI1Iicr8M0SmKj+vWbwwfV8b4gdA3Rawd3CdSISJaij1xOUhM1+HP4xYcUZVAQ7OLS9UiYt/wvYRM3VBQyFrlD2UMb8Jly1f4J4r1SJcZIc03w2CqxglzHeTHzkN5sgLZ2lJk5ZmQpSlFrqEcEo0Jm7dFHfupjPGtcGVw6ILsPOPQKctllF+m5bvSAdlJG1SFdhwloc5Ugzp3Ny42tqPY5ob2jB2RUfHjy7yF2oXElDlzfGcbzlrfWeo7UNPSD72lEZn6CjhaB1DV1AtxQSVUxQ6YaltR5mhHkdU1uGnL1uQxMi9lOXGYSCAiCI+MmJqj0hfXttz8z+a+CXWZE1qzE70Pn6Pv0XMY7S1Ql9ZDQ21MpjlR8ndI6O+Lvsi4a95IfVTbMmI+4UPMIDx/0A0bNwcXWy7+6+y8hypXL6zE7acvcPfZK7TeeYLKph7Yr92CjZYyM0ueNkMoFAyPSKH+EmItVx4t+41g+8XOvKmE5yWhpZyWIZaGWWyO966eAXQ/foZHr97gr9dvPddbVG9o7UGOUnt8RVDwL6zPyMxERAARSKRxbaOFTMZEY+Lj4yNISEoONZwuKS89b/1Q29j8qamta8hirf3HZK54mi1TRAWtDBkWcWF7MY/wJeYSAV5kfgR7E72Fz375qtVrFkrlymilWp8XviNyaUjoaj86oNmXYEzYpjPYMrE9YeKDHgsXqv/K3Z9IvB1vX8I2nMEeYkvFvmv+xAEimYgl2KzHm9kEw+P9D99TVqaL18EaAAAAAElFTkSuQmCC), auto;
+}
+
+.csr_rowResize[data-theme="macos"] {
+  /*cursor: url() 10 10, auto;*/
+}
+
+.csr_text[data-theme="macos"] {
+  cursor: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAkAAAAUCAYAAABf2RdVAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAADJSURBVChTjZIxC8IwFIQfiCBFhQ46tEi7lv6cgos4SKcu/v9N784LhFTQg0vyvne0aZp4ZYqIA1xxNpIUApS9blZMo5UFNSehjgl+wItBaizm7EcNX+CxCI3m7McWPsJ9EerN2Zd2cFuEWnNpA+/hrgh15uxHJWqh9uoj9hmqXaxsro2fVFmpmcQ+Q0xe4W/nRK4n8Z1neChCg7n29NfXUT/P6feJi1hZQHOSKsIs8FwxjRbgDPPvz0YSat2XO3yDeTUaz6zBY3oD9dU3eKQETqcAAAAASUVORK5CYII=) 4 9, auto;
+}
+
+.csr_verticalText[data-theme="macos"] {
+  /*cursor: url() 10 4, auto;*/
+}
+
+.csr_wait0[data-theme="macos"] {
+  cursor: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAAWCAYAAADEtGw7AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAOQSURBVEhLfZXdS5NhGMaXSAceVBSGFNRBYXReB1EUWRpU9mFEHlhUOil1WptOm0PnZpbTLE3FNEfmR6zRyPwulWlaGonRJyGd9m/c7Xdv70qsHrh4nz33df2e+3nejZn+MuLCSggrqdJTm+uouD133lwsaRl5KuasUcMT9ZL574gPa72rui4/J/+GpJ+zSoHdK+29/TL5+r2KOWvU8OAlE83+dVBIdN+6E0g9dUUysu0KGQvNSXAkFFNgYEL8wVFp7QqqBy8ZslHGssFR1mMwjuy561PI0MSs9I9NK6jRF5C6tj599vWPq8fwR+F0vuxaElw1DcWGKTO3XEGA6RI43Tu97eKofSAV9Z0KxoPXyMGAFUFGdtjEfXGs1HSzZOVUameEgdPx4+BLuVbZJBbnvTC4Q2ud/iEpc9+Xo5mFCoYBK8o0JXhqGpwU0bHTFhX3B4iwcbdAzcW1Ut/+dBk4I8uuWQQLJuANJeXupZMX7fqmgdI1c9YuFVbrnQJno9yyOu0eMOtZeW7NGH5YMAEn8d3krtgZA09DfEZAgdiqmvWaeJ65VP77hGEvDFgwTdu2J2/h2HTGMQnwtm+19Cqguqlb1wyxAd4/N+bJe9H1MAumac/e/dvZiYDT26lA7pBvAXfIcQGW1rSp2JxODRkbcBpqsGCa9u47sI236fD6tLt63/MYlDUCF6z14rrXo8+GRy/0jtmQJsgg6vhhwTQl79i5ubC06qenxa/Qxp4hae4bEYvnoYIQ6/7hGcm23xWzs0V8zyfFPzqrYk4GDwxYMHl5a/jVUABoQAEgzKMzH2RwakFs3i6t8QQYnJiX3pEZ6Xg2rjkY0V/gGsCrSx2udJuzRs0UCRrqHpyWiflPKmqOpiexGp1SR2RhwIIJOO74idObXdXeMQzsfPNhMKbh2UWZfP9ZRZ01ToGYsxkdU4MBCyZgxmrzFcsep9urxzM6QKHFL6rXH78pvDUwpgJGHS8ZsjBgRZCRsergobR11hLHKQyv5j/KyNyiCiB68/W7irVA6K0MzCzoHC8ZsjBgRZC/R9yFi+aNeQXX02rvNIu3sVVBC0s/VsjYBA9eMmRhRFArR1zqkaNrLddKdjsrbxY1NLVpuKXjsfQEB1TMWaOGBy8ZshHEvwdHiaeDImvpriJrWUp+oe3s+NQ7QcxZoxbtkn+NFcf/38BMF/GXc64mphw+shUxZy1a+wfQZPoFPtyp2wsMeekAAAAASUVORK5CYII=) 10 10, auto;
+  -webkit-animation-iteration-count: 5;
+  -moz-animation-iteration-count: 5;
+  -o-animation-iteration-count: 5;
+  animation-iteration-count: 5;
+  -webkit-animation-delay:2s;
+  -moz-animation-delay:2s;
+  -o-animation-delay:2s;
+  animation-delay:2s;
+}
+
+.csr_wait1[data-theme="macos"] {
+  cursor: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAAWCAYAAADEtGw7AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAO0SURBVEhLfZXbT9NZEMe7hPjAgxo3GiOJPmg0vuuD0Wi8gIkuu4oxaoLGCyUKFrBAwdJALaVKqRUQCILgDTC1seEiNwVSEQQNXmLUjTG+7r8x28+0p6bxcpJvzvnNmfmcmTm/X2v5yUiLKSOm1bV1DQXOmmsLJ63lkp1bqGKNjT18Er7E/Hakx7TCUx8ozS+6LDnH7FLluSmhyLg8f/lepl8sSmffoFx0+OXgYZvg4/Y2FhGTiP3pYGOl5+r1cNah85J7zqGQieiCROffqiJjUQkPT8n9yFOpCXRJbp5D8CWG2AQjZVDKCgPNyrFqpkBGpuYUPvn8tQIbO/ol0PlIrrb1icvfmWxRAk7mKW3JcPuC5TgARWeKvQoxcNQdGhFnwy0p997Suf1eRI4XVCfhMGDFkfET1tAvky39O3GhRqzlDbGSu2VwYkZFa2yuJrV7mu7oQVR24HixCgasBNOSUecLuswmUESP8wo9ctbuk+aesIKZgRZUNSrUgMnaxMOCCfjPimrP139OO+TImWp1og3cPFAyZzb9Zc3cPzipB5VdadUEuEgYsGACXs27aUovcgal0tehpXpbHuiawwAiQIC5PPaA8loCxg8WTMv6DRvXUjZQ+meg5vaBAzNiHz+qokIDzcuvVRssmJZt23du4KTS2pbY69OtmQDmmWwIPmm7pkB01OpWmxFQBcd8DRimZfuOXeu5Tae/R7NjBgSAmdbQX9MiLoz5lD2gPsaPikkGFkzLxk2bM4srr/xX1xZS6DnHDXUkkPc1ND4nodFZtVtdbboemH4tD57MSHt4QtvlbuoV4plhweTylvLV4MBmmf+eAmx1txU6PvteZ+zYgneH1AY8MvVK+sZmpevxpLT2j0mgZ8B8gUsBL6l0unPKXD7dNHDWo3Pv5NmrDwpxtjxMimzZw86hPPcMTAsMWDABp/319+FMt9c/gYM5+dHkfBKMyLT+diQpMh2aWVQ/4DzDgAUTMGOJ9bxtm8vjT5Y3thCHRt99UnEoJTf3jmhvWQMdiP04cQCxMGDFkfHxx+692cvtFc5DOEwvfpQXH/5NEQeFo/NJDc++SR5ODLEwYMWR30faqdPWVYUXL2U3XG8Vf3O7vPn6LUUvP39JET74EkMsjDjqx5GWtf/AMltpxVZXbX1JsKVDg9u67ktvZFjFGht7+OBLDLFxxK8HpaSTQYm9ckuJvWpPUXHZUX7oEWts7CWy5F/jh/J/N3Ami/Sz+RdW7tm3fx1ijS2x9wugxfI/NaOoSYEJ99YAAAAASUVORK5CYII=) 10 10, auto;
+}
+
+.csr_wait2[data-theme="macos"] {
+  cursor: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAAWCAYAAADEtGw7AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAOaSURBVEhLfZXdS5NxFMeXiBdeWBRFL1AXhdF9XYhR9KJBZaURGZjYy8K0aU2dNYfOOZdOXWoalmZvathoaFZqaSzTtOgdKiK67d847XOePUsx+8GXPc/vfM/nnN959myWf6y4iBIjWlVd21DgrKybOW4tlX2ZNkk7lC9cs1dVU38m4lkZ9ZLz3xUf0VK3t6HwdOElyThql4ueq9IfGpFXM59VN3oH5ZzDr4Xw4CUnmvvPRWC553JTkM6ychzS0h2U0fCMhKc/xMDc3w09k8rGTtmbXaSnIIfcKGPO4ihLTWhahlVOFHnlcnuvBIfGFTb28q1qcHRCC3pb76kH7yw4nc8ZS6LbFyhNzyowjFFwSXWbuPw3FP5kfEoVGg5Lua9DY7PB5MKAZSCNCquZl9kt8zt2tlKspfUqjg2QbhmDuY/n8IkKHQmCASvKtCTW+AIuM8hs6aTQGdDPk3afQji+OQb2cgo8Cra5miX7TIXmkQ8LJuBlZRWenwfzHGo0RwCAb0Cp97qCOD5gZ/119QFjTOZI2IMBCybglXw3CdAZnQLxNN/Sh9fQ0acA4kDoDCgF8OAlxxwNLJiW9RuS12adcmiAY2GsbLwZgd2U81WtmsQ+UMQ9xTgRhSlKnK4RLJiWlNRtG+gACFBMR6xufSimjtvqNIaYLXE+EXFOwbUJhmlJ3bp9PU+TJN4oICQirum+b3BMZ40Ctx9Jrr1xno8T0xwsmJbkjZvWFJVX/3b6uzXxlOOKGvls6XkiAy/eyr3HE3pvq+mSB2PT0j8yJe7mnjlecmHAgsnDS+KtqWnvF1TivyNWV3sMOjL5ScFAEVD2zIKN3QOaZyr6BiYBTih3ujNKXD5p6xuOGUh8OvVRnr/5Ir3Dk+Jsva+6FhzVPWJ4KESB7oEXAgMWTMBx+w9krnF7/aMYgGN6NPEuBub4tV2hmMyieMzR6HgiDFgwAbMSrPm2FJfHL6HxNzIQ+bEZnjGg4Y9fZWjyvXQ+HFMxIgoDxkMMkQsDloE01qIdu9KX2MuchzAAe/Xl+xxRLBiejgkwPkQOuTBgGci/Ky43z7qi4NyF9PqmNvG3XJP3P3/F9Prbj3nCg5cccmEYqPkrLm3P3sW282VbXFW1xYHWDk1u77wrPaEhFdfsITx4ySHXQCy8OEo8HRTbyzcX2y/uLCwqOWL+0HPNHrFol/xrzDv+/xZmuog/efrs8p2796xDXLMXjS0AtFj+APvEpZzTR6elAAAAAElFTkSuQmCC) 10 10, auto;
+}
+
+.csr_wait3[data-theme="macos"] {
+  cursor: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAAWCAYAAADEtGw7AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAPBSURBVEhLjZTtT5NXGMYrIX7ggy9EjeGDH9SYmX2ciywmZsYgmU6nsBdmgE1pmVhLyosVai1QSoFSHSAQ3hcQMEDWyBCBDUhFGGBUNl9mzLLE/8MPt8/vbp+q8SU7yZXnPOdc1+/c55yntbyjJRhKMrS1sjr4U/ml2vkcW6mkHT+jos+Y11dnxRPzkvlgSzS0sdLf4LDay18cOeGQEk9AhsNTcmf5bxX9Mt9VOZxVKHiMBc6QiWXf2ZjYVBUIXacygt5Ql/SHf5fpyHIcHFl6oO/+5mvqwUuGbIzxRmMrySY07ahNThX6NRzqHJG2vrDCZm7f1efE7KI09Y6qB+9r8OQYK96SKmpCzkMZZ+NGQiVVLVLq7xB3fYd0Do4pEIUnI7qbONgQWRiwosjoCimcF1tDDk+jVuusaBZbab2+e4KdChybnpee4QnJL2uQ7wu8wj2YYBiwYkxLki9wuRxgRrZLsvIv6uUQ5nwBAgfEGPDa1kHJPuuTjDyXgo9+V6xZGLBgAk4uLa968tWPLq3APALOcGhsRkbHZ3XbgDlrxk4XBwS/CSRDljFYMAFv5dtkgsrs7isKplJvqEer4wKp0DwagIgF8JJhHAYsmJYdO3dtY0uYWDnbWiGZpy6qqIYnUAAI34VAuzS0D6l8jb/oO/cAHBZMy6d7P9vBi0I5NwNmAlGOo86ovkfDCDA7YRccFzviovl6OC5YMC17U/dtN24zvk1A39gqJbc4pGHOlEvjHYijuju6ZcNHITyZIwsDFkzLR7s/TnG4Kp67g726ap7rZw1fuzkvw1OLcmPurjBHuOvXGR23eVr1HQEmo9+74YMFk8tbx6+munVYUGXjgPTemJPw7IpCeZYE++KLTS38pQsyxgKIvpmP/QLXAV57vuzSEf5sWoYmtSqz0luLqwpzN19XseDsyiP5Y+Wh/DZ/T5oGJnQcIFkYsGACTkj/4ssUb3X9TXP7IzNLGgTMQjXdYVXb6LTM3XusYObw4GdBsjBgwQRMW2vNt6d6fEEZX7ivmlxeVcDg5IJWxgIAGI+sPtE5+qafLAxYUWS0rTlw8NAGZ0nZMQwE7zx8qiI0GlmKi3dzDuElQxYGrCjyVUvIOpm7ucDuTKu/3CLBpja5/+9/8uc/z94S4wgPXjJkYURRb7eEtPTD6+2FxXvcXv+5K83tGmzt6peB8LiKPkDm8OAlQzaKeH9jK4lff3tyi8N5/pPCIteBgnNFmfzJI/qMMYcHbyzzvxtmqkjM+cG6af/nB7ch+ozF5t4DtFheAiLIpNGWYsWeAAAAAElFTkSuQmCC) 10 10, auto;
+}
+
+.csr_wait4[data-theme="macos"] {
+  cursor: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAAWCAYAAADEtGw7AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAO3SURBVEhLfZVZT1NhEIYrIV5woUajcUn0QqPxXi+MRuMCJiouGKMmaFwoEbCgBQqWBkpbqhSsgEAQpG6AqY0NiIgomKIoYMR9iTHe+jfG80x7ENy+5M05Z868z8w332lq+ctKMpRiaFFlVU2us/zC2BFrkaTuPaXinliFtzrbyFmYyMXz35VsaK7bV5OXlXdOdu6zyWlHQFo7e2T4xVt5NvZOwtGHUuq5LOkH7UIOuXgS3r8uXsz3nL8YobMdh/KlvLZNbkYfSaR3SHoGnkps9LVqIDamxTIyHboLPHgTjGmLrcwlIS0jV5Pp1NdwS2pb70hNS5fUhyIS7Y8ptG/ouRYrrGyU1HTrVDidTxtLitsfLAKKDmWXSfONqMJK/C3irL4irkCrxoBSAPCZioY42BA+GLDiyHiFxcyL7SNm2B7uk66eQYXbXHUKOd/UqSMByigycz16DmbXMGAlmJYUrz/oAsjM6HYqGAgjyS6t0a7NbhlDxkmHgpHZFCyYgOcVl3m+7TnmkP3Hy1R0wgjYOhATxGECpgD5fBl0CxgfMVgwAS/k26RTOjY7QBgxMIY8Z1BlLarWOCInM6tCY+hwTrl+5zAty1esXMqWjuf7NAk4Jq4IMAY6RifsfoVQzHspJJ66a7o7zoE4LJiWdes3rpgEGyMwYeZhMWs+N8wmgIMjzpXPkTxXoF097BymZf2GTcs5TYJUpKvg9XuTh4f5pOOSFPmuKOSI7YIctdca827XZ3K5uus69LOEBdOyctXqJfkllT+cgZCefn1Hn4S6n0j44XMJPxgRm/eqgmpD3XJ/eEIL8DxV7EK/d4MBCyaHN4tfDVUbu/ql7e6gdPaPSHRoXIsARhR7PP5eCxYGbojV1TQpnr1NYVXiFzgL8MwSpzu90OVX8637T9UMmERMzobbGhsa/6CiMHFT5NEUDFgwASft2r1vidsXGNDtG7ozOKpXs4uqq1GNPXn1UWV2znx5B5SGYMCCCZg103rKts7lCUjvyIQKEGNpjgzoSHh+9v6LxN58UgHvH3ujcXaHFwasODK+ZmzemjbHXuzcSwJGOqNAJDaq6h5+qeDfRS4evDBgxZG/VtLRY9YFuafPplVfbJRAfbO8+Px1mia+fZ8mcsjFgxdGHPXnSkrdvmO27UzxWldFVUGwoUXNTW03pSPaq+KeGO/IIRcP3jji34utJNNBgb1kTYG9dEtefuGBQWMUiHtivEt0yb/GH9v/3yKZLpJPZOXM37Jt+zLEPbHEu38ALZafoFWoy52PYBMAAAAASUVORK5CYII=) 10 10, auto;
+}
+
+.csr_wait5[data-theme="macos"] {
+  cursor: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAAWCAYAAADEtGw7AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAOUSURBVEhLfZXbS1RRFIcnER98sCgKSaiHwui9HsQosjKwrDSiApVKR7yN1nhtHHSc0VFHm9RUTHNKU8GkwVKxi4rZTUMRuhLRa//Gar41cyYjc8Pi7LPX7/fttdfZw5jWGRGBiA5EbK2rOddW07SYaS6T5PQCDeaskUMT0uLZcEQGYqujvqUwp/CmnEqzSFGFR3qHn8jc62WN/tEpqXLekdSLVkGDFk/Iu+4gsd3ZeGvsxLk8Sc+ukMauYRn0v5CxiVnxT89rTM2+lefzi7oZGrR48IYYfw2OshWBcWTXbZ8CqbClZ0TafWMavAMnhwbtGjiV/9WWaIfbW2ZAL+VWS/eAX80Elds9vRrAqZx1NOkZgapTzeqDASuIDO6wk36lXCrWoIdUNvJkJlz19doODapnjRzrBpiqYcAKMU3RLrfXbkD5YBk5teJsu69GIFRY6e6R3KoWae19FAazhp4w/LBgAt5WXu38cfZKhX5pRFTA/HJ+jW4AmEoBG5vZmu+qBi0e5jBgwQQcy92krxzLqMAQGxsU2rxytbhealr79Z31tVq8rMOCadqzN34X1wYTLTh/tVoyCpx6fy32Nu0r0NK6Tg3MaADxJK5Z3ao3lzXrFYRpSkg8vJcXkgA4On3knnJsnmxAPwkq5mbQGnQ8g7emX4vg5DBNiYeO7OFrYqrveCitvvEwtH1oSrKsrZJpaRLvg6faY94BG7cCLR68No9PbwZMU/y+/XHFlXW/XF2jKgDmG5+TvsczYrZ3KQjD5KsVQcN7dsVtcbQNycPJBdXiwUseFkw+Xgy/GhKdI9MKxFDqGVCwxXVPzS+XPsros7f6Thg5oyBOxDP0C4wBHFVpc6SW2t0KAMoGgI2g2tmlTxpUtzZHAFdPgAELJuCI02fS4hz1nudUNDz9RndvuOcPVwNwbvmzxsSblXCOJwGUgmDAggmYEWXOsyTYnR4Zf/Uh3DvawhPg64/fNOZXv8jTheVwDq1/dknwwoAVRAbHpqPHkrdYy23nENDP6cVVrW5s/r3C3n39rmFswGZo0OLBCwNWEPlnRGRdMe8oKLqR3HyrUzzt3WHYyo+f6wYatHjwwgii/h0RJ06mbLZcLz9or20o8Xb0qLGrb1CG/BMazAGSQ4MWD94g4v+Do0RSQYm18kCJtSqpsLj0wkyg9wRz1siFquRf45/jbzQQU0XktZz87UnHT+4mmLMWyv0HaDL9Brn5qie1Sk7SAAAAAElFTkSuQmCC) 10 10, auto;
+}
+
+.csr_zoomIn[data-theme="macos"] {
+  /*cursor: url() 9 9, auto;*/
+}
+
+.csr_zoomOut[data-theme="macos"] {
+  /*cursor: url() 9 9, auto;*/
+}
+
+.Desktop[data-theme="macos"],
+body[data-theme="macos"] {
+  background-color:#FFF;
+  background-image:url(background.jpg);
+}
+
+.Button[data-theme="macos"] span,
+.RoundButton[data-theme="macos"] span,
+.CircleButton[data-theme="macos"] span,
+.BitmapButton[data-theme="macos"] span,
+.PathButton[data-theme="macos"] span,
+.ColorButton[data-theme="macos"] span,
+.CornerButton[data-theme="macos"] span,
+.PopupButton[data-theme="macos"] span,
+.SpeedButton[data-theme="macos"] span,
+.IPhoneButton[data-theme="macos"] span,
+.ToolButton[data-theme="macos"] span,
+.PageControl_LeftBtn[data-theme="macos"] span,
+.PageControl_RightBtn[data-theme="macos"] span,
+.Label[data-theme="macos"], .BarChart[data-theme="macos"], .ColumnChart[data-theme="macos"], .DonutChart[data-theme="macos"], .LineChart[data-theme="macos"],
+.PieChart[data-theme="macos"], .PolarAreaChart[data-theme="macos"], .RadarChart[data-theme="macos"], .PopupButton[data-theme="macos"] div {
+  color: #000;
+}
+
+.loading[data-theme="macos"] {
+  border: 1px solid #000;
+  border-radius: 9px;
+  background-color: #373636;
+  box-shadow: rgba(0,0,0,0.8) 3px 3px 3px;
+}
+
+.loading_progressInner[data-theme="macos"] {
+  border-radius: 3px;
+  background-color: #F5CD76;
+}
+
+.loading_progressOuter[data-theme="macos"] {
+  border-top: 1px solid #505050;
+  border-right: 1px solid #E0E0E0;
+  border-bottom: 1px solid #E0E0E0;
+  border-left: 1px solid #505050;
+  border-radius: 5px;
+}
+
+.loading_text[data-theme="macos"] {
+  color: #E0E0E0;
+}
+
+.spinIndic[data-theme="macos"],
+.win8loader[data-theme="macos"] .win8circle[data-theme="macos"]:after {
+  background-color: #E0E0E0;
+}
+
+.ballIndic[data-theme="macos"],
+.ball1Indic[data-theme="macos"] {
+  border-right: 5px solid #F5AB28;
+  border-bottom: 5px solid #F5AB28;
+  box-shadow: 0 0 35px rgba(0,0,0,0.9);
+}
+
+.circleIndic[data-theme="macos"],
+.circle1Indic[data-theme="macos"] {
+  border-top: 5px solid #F5AB28;
+  border-bottom: 5px solid #F5AB28;
+  box-shadow: 0 0 35px rgba(0,0,0,0.9);
+}
+
+.circle1Indic[data-theme="macos"] {
+  box-shadow: 0 0 15px rgba(0,0,0,0.9);
+}
+
+.ValueLabel[data-theme="macos"] {
+  color: #000;
+}
+
+.Button[data-theme="macos"], .SpeedButton[data-theme="macos"], .ColorButton[data-theme="macos"], .PathButton[data-theme="macos"], .BitmapButton[data-theme="macos"],
+.PopupButton[data-theme="macos"], .PageControl_LeftBtn[data-theme="macos"], .PageControl_RightBtn[data-theme="macos"] {
+  border-radius: 12px;
+}
+
+.Button[data-theme="macos"][data-stayspressed="true"].pressed, .Button[data-theme="macos"][data-stayspressed="true"].pressed:hover,
+.SpeedButton[data-theme="macos"][data-stayspressed="true"].pressed, .SpeedButton[data-theme="macos"][data-stayspressed="true"].pressed:hover,
+.RoundButton[data-theme="macos"][data-stayspressed="true"].pressed, .RoundButton[data-theme="macos"][data-stayspressed="true"].pressed:hover,
+.CircleButton[data-theme="macos"][data-stayspressed="true"].pressed, .CircleButton[data-theme="macos"][data-stayspressed="true"].pressed:hover,
+.CornerButton[data-theme="macos"][data-stayspressed="true"].pressed, .CornerButton[data-theme="macos"][data-stayspressed="true"].pressed:hover,
+.ColorButton[data-theme="macos"][data-stayspressed="true"].pressed, .ColorButton[data-theme="macos"][data-stayspressed="true"].pressed:hover,
+.PathButton[data-theme="macos"][data-stayspressed="true"].pressed, .PathButton[data-theme="macos"][data-stayspressed="true"].pressed:hover,
+.BitmapButton[data-theme="macos"][data-stayspressed="true"].pressed, .BitmapButton[data-theme="macos"][data-stayspressed="true"].pressed:hover,
+.PopupButton[data-theme="macos"][data-stayspressed="true"].pressed, .PopupButton[data-theme="macos"][data-stayspressed="true"].pressed:hover {
+  background-color: #F5AB28;
+  background-image: none;
+  color: #000;
+}
+
+.Button[data-theme="macos"][data-stayspressed="true"].pressed span,
+.SpeedButton[data-theme="macos"][data-stayspressed="true"].pressed span,
+.RoundButton[data-theme="macos"][data-stayspressed="true"].pressed span,
+.CircleButton[data-theme="macos"][data-stayspressed="true"].pressed span,
+.CornerButton[data-theme="macos"][data-stayspressed="true"].pressed span,
+.ColorButton[data-theme="macos"][data-stayspressed="true"].pressed span,
+.PathButton[data-theme="macos"][data-stayspressed="true"].pressed span,
+.BitmapButton[data-theme="macos"][data-stayspressed="true"].pressed span,
+.PopupButton[data-theme="macos"][data-stayspressed="true"].pressed span {
+  color: #000;
+}
+
+.Button[data-theme="macos"]:hover, .RoundButton[data-theme="macos"]:hover, .CircleButton[data-theme="macos"]:hover,
+.CornerButton[data-theme="macos"]:hover, .ColorButton[data-theme="macos"]:hover, .PathButton[data-theme="macos"]:hover,
+.BitmapButton[data-theme="macos"]:hover, .PopupButton[data-theme="macos"]:hover, .AngleButton[data-theme="macos"]:hover,
+.Button[data-theme="macos"][data-focused="true"], .RoundButton[data-theme="macos"][data-focused="true"], .CircleButton[data-theme="macos"][data-focused="true"],
+.CornerButton[data-theme="macos"][data-focused="true"], .ColorButton[data-theme="macos"][data-focused="true"], .PathButton[data-theme="macos"][data-focused="true"],
+.BitmapButton[data-theme="macos"][data-focused="true"], .PopupButton[data-theme="macos"][data-focused="true"], .AngleButton[data-theme="macos"][data-focused="true"] {
+  border-color: #3F608B;
+  border-top-color: #272761;
+  border-right-color: #3C638E;
+  border-bottom-color: #5B777C;
+  background-color:#8DC0F5;
+  background-image: linear-gradient(to bottom,rgba(38,38,86,0.4) 0, rgba(33,52,166,0.8) 4px,rgba(127,183,241,0) 10px, rgba(0,0,0,0) 10px, rgba(0,0,0,0) 100%),
+                    linear-gradient(to top,#D7F1F8 0,rgba(149,201,249,0.4) 8px, rgba(0,0,0,0) 8px, rgba(0,0,0,0) 100%),
+                    linear-gradient(to right,#3D87D7 0,#8DC0F5 8px, rgba(141,192,245,0) 8px, rgba(0,0,0,0) 100%),
+                    linear-gradient(to left,#3D87D7 0,#8DC0F5 8px, rgba(141,192,245,0) 8px, rgba(0,0,0,0) 100%);
+}
+
+.Button[data-theme="macos"]:active, .RoundButton[data-theme="macos"]:active, .CircleButton[data-theme="macos"]:active,
+.CornerButton[data-theme="macos"]:active, .ColorButton[data-theme="macos"]:active, .PathButton[data-theme="macos"]:active,
+.BitmapButton[data-theme="macos"]:active, .PopupButton[data-theme="macos"]:active, .AngleButton[data-theme="macos"]:active {
+  border-color: #425C7F;
+  border-top-color: #292950;
+  border-right-color: #3F5F81;
+  border-bottom-color: #596F73;
+  background-color:#8CB5E0;
+  background-image: linear-gradient(to bottom,rgba(41,41,85,0.4) 0, rgba(41,55,148,0.8) 4px,rgba(127,172,221,0) 10px, rgba(0,0,0,0) 10px, rgba(0,0,0,0) 100%),
+                    linear-gradient(to top,#CCE1E7 0,rgba(145,191,234,0.4) 8px, rgba(0,0,0,0) 8px, rgba(0,0,0,0) 100%),
+                    linear-gradient(to right,#4580C2 0,#8CB5E0 8px, rgba(140,181,224,0) 8px, rgba(0,0,0,0) 100%),
+                    linear-gradient(to left,#4580C2 0,#8CB5E0 8px, rgba(140,181,224,0) 8px, rgba(0,0,0,0) 100%);
+}
+
+.Button[data-theme="macos"], .RoundButton[data-theme="macos"], .CircleButton[data-theme="macos"], .ColorButton[data-theme="macos"],
+.CornerButton[data-theme="macos"], .PathButton[data-theme="macos"], .BitmapButton[data-theme="macos"], .PopupButton[data-theme="macos"],
+.AngleButton[data-theme="macos"],
+.Button[data-theme="macos"][data-enabled='false'], .CornerButton[data-theme="macos"][data-enabled='false'],
+.RoundButton[data-theme="macos"][data-enabled='false'], .CircleButton[data-theme="macos"][data-enabled='false'],
+.ColorButton[data-theme="macos"][data-enabled='false'], .PathButton[data-theme="macos"][data-enabled='false'],
+.BitmapButton[data-theme="macos"][data-enabled='false'], .PopupButton[data-theme="macos"][data-enabled='false'],
+.AngleButton[data-theme="macos"][data-enabled='false'] {
+  border: 1px solid #88888A;
+  background-color:#F8F9F7;
+  background-image: linear-gradient(to bottom,rgba(136,136,138,0.4) 0,rgba(247,246,249,0) 10px, rgba(0,0,0,0) 10px, rgba(0,0,0,0) 100%),
+                    linear-gradient(to top,rgba(249,249,249,0.4) 0,rgba(249,249,249,0.4) 8px, rgba(0,0,0,0) 8px, rgba(0,0,0,0) 100%),
+                    linear-gradient(to right,#D8D8D8 0,#F8F9F7 8px, rgba(248,249,247,0) 8px, rgba(0,0,0,0) 100%),
+                    linear-gradient(to left,#D8D8D8 0,#F8F9F7 8px, rgba(248,249,247,0) 8px, rgba(0,0,0,0) 100%);
+  box-shadow:0 1px 2px 0 #A7ACB4;
+}
+
+.Button[data-theme="macos"]:hover:before, .RoundButton[data-theme="macos"]:hover:before, .CircleButton[data-theme="macos"]:hover:before,
+.ColorButton[data-theme="macos"]:hover:before, .CornerButton[data-theme="macos"]:hover:before, .BitmapButton[data-theme="macos"]:hover:before,
+.PopupButton[data-theme="macos"]:hover:before, .PathButton[data-theme="macos"]:hover:before, .AngleButton[data-theme="macos"]:hover:before {
+  background-image:linear-gradient(to bottom, #DDE3F9 0, #92C4F9 100%);
+  opacity:1;
+}
+
+.Button[data-theme="macos"]:active:before, .RoundButton[data-theme="macos"]:active:before, .CircleButton[data-theme="macos"]:active:before,
+.ColorButton[data-theme="macos"]:active:before, .CornerButton[data-theme="macos"]:active:before, .BitmapButton[data-theme="macos"]:active:before,
+.PopupButton[data-theme="macos"]:active:before, .PathButton[data-theme="macos"]:active:before, .AngleButton[data-theme="macos"]:active:before,
+.Button[data-theme="macos"][data-focused="true"]:before, .RoundButton[data-theme="macos"][data-focused="true"]:before, .CircleButton[data-theme="macos"][data-focused="true"]:before,
+.ColorButton[data-theme="macos"][data-focused="true"]:before, .CornerButton[data-theme="macos"][data-focused="true"]:before, .BitmapButton[data-theme="macos"][data-focused="true"]:before,
+.PopupButton[data-theme="macos"][data-focused="true"]:before, .PathButton[data-theme="macos"][data-focused="true"]:before, .AngleButton[data-theme="macos"][data-focused="true"]:before {
+  background-image:linear-gradient(to bottom, #D2D8ED 0, #91B9E6 100%);
+  opacity:1;
+}
+
+.Button[data-theme="macos"]:before, .RoundButton[data-theme="macos"]:before, .CircleButton[data-theme="macos"]:before,
+.ColorButton[data-theme="macos"]:before, .CornerButton[data-theme="macos"]:before, .BitmapButton[data-theme="macos"]:before,
+.PopupButton[data-theme="macos"]:before, .PathButton[data-theme="macos"]:before, .AngleButton[data-theme="macos"]:before,
+.Button[data-theme="macos"][data-enabled='false']:before, .CornerButton[data-theme="macos"][data-enabled='false']:before,
+.RoundButton[data-theme="macos"][data-enabled='false']:before, .CircleButton[data-theme="macos"][data-enabled='false']:before,
+.ColorButton[data-theme="macos"][data-enabled='false']:before, .PathButton[data-theme="macos"][data-enabled='false']:before,
+.BitmapButton[data-theme="macos"][data-enabled='false']:before, .PopupButton[data-theme="macos"][data-enabled='false']:before,
+.AngleButton[data-theme="macos"][data-enabled='false']:before {
+  position:absolute;
+  content:"";
+  left:5px;
+  top:0;
+  height:7px;
+  right:5px;
+  background-image:linear-gradient(to bottom, #F9F9F9 0, #F9F9F9 100%);
+  border-radius: 5px 5px 3px 3px;
+  opacity:0.7;
+  box-shadow:0 0 1px 0 #F9F9F9;
+}
+
+.SpeedButton[data-theme="macos"]:hover, .PageControl_LeftBtn[data-theme="macos"]:hover, .PageControl_RightBtn[data-theme="macos"]:hover {
+  border-color:#A3A3A3;
+  border-bottom-color:#595959;
+  background-color:#EEE;
+  box-shadow:inset 0 1px 0 0 #FEFEFE,inset 0 2px 0 0 #F6F6F6,inset 0 3px 0 0 #E1E1E1,inset 0 4px 0 0 #E4E4E4,inset 0 -1px 0 0 #FCFCFC,inset 0 -2px 0 0 #FAFAFA,inset 0 -3px 0 0 #F7F7F7;
+}
+
+.SpeedButton[data-theme="macos"]:active, .PageControl_LeftBtn[data-theme="macos"]:active, .PageControl_RightBtn[data-theme="macos"]:active {
+  border-color:#6F6F6F;
+  border-bottom-color:#1C1C1C;
+  background-color:#C3C3C3;
+  box-shadow:inset 0 1px 0 0 #D4D4D4,inset 0 2px 0 0 #CACACA,inset 0 3px 0 0 #B4B4B4,inset 0 4px 0 0 #B9B9B9,inset 0 5px 0 0 #BFBFBF,inset 0 -1px 0 0 #D1D1D1,inset 0 -2px 0 0 #CFCFCF,inset 0 -3px 0 0 #CDCDCD;
+}
+
+.SpeedButton[data-theme="macos"], .PageControl_LeftBtn[data-theme="macos"], .PageControl_RightBtn[data-theme="macos"] {
+  border:1px solid transparent;
+  border-radius:3px;
+}
+
+.Panel[data-theme="macos"], .CalloutPanel[data-theme="macos"] {
+  border: 1px solid #C3C3C3;
+  border-top-color:#A8A8A8;
+  border-bottom-color:#CECECE;
+  background-color: #E0E0E0;
+  border-radius:3px;
+  box-shadow:inset 0 1px 0 0 #BFBFBF,inset 0 2px 0 0 #D5D5D5, inset 0 0 0 1px #DCDCDC;
+}
+
+.CalloutPanel[data-theme="macos"]:after {
+  border:1px solid #E0E0E0;
+}
+
+.CalloutPanel[data-theme="macos"]:before {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  width: 0;
+  height: 0;
+  border: 1px solid #A8A8A8;
+  content: "";
+}
+
+.ColorButton[data-theme="macos"] {
+  border: 1px solid #404040;
+}
+
+.ColorButton[data-theme="macos"] span {
+  visibility: hidden;
+}
+
+.ColorButtonColor[data-theme="macos"] {
+  border: 1px solid #C1C1C1;
+}
+
+.StatusBar[data-theme="macos"] {
+  left: 0;
+  height: 22px;
+  border-top: 1px solid #C1C1C1;
+  background-color: #E8E8E8;
+  box-shadow:inset 0 1px 0 0 #F4F4F4;
+}
+
+.StatusBar[data-theme="macos"]:before {
+  right: 2px;
+  bottom: 2px;
+  width: 11px;
+  height: 11px;
+  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAkAAAAJCAYAAADgkQYQAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwgAADsIBFShKgAAAABl0RVh0U29mdHdhcmUAUGFpbnQuTkVUIHYzLjUuNUmK/OAAAAAmSURBVChTY2AgACoqKv4TUoNfHmYC+Sahm0C6SbhMIN4kQiaA5AG0PyQKD/7QYwAAAABJRU5ErkJggg==);
+}
+
+.ToolBar[data-theme="macos"] {
+  background-color: #E8E8E8;
+  border-bottom:1px solid #9F9F9F;
+}
+
+.CheckBox[data-theme="macos"]:before {
+  max-width: 15px;
+  width: 15px;
+  height: 15px;
+  border: 1px solid #202020;
+  border-radius: 2px;
+  background-image: linear-gradient(to bottom,#606060 0,#303030 100%);
+  margin-right: 2px;
+}
+
+.CheckBox[data-theme="macos"]:after {
+  width: 12px;
+  left: 2px;
+  color: #F5AB28;
+}
+
+.CheckBox[data-theme="macos"][data-state='grayed']:after {
+  background-color: #F5AB28;
+  content: "";
+  left: 4px;
+  width: 7px;
+}
+
+.CheckBox[data-theme="macos"], .RadioButton[data-theme="macos"], .PathCheckBox[data-theme="macos"],
+.CheckBox[data-theme="macos"][data-focused='true'], .RadioButton[data-theme="macos"][data-focused='true'], .PathCheckBox[data-theme="macos"][data-focused='true'] {
+  padding-left: 19px;
+  color: #E0E0E0;
+  height: 16px;
+  line-height: 16px;
+  box-shadow: 0 0 0 rgba(0,0,0,1);
+}
+
+.RadioButton[data-theme="macos"]:before {
+  position: absolute;
+  max-width: 15px;
+  width: 15px;
+  height: 15px;
+  border: 1px solid #202020;
+  border-radius: 50%;
+  background-image: linear-gradient(to bottom,#606060 0,#303030 100%);
+  margin-right: 2px;
+}
+
+.RadioButton[data-theme="macos"]:after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  left: 4px;
+  top: 5px;
+  background-color: #F5AB28;
+}
+
+.PathCheckBox[data-theme="macos"] svg path {
+  fill: #000;
+}
+
+.GroupBox[data-theme="macos"] {
+  border: 1px solid #9B9B9B;
+  border-left-color:#C1C1C1;
+  border-right-color:#C1C1C1;
+  border-bottom-color:#DADADA;
+  border-radius: 6px;
+}
+
+.GroupBox[data-theme="macos"] legend {
+  color: #010101;
+}
+
+.ToolButton[data-theme="macos"]:hover {
+  border-left-color:#B9B9B9;
+  border-right-color:#B9B9B9;
+  background-color:rgba(202,202,202,0.5);
+}
+
+.ToolButton[data-theme="macos"], .PathToolButton[data-theme="macos"] {
+  border-left:1px solid transparent;
+  border-right:1px solid transparent;
+  color: #000;
+}
+
+.SplitToolButton[data-theme="macos"] {
+  border-left: 1px solid transparent;
+  border-right: 1px solid transparent;
+}
+
+.SplitToolButton[data-theme="macos"] .BitmapButton[data-theme="macos"], .SplitToolButton[data-theme="macos"] .PopupButton[data-theme="macos"] {
+  background:none;
+  border-radius:0;
+  border-color:transparent;
+  box-shadow:none;
+}
+
+.SplitToolButton[data-theme="macos"] .BitmapButton[data-theme="macos"]:before,
+.SplitToolButton[data-theme="macos"] .PopupButton[data-theme="macos"]:before {
+  display:none;
+}
+
+.SplitToolButton[data-theme="macos"] .BitmapButton[data-theme="macos"]:hover,
+.SplitToolButton[data-theme="macos"] .PopupButton[data-theme="macos"]:hover {
+  border-left-color:#B9B9B9;
+  border-right-color:#B9B9B9;
+  background-color:rgba(202,202,202,0.5);
+}
+
+.SplitToolButton[data-theme="macos"][data-opened="true"] {
+  border-left-color: #B9B9B9;
+  border-right-color: #B9B9B9;
+  background-color: rgba(202,202,202,0.5);
+}
+
+.SplitToolButton[data-theme="macos"][data-opened="true"] .BitmapButton[data-theme="macos"]:hover,
+.SplitToolButton[data-theme="macos"][data-opened="true"] .PopupButton[data-theme="macos"]:hover
+{
+  border-color:transparent;
+  background-color:transparent;
+}
+
+.SplitButton[data-theme="macos"] .BitmapButton[data-theme="macos"] {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.SplitButton[data-theme="macos"] .PopupButton[data-theme="macos"] {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.AngleButton_knob[data-theme="macos"]:before {
+  background-color: #000;
+}
+
+.AngleButton_text[data-theme="macos"] {
+  color: #000;
+}
+
+.ProgressBar[data-theme="macos"][data-orientation="horizontal"] {
+  border-top: 1px solid #A3A3A3;
+  border-bottom: 1px solid #CECECE;
+  background-image: linear-gradient(to bottom,#E3E3E3 0,#D9D9D9 42%,#F8F8F8 100%);
+  height:16px;
+  box-shadow:inset 0 1px 0 0 #D2D2D2,0 1px 3px 0 #ADADAD;
+  overflow:visible;
+}
+
+.ProgressBar[data-theme="macos"][data-orientation="horizontal"] .ProgressBar_progress[data-theme="macos"],
+.GridviewCellProgressBar[data-theme="macos"] {
+  margin:0;
+  border-top: 1px solid #2151B7;
+  border-bottom:1px solid #CECECE;
+  box-shadow:inset 0 1px 0 0 #5C88CE,inset 0 1px 0 0 #79BFFF;
+  background-image: linear-gradient(to bottom,#84ABDF 0,#4B90DF 50%,#7BCBFF 100%);
+}
+
+.ProgressBar[data-theme="macos"][data-orientation="horizontal"] .ProgressBar_progress[data-theme="macos"] {
+  top:-1px;
+  bottom:-1px;
+}
+
+.ProgressBar[data-theme="macos"][data-orientation="horizontal"] .ProgressBar_progress[data-theme="macos"]:before {
+  background-image: none;
+  border-radius: 9px;
+}
+
+.ProgressBar[data-theme="macos"][data-orientation="vertical"] {
+  border-left: 1px solid #A3A3A3;
+  border-right: 1px solid #CECECE;
+  background-image: linear-gradient(to right,#E3E3E3 0,#D9D9D9 42%,#F8F8F8 100%);
+  width:16px;
+  box-shadow:inset 0 1px 0 0 #D2D2D2,0 1px 3px 0 #ADADAD;
+  overflow:visible;
+}
+
+.ProgressBar[data-theme="macos"][data-orientation="vertical"] .ProgressBar_progress[data-theme="macos"] {
+  margin:0;
+  left:-1px;
+  right:-1px;
+  border-left: 1px solid #2151B7;
+  border-right:1px solid #CECECE;
+  box-shadow:inset 1px 0 0 0 #5C88CE,inset 1px 0 0 0 #79BFFF;
+  background-image: linear-gradient(to right,#84ABDF 0,#4B90DF 50%,#7BCBFF 100%);
+}
+
+.ProgressBar[data-theme="macos"][data-orientation="vertical"] .ProgressBar_progress[data-theme="macos"]:before {
+  background-image: none;
+  border-radius: 9px;
+}
+
+.ScrollBar[data-theme="macos"][data-orientation="horizontal"] {
+  border-radius: 3px;
+  background-image: linear-gradient(to bottom,#606060 0,#303030 100%);
+}
+
+.ScrollBarFirstButton[data-theme="macos"]:hover,
+.ScrollBarLastButton[data-theme="macos"]:hover {
+  color: #202020;
+}
+
+.ScrollBar[data-theme="macos"][data-orientation="vertical"] {
+  border-radius: 3px;
+  background-image: linear-gradient(to right,#606060 0,#303030 100%);
+}
+
+.ScrollBar[data-theme="macos"][data-orientation="horizontal"] .ScrollBar_inner[data-theme="macos"] {
+  left: 18px;
+  top: 2px;
+  right: 18px;
+  bottom: 2px;
+  border-radius: 6px;
+  background-image: linear-gradient(to bottom,#303030 0,#606060 100%);
+}
+
+.ScrollBar[data-theme="macos"][data-orientation="horizontal"] .ScrollBar_thumb[data-theme="macos"]:hover {
+  background-image: linear-gradient(to bottom,#F9DDA2 0,#674704 100%);
+}
+
+.ScrollBar[data-theme="macos"][data-orientation="horizontal"] .ScrollBar_thumb[data-theme="macos"],
+.ScrollBar[data-theme="macos"][data-orientation="horizontal"][data-enabled='false'] .ScrollBar_thumb[data-theme="macos"] {
+  top: 0;
+  bottom: 0;
+  border: 1px solid #404040;
+  background-image: linear-gradient(to bottom,#F4BB40 0,#674704 100%);
+  border-radius: 8px;
+}
+
+.ScrollBar[data-theme="macos"][data-orientation="vertical"] .ScrollBar_inner[data-theme="macos"] {
+  left: 2px;
+  top: 18px;
+  right: 2px;
+  bottom: 18px;
+  border-radius: 6px;
+  background-image: linear-gradient(to right,#303030 0,#606060 100%);
+}
+
+.ScrollBar[data-theme="macos"][data-orientation="vertical"] .ScrollBar_thumb[data-theme="macos"]:hover {
+  background-image: linear-gradient(to right,#F9DDA2 0,#674704 100%);
+}
+
+.ScrollBar[data-theme="macos"][data-orientation="vertical"] .ScrollBar_thumb[data-theme="macos"],
+.ScrollBar[data-theme="macos"][data-orientation="vertical"][data-enabled='false'] .ScrollBar_thumb[data-theme="macos"] {
+  left: 0;
+  right: 0;
+  border: 1px solid #404040;
+  background-image: linear-gradient(to right,#F4BB40 0,#674704 100%);
+  border-radius: 8px;
+}
+
+.Slider[data-theme="macos"],
+.AlphaSlider[data-theme="macos"],
+.BWSlider[data-theme="macos"],
+.HUESlider[data-theme="macos"] {
+  box-shadow: 0 0 0 rgba(0,0,0,1);
+}
+
+.Slider[data-theme="macos"]:before,
+.AlphaSlider[data-theme="macos"]:before,
+.BWSlider[data-theme="macos"]:before,
+.HUESlider[data-theme="macos"]:before,
+.AlphaSlider[data-theme="macos"]:after,
+.BWSlider[data-theme="macos"]:after,
+.HUESlider[data-theme="macos"]:after {
+  position: absolute;
+  content: "";
+  border: 1px solid #303030;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.Slider[data-theme="macos"][data-orientation="horizontal"]:before,
+.AlphaSlider[data-theme="macos"][data-orientation="horizontal"]:before,
+.BWSlider[data-theme="macos"][data-orientation="horizontal"]:before,
+.HUESlider[data-theme="macos"][data-orientation="horizontal"]:before,
+.AlphaSlider[data-theme="macos"][data-orientation="horizontal"]:after {
+  left: 6px;
+  top: 4px;
+  right: 6px;
+  bottom: 4px;
+}
+
+.BWSlider[data-theme="macos"][data-orientation="horizontal"]:after,
+.BWSlider[data-theme="macos"][data-orientation="vertical"]:after,
+.HUESlider[data-theme="macos"][data-orientation="horizontal"]:after,
+.HUESlider[data-theme="macos"][data-orientation="vertical"]:after {
+  visibility: hidden;
+}
+
+.AlphaSlider[data-theme="macos"][data-orientation="horizontal"]:before {
+  left: 7px;
+  top: 5px;
+  right: 7px;
+  bottom: 5px;
+  border: none;
+}
+
+.Slider[data-theme="macos"][data-orientation="vertical"]:before,
+.AlphaSlider[data-theme="macos"][data-orientation="vertical"]:before,
+.BWSlider[data-theme="macos"][data-orientation="vertical"]:before,
+.HUESlider[data-theme="macos"][data-orientation="vertical"]:before,
+.AlphaSlider[data-theme="macos"][data-orientation="vertical"]:after {
+  left: 4px;
+  top: 6px;
+  right: 4px;
+  bottom: 6px;
+}
+
+.AlphaSlider[data-theme="macos"][data-orientation="vertical"]:before {
+  left: 5px;
+  top: 7px;
+  right: 5px;
+  bottom: 7px;
+  border: none;
+}
+
+.Slider[data-theme="macos"][data-orientation="horizontal"]:before {
+  background-image: linear-gradient(to bottom,#303030 0,#606060 100%);
+}
+
+.Slider[data-theme="macos"][data-orientation="vertical"]:before {
+  background-image: linear-gradient(to right,#303030 0,#606060 100%);
+}
+
+.Slider[data-orientation="horizontal"] .Slider_thumb[data-theme="macos"]:hover,
+.AlphaSlider[data-orientation="horizontal"] .AlphaSlider_thumb[data-theme="macos"]:hover,
+.BWSlider[data-orientation="horizontal"] .BWSlider_thumb[data-theme="macos"]:hover,
+.HUESlider[data-orientation="horizontal"] .HUESlider_thumb[data-theme="macos"]:hover {
+  background-image: linear-gradient(to bottom,#808080 0,#303030 100%);
+}
+
+.Slider[data-orientation="vertical"] .Slider_thumb[data-theme="macos"]:hover,
+.AlphaSlider[data-orientation="vertical"] .AlphaSlider_thumb[data-theme="macos"]:hover,
+.BWSlider[data-orientation="vertical"] .BWSlider_thumb[data-theme="macos"]:hover,
+.HUESlider[data-orientation="vertical"] .HUESlider_thumb[data-theme="macos"]:hover {
+  background-image: linear-gradient(to right,#808080 0,#303030 100%);
+}
+
+.Slider[data-orientation="horizontal"] .Slider_thumb[data-theme="macos"],
+.AlphaSlider[data-orientation="horizontal"] .AlphaSlider_thumb[data-theme="macos"],
+.BWSlider[data-orientation="horizontal"] .BWSlider_thumb[data-theme="macos"],
+.HUESlider[data-orientation="horizontal"] .HUESlider_thumb[data-theme="macos"],
+.Slider[data-theme="macos"][data-enabled='false'][data-orientation="horizontal"] .Slider_thumb[data-theme="macos"],
+.AlphaSlider[data-theme="macos"][data-enabled='false'][data-orientation="horizontal"] .AlphaSlider_thumb[data-theme="macos"],
+.BWSlider[data-theme="macos"][data-enabled='false'][data-orientation="horizontal"] .BWSlider_thumb[data-theme="macos"],
+.HUESlider[data-theme="macos"][data-enabled='false'][data-orientation="horizontal"] .HUESlider_thumb[data-theme="macos"] {
+  top: 0;
+  bottom: 0;
+  border: 1px solid #303030;
+  border-radius: 50%;
+  background-image: linear-gradient(to bottom,#606060 0,#303030 100%);
+  z-index: 1;
+}
+
+.Slider[data-orientation="vertical"] .Slider_thumb[data-theme="macos"],
+.AlphaSlider[data-orientation="vertical"] .AlphaSlider_thumb[data-theme="macos"],
+.BWSlider[data-orientation="vertical"] .BWSlider_thumb[data-theme="macos"],
+.HUESlider[data-orientation="vertical"] .HUESlider_thumb[data-theme="macos"],
+.Slider[data-theme="macos"][data-enabled='false'][data-orientation="vertical"] .Slider_thumb[data-theme="macos"],
+.AlphaSlider[data-theme="macos"][data-enabled='false'][data-orientation="vertical"] .AlphaSlider_thumb[data-theme="macos"],
+.BWSlider[data-theme="macos"][data-enabled='false'][data-orientation="vertical"] .BWSlider_thumb[data-theme="macos"],
+.HUESlider[data-theme="macos"][data-enabled='false'][data-orientation="vertical"] .HUESlider_thumb[data-theme="macos"] {
+  left: 0;
+  right: 0;
+  border: 1px solid #303030;
+  border-radius: 50%;
+  background-image: linear-gradient(to right,#606060 0,#303030 100%);
+  z-index: 1;
+}
+
+.Slider[data-theme="macos"][data-orientation="horizontal"][data-mode="range"] .Slider_range[data-theme="macos"] {
+  top: 5px;
+  bottom: 5px;
+  position: absolute;
+  background-image: linear-gradient(to bottom,#F4BB40 0,#674704 100%);
+}
+
+.Slider[data-theme="macos"][data-orientation="vertical"][data-mode="range"] .Slider_range[data-theme="macos"] {
+  left: 5px;
+  right: 5px;
+  position: absolute;
+  background-image: linear-gradient(to right,#F4BB40 0,#674704 100%);
+}
+
+.ToolTip[data-theme="macos"] {
+  box-shadow: rgba(0,0,0,0.5) 3px 3px 3px;
+}
+
+.SliderToolTip[data-theme="macos"], .ToolTip[data-theme="macos"] {
+  border-radius: 3px;
+  padding: 2px;
+  border: 1px solid #303030;
+  background-image: linear-gradient(to bottom,#F5CD76 0,#9F7009 100%);
+  z-index: 999999;
+}
+
+.SliderToolTip[data-theme="macos"][data-position="top"] {
+  top: -25px;
+}
+
+.SliderToolTip[data-theme="macos"][data-position="bottom"] {
+  bottom: -25px;
+}
+
+.SliderToolTip[data-theme="macos"][data-position="left"] {
+  left: -25px;
+}
+
+.SliderToolTip[data-theme="macos"][data-position="right"] {
+  left: 20px;
+}
+
+.SliderToolTip[data-theme="macos"]:before {
+  height: 0;
+  position: absolute;
+  width: 0;
+  content: "";
+  visibility: visible;
+}
+
+.SliderToolTip[data-theme="macos"][data-position="top"]:before,
+.SliderToolTip[data-theme="macos"][data-position="bottom"]:before {
+  left: 50%;
+  transform: translate(-50%, 0);
+  -webkit-transform: translate(-50%, 0);
+}
+
+.SliderToolTip[data-theme="macos"][data-position="top"]:before {
+  border-top: 5px solid #303030;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 0 solid transparent;
+  bottom: -5px;
+}
+
+.SliderToolTip[data-theme="macos"][data-position="bottom"]:before {
+  border-bottom: 5px solid #303030;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 0 solid transparent;
+  top: -5px;
+}
+
+.SliderToolTip[data-theme="macos"][data-position="left"]:before,
+.SliderToolTip[data-theme="macos"][data-position="right"]:before {
+  top: 50%;
+  transform: translate(0, -50%);
+  -webkit-transform: translate(0, -50%);
+}
+
+.SliderToolTip[data-theme="macos"][data-position="left"]:before {
+  border-left: 5px solid #303030;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-right: 0 solid transparent;
+  right: -5px;
+}
+
+.SliderToolTip[data-theme="macos"][data-position="right"]:before {
+  border-right: 5px solid #303030;
+  border-bottom: 5px solid transparent;
+  border-top: 5px solid transparent;
+  border-left: 0 solid transparent;
+  left: -5px;
+}
+
+.SliderToolTip[data-theme="macos"]:after {
+  height: 0;
+  position: absolute;
+  width: 0;
+  content: "";
+  visibility: visible;
+}
+
+.SliderToolTip[data-theme="macos"][data-position="top"]:after,
+.SliderToolTip[data-theme="macos"][data-position="bottom"]:after {
+  left: 50%;
+  transform: translate(-50%, 0);
+  -webkit-transform: translate(-50%, 0);
+}
+
+.SliderToolTip[data-theme="macos"][data-position="left"]:after,
+.SliderToolTip[data-theme="macos"][data-position="right"]:after {
+  top: 50%;
+  transform: translate(0, -50%);
+  -webkit-transform: translate(0, -50%);
+}
+
+.SliderToolTip[data-theme="macos"][data-position="top"]:after {
+  border-top: 4px solid #9F7009;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 0 solid transparent;
+  bottom: -4px;
+}
+
+.SliderToolTip[data-theme="macos"][data-position="bottom"]:after {
+  border-bottom: 4px solid #F5CD76;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 0 solid transparent;
+  top: -4px;
+}
+
+.SliderToolTip[data-theme="macos"][data-position="right"]:after {
+  border-right: 5px solid #CA9E3F;
+  border-bottom: 5px solid transparent;
+  border-top: 5px solid transparent;
+  border-left: 0 solid transparent;
+  left: -4px;
+}
+
+.SliderToolTip[data-theme="macos"][data-position="left"]:after {
+  border-left: 5px solid #CA9E3F;
+  border-bottom: 5px solid transparent;
+  border-top: 5px solid transparent;
+  border-right: 0 solid transparent;
+  right: -4px;
+}
+
+.ScrollBoxContent[data-theme="macos"] {
+  color: #000;
+}
+
+.ListBoxContent[data-theme="macos"], .TreeViewContent[data-theme="macos"], .ListBoxPopupContent[data-theme="macos"], .GridView_ViewPort[data-theme="macos"] {
+  background-color: #FFF;
+}
+
+.ListBox[data-theme="macos"], .TreeView[data-theme="macos"], .ListBoxPopup[data-theme="macos"] {
+  border: 1px solid #A3A3A3;
+  background-color: #FFF;
+}
+
+.ListBoxItem[data-theme="macos"], .TreeViewItem[data-theme="macos"] span, .ListBoxItemPopup[data-theme="macos"], .ListBoxItemColor[data-theme="macos"] {
+  color: #000;
+  overflow: hidden;
+}
+
+.ListBoxItemPopup[data-theme="macos"]:hover, .ListBoxItemColor[data-theme="macos"]:hover {
+  background-color: #936639;
+}
+
+.ListBoxItemPopup[data-theme="macos"][disabled='disabled']:hover,
+.ListBoxItemColor[data-theme="macos"][disabled='disabled']:hover {
+  background-color: transparent;
+}
+
+.ListBoxItemPopup[data-theme="macos"] + .ListBoxItemHeader:hover {
+  background-color: #F9DDA2;
+}
+
+.TVIHasChild[data-theme="macos"]:before {
+  color: #727272;
+}
+
+.TreeViewItem[data-theme="macos"] .CheckBox[data-theme="macos"] {
+  margin-left: 19px;
+  padding-left: 0;
+}
+
+.TreeViewItem[data-theme="macos"] .CheckBox[data-theme="macos"]:before {
+  left: 10px;
+}
+
+.TreeViewItem[data-theme="macos"] .CheckBox[data-theme="macos"]:after {
+  left: 12px;
+}
+
+.TreeViewItem[data-theme="macos"] .CheckBox[data-theme="macos"][data-state='grayed']:after {
+  left: 14px;
+}
+
+.ListBox[data-theme="macos"][data-usealternatecolor] .ListBoxContent .ListBoxItem[data-theme="macos"][data-alternate="true"] {
+  background-color: #F0F0F0;
+}
+
+.ListBox[data-theme="macos"] .ListBoxContent .ListBoxItem[data-theme="macos"][data-isheader="true"] {
+  background-color: #F9DDA2;
+  color: #404040;
+}
+
+.ListBox[data-theme="macos"] .ListBoxContent .ListBoxItem[data-theme="macos"][data-selected="true"][data-isheader="false"] {
+  background-color: #936639;
+}
+
+.TVI_Expanded[data-theme="macos"]:before {
+  color: #000;
+  content: "7";
+}
+
+.TVI_Collapsed[data-theme="macos"]:before {
+  color: #000;
+  content: ")";
+}
+
+.ExpanderHeader[data-theme="macos"] {
+  border: 1px solid #AAA;
+  color: #3F3D3D;
+  height: 23px;
+  line-height: 23px;
+  background-image: linear-gradient(to bottom,#EFEFEF 0,#CACACA 100%);
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+  box-shadow:inset 0 1px 0 0 #FFF;
+  font-weight:bold;
+}
+
+.ExpanderHeader[data-theme="macos"]:hover {
+  color: #7E7C7C;
+}
+
+.ExpanderCaption[data-theme="macos"] {
+  left:12px;
+  right:45px;
+  height:23px;
+}
+
+.ExpanderViewPort[data-theme="macos"] {
+  top: 23px;
+  background-color:#F5F5F5;
+  border: 1px solid #C1C1C1;
+  border-top-width:0;
+}
+
+.ExpanderButton[data-theme="macos"], .ExpanderCheckBox[data-theme="macos"] {
+  color: #000;
+}
+
+.ExpanderButton[data-theme="macos"] {
+  right:6px;
+  border-radius:50%;
+  border:1px solid #0E0E0E;
+  border-bottom-color:#858235;
+  border-left-color:#7A3013;
+  border-right-color:#7A3013;
+  background-color:#FF6A00;
+  width:14px;
+  min-width:14px;
+  max-width:14px;
+  height:14px;
+  min-height:14px;
+  max-height:14px;
+  left:auto;
+  background-image: radial-gradient(150% 120% at center 90%, rgba(253,252,146,1), rgba(253,252,146,0.2) 50%),
+                    radial-gradient(75% 50% at center 10%, rgba(255,255,255,1), rgba(255,255,255,0.2) 50%);
+  box-shadow:inset 0 1px 0 0 #9A482A,0 1px 0 0 #FFF;
+}
+
+.ExpanderButton[data-theme="macos"] span {
+  position:absolute;
+  left:0;
+  top:0;
+  right:0;
+  bottom:0;
+}
+
+.ExpanderButton[data-theme="macos"] span:before {
+  content:"";
+  font-family:Tahoma;
+  -webkit-transform: none;
+  transform: none;
+  left: 0;
+  top: 50%;
+  text-align: center;
+  font-size: 17px;
+  opacity: 0.3;
+}
+
+.ExpanderButton[data-theme="macos"][data-expanded="false"]:hover span:before {
+  content:"+";
+  font-size: 12px;
+  opacity: 0.4;
+}
+
+.ExpanderButton[data-theme="macos"][data-expanded="true"]:hover span:before {
+  content:"-";
+}
+
+.ExpanderCheckBox[data-theme="macos"] {
+  left: auto;
+  width: 15px;
+  right: 25px;
+}
+
+.ExpanderCheckBox[data-theme="macos"]:before {
+  content: "N";
+  font-size: 8pt;
+}
+
+.Window[data-theme="macos"] {
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+  box-shadow: 0 3px 10px 2px rgba(0,0,0,.7);
+  overflow: hidden;
+  border: 1px solid #C1C1C1;
+}
+
+.Window[data-theme="macos"][data-borderstyle="none"],
+.Window[data-theme="macos"][data-borderstyle*="oolW"] {
+  border-radius: 5px;
+}
+
+.WindowTitleBar[data-theme="macos"] {
+  margin: 0;
+  background-image: linear-gradient(to bottom,#EFEFEF 0,#CACACA 100%);
+  box-shadow:inset 0 1px 0 0 #F9F9F9, inset 0 2px 0 0 #EFEFEF;
+  height: 21px;
+  min-height: 21px;
+  max-height: 21px;
+}
+
+.WindowTitle[data-theme="macos"] {
+  color: #000;
+  font-size: 10pt;
+  left: 50%;
+  transform: translateX(-50%);
+  -webkit-transform: translateX(-50%);
+  height: 21px;
+  min-height: 21px;
+  max-height: 21px;
+  line-height: 21px;
+}
+
+.WindowCloseButton[data-theme="macos"], .WindowMinimizeButton[data-theme="macos"], .WindowMaxRestoreButton[data-theme="macos"], .WindowHelpButton[data-theme="macos"],
+.WindowRollUpDownButton[data-theme="macos"], .WindowStayOnOffButton[data-theme="macos"] {
+  top: 4px;
+  border-radius: 50%;
+  max-width:14px;
+  min-width:14px;
+  width:14px;
+  max-height:14px;
+  min-height:14px;
+  height:14px;
+  float:left;
+  margin-right:0;
+  margin-left:7px;
+}
+
+.WindowHelpButton[data-theme="macos"], .WindowRollUpDownButton[data-theme="macos"], .WindowStayOnOffButton[data-theme="macos"] {
+  float:right;
+  margin-right:7px;
+  margin-left:0;
+}
+
+.WindowCloseButton[data-theme="macos"] {
+  border:1px solid #0E0E0E;
+  border-bottom-color:#804E46;
+  border-left-color:#590F13;
+  border-right-color:#590F13;
+  background-color:#C80000;
+  background-image: radial-gradient(150% 120% at center 90%, rgba(249,181,170,1), rgba(249,181,170,0.2) 50%),
+                    radial-gradient(75% 50% at center 10%, rgba(255,255,255,1), rgba(255,255,255,0.2) 50%);
+  box-shadow:inset 0 1px 0 0 #75262A,0 1px 0 0 #FFF;
+}
+
+.WindowMinimizeButton[data-theme="macos"] {
+  border:1px solid #200C0E;
+  border-bottom-color:#858135;
+  border-left-color:#7A2F12;
+  border-right-color:#7A2F12;
+  background-color:#FF6400;
+  background-image: radial-gradient(150% 120% at center 90%, rgba(253,252,146,1), rgba(253,252,146,0.2) 50%),
+                    radial-gradient(75% 50% at center 10%, rgba(255,255,255,1), rgba(255,255,255,0.2) 50%);
+  box-shadow:inset 0 1px 0 0 #9A482A,0 1px 0 0 #FFF;
+}
+
+.WindowMaxRestoreButton[data-theme="macos"] {
+  border:1px solid #0E0E0E;
+  border-bottom-color:#668138;
+  border-left-color:#1A3C11;
+  border-right-color:#1A3C11;
+  background-color:#00C800;
+  background-image: radial-gradient(150% 120% at center 90%, rgba(219,253,149,1), rgba(219,253,149,0.2) 50%),
+                    radial-gradient(75% 50% at center 10%, rgba(255,255,255,1), rgba(255,255,255,0.2) 50%);
+  box-shadow:inset 0 1px 0 0 #2C5E29,0 1px 0 0 #FFF;
+}
+
+.WindowHelpButton[data-theme="macos"] {
+  border:1px solid #0C1820;
+  border-bottom-color:#593585;
+  border-left-color:#12297A;
+  border-right-color:#12297A;
+  background-color:#001CFF;
+  background-image: radial-gradient(150% 120% at center 90%, rgba(194,255,255,1), rgba(194,255,255,0.2) 50%),
+                    radial-gradient(75% 50% at center 10%, rgba(255,255,255,1), rgba(255,255,255,0.2) 50%);
+  box-shadow:inset 0 1px 0 0 #2A449A,0 1px 0 0 #FFF;
+}
+
+.WindowRollUpDownButton[data-theme="macos"] {
+  border:1px solid #0E0E0E;
+  border-bottom-color:#533881;
+  border-left-color:#533881;
+  border-right-color:#533881;
+  background-color:#C800C8;
+  background-image: radial-gradient(150% 120% at center 90%, rgba(224,212,249,1), rgba(224,212,249,0.2) 50%),
+                    radial-gradient(75% 50% at center 10%, rgba(255,255,255,1), rgba(255,255,255,0.2) 50%);
+  box-shadow:inset 0 1px 0 0 #5B295E,0 1px 0 0 #FFF;
+}
+
+.WindowStayOnOffButton[data-theme="macos"] {
+  border:1px solid #0E0E0E;
+  border-bottom-color:#467880;
+  border-left-color:#0F5955;
+  border-right-color:#0F5955;
+  background-color:#00C8C8;
+  background-image: radial-gradient(150% 120% at center 90%, rgba(170,238,249,1), rgba(170,238,249,0.2) 50%),
+                    radial-gradient(75% 50% at center 10%, rgba(255,255,255,1), rgba(255,255,255,0.2) 50%);
+  box-shadow:inset 0 1px 0 0 #267571,0 1px 0 0 #FFF;
+}
+.WindowCloseButton[data-theme="macos"] span, .WindowMinimizeButton[data-theme="macos"] span, .WindowMaxRestoreButton[data-theme="macos"] span,
+.WindowHelpButton[data-theme="macos"] span, .WindowRollUpDownButton[data-theme="macos"] span,
+.WindowStayOnOffButton[data-theme="macos"] span {
+  position:absolute;
+  left:0;
+  top:0;
+  right:0;
+  bottom:0;
+}
+
+.WindowCloseButton[data-theme="macos"] span:before, .WindowMinimizeButton[data-theme="macos"]  span:before, .WindowMaxRestoreButton[data-theme="macos"]  span:before,
+.WindowHelpButton[data-theme="macos"]  span:before, .WindowRollUpDownButton[data-theme="macos"]  span:before,
+.WindowStayOnOffButton[data-theme="macos"]  span:before {
+  content:"";
+  transform:none;
+  -webkit-transform:none;
+  font-family:Tahoma;
+  font-size:10pt;
+  left: 0;
+  top: 0;
+  right: 0;
+  line-height: 10px;
+  height: 12px;
+}
+
+.WindowCloseButton[data-theme="macos"] span:before {
+  color:#670100;
+}
+
+.WindowCloseButton[data-theme="macos"]:hover span:before,
+.WindowCloseButton[data-theme="macos"]:active span:before {
+  content:"x";
+}
+
+.WindowCloseButton[data-theme="macos"]:active {
+  background-color: #640000;
+}
+
+.WindowMaxRestoreButton[data-theme="macos"] span:before {
+  color:#297310;
+}
+
+.WindowMaxRestoreButton[data-theme="macos"]:hover span:before,
+.WindowMaxRestoreButton[data-theme="macos"]:active span:before {
+  content:"+";
+  font-size:9pt;
+  font-weight:bold;
+  text-shadow:0 1px 0 #297310;
+}
+
+.WindowMaxRestoreButton[data-theme="macos"]:active {
+  background-color: #006400;
+}
+
+.WindowMinimizeButton[data-theme="macos"] span:before {
+  color:#9E6013;
+}
+
+.WindowMinimizeButton[data-theme="macos"]:hover span:before,
+.WindowMinimizeButton[data-theme="macos"]:active {
+  content:"-";
+  font-size:12pt;
+  font-weight:bold;
+  text-shadow:0 1px 0 #9E6013;
+}
+
+.WindowMinimizeButton[data-theme="macos"]:active {
+  background-color: #803200;
+}
+
+.WindowHelpButton[data-theme="macos"] span:before {
+  color:#242E7D;
+}
+
+.WindowHelpButton[data-theme="macos"]:hover span:before {
+  content:"9";
+  font-family:jagui;
+  line-height: 13px;
+  font-size: 6pt;
+}
+
+.WindowHelpButton[data-theme="macos"]:active {
+  background-color: #000E80;
+}
+
+.WindowRollUpDownButton[data-theme="macos"] span:before {
+  color:#773177;
+}
+
+.WindowRollUpDownButton[data-theme="macos"]:hover span:before {
+  content:">";
+  font-family:jagui;
+  line-height: 15px;
+  font-size: 7pt;
+  text-shadow:0 1px 0 #773177;
+}
+
+.WindowRollUpDownButton[data-theme="macos"]:active {
+  background-color: #640064;
+}
+
+.WindowStayOnOffButton[data-theme="macos"] span:before {
+  color:#2D4E4E;
+}
+
+.WindowStayOnOffButton[data-theme="macos"]:hover span:before {
+  content:"@";
+  font-family:jagui;
+  line-height: 15px;
+  font-size: 7pt;
+}
+
+.WindowStayOnOffButton[data-theme="macos"]:active {
+  background-color: #006464;
+}
+
+.WindowCloseButton[data-theme="macos"][data-enabled="false"], .WindowMinimizeButton[data-theme="macos"][data-enabled="false"],
+.WindowMaxRestoreButton[data-theme="macos"][data-enabled="false"], .WindowHelpButton[data-theme="macos"][data-enabled="false"],
+.WindowRollUpDownButton[data-theme="macos"][data-enabled="false"], .WindowStayOnOffButton[data-theme="macos"][data-enabled="false"] {
+  border-color:#929292;
+  border-bottom-color:#A4A4A4;
+  border-left-color:#B9B9B9;
+  border-right-color:#B9B9B9;
+  background-color:#C9C9C9;
+  background-image: radial-gradient(150% 120% at center 90%, rgba(221,221,221,1), rgba(221,221,221,0.2) 50%),
+                    radial-gradient(75% 50% at center 10%, rgba(255,255,255,1), rgba(255,255,255,0.2) 50%);
+}
+
+.WindowContent[data-theme="macos"] {
+  background-color: #E8E8E8;
+  border-color: #000;
+  overflow: hidden;
+}
+
+.WindowStatusBar[data-theme="macos"] {
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 16px;
+  border-bottom-right-radius: 9px;
+  border-bottom-left-radius: 9px;
+}
+
+.TabSheet[data-theme="macos"] {
+  color: #E0E0E0;
+  border-top: 1px solid #303030;
+  border-left: 1px solid #303030;
+  border-right: 1px solid #303030;
+  border-top-left-radius: 3px;
+  border-top-right-radius: 3px;
+  background-image: linear-gradient(to bottom,#303030 0,#404040 100%);
+}
+
+.TabSheet[data-theme="macos"]:hover {
+  background-image: linear-gradient(to bottom,#4F4F4F 0,#404040 100%);
+}
+
+.TabSheet_selected[data-theme="macos"], .TabSheet_selected[data-theme="macos"]:hover {
+  background-image: linear-gradient(to bottom,#606060 0,#404040 100%);
+  height: 20px;
+  margin-top: 0;
+  padding-top: 2px;
+}
+
+.PagesContent[data-theme="macos"] {
+  border-top: 1px solid #303030;
+  border-right: 1px solid #303030;
+  border-bottom: 1px solid #303030;
+  border-left: 1px solid #303030;
+  border-radius: 3px;
+  background-image: linear-gradient(to bottom,#404040 0,#303030 100%);
+}
+
+.TextBox[data-theme="macos"], .RoundTextBox[data-theme="macos"], .MaskedTextBox[data-theme="macos"], .PasswordTextBox[data-theme="macos"], .TextBoxClearBtn[data-theme="macos"] {
+  border: 1px solid #C3C3C3;
+  border-top-color:#7C7C7C;
+  border-bottom-color:#DDD;
+  background-color: #FFF;
+}
+
+.TextBox[data-theme="macos"] input, .RoundTextBox[data-theme="macos"] input, .MaskedTextBox[data-theme="macos"] input, .PasswordTextBox[data-theme="macos"] input,
+.MemoViewPort[data-theme="macos"] textarea, .PasswordTextBox_btn[data-theme="macos"], .TextBoxClearBtn[data-theme="macos"] input, .TextBoxClearBtn_btn[data-theme="macos"] {
+  color: #000;
+}
+
+.SpinBox[data-theme="macos"] {
+  border: 1px solid #C3C3C3;
+  border-top-color:#7C7C7C;
+  border-bottom-color:#DDD;
+  border-radius: 12px;
+  background-color: #FFF;
+  text-align: center;
+}
+
+.SpinBox_Minus[data-theme="macos"], .SpinBox_Plus[data-theme="macos"], .SpinBox[data-theme="macos"] input {
+  color: #000;
+}
+
+.SpinBox_Minus[data-theme="macos"]:hover, .SpinBox_Plus[data-theme="macos"]:hover {
+  background-color: #707070;
+  opacity: 0.7;
+}
+
+.SpinBox_Minus[data-theme="macos"][disabled='disabled'],
+.SpinBox_Plus[data-theme="macos"][disabled='disabled'] {
+  background-color: transparent;
+  opacity: 0.7;
+}
+
+.TextBoxClearBtn[data-theme="macos"], .Memo[data-theme="macos"] {
+  border: 1px solid #C3C3C3;
+  border-top-color:#7C7C7C;
+  border-bottom-color:#DDD;
+  background-color: #FFF;
+}
+
+.MemoViewPort[data-theme="macos"] textarea {
+  background-color: #FFF;
+}
+
+.TextBoxClearBtnText[data-theme="macos"] {
+  color: #000;
+}
+
+.TextBoxClearBtn_btn[data-theme="macos"], .PasswordTextBox_btn[data-theme="macos"] {
+  border-radius: 50%;
+  color: #000;
+  text-align: center;
+}
+
+.TextBoxClearBtn_btn[data-theme="macos"] {
+  font-size: 8pt;
+}
+
+.TextBoxClearBtn_btn[data-theme="macos"]:hover, .PasswordTextBox_btn[data-theme="macos"]:hover {
+  background-color: #808080;
+  opacity: 0.7;
+}
+
+.TextBoxClearBtn_btn[data-theme="macos"][disabled='disabled'],
+.PasswordTextBox_btn[data-theme="macos"][disabled='disabled'] {
+  background-color: transparent;
+  opacity: 0.7;
+}
+
+.Popup[data-theme="macos"] {
+  background-color: #404040;
+}
+
+.DropDownListBox[data-theme="macos"], .DropDownListBoxColor[data-theme="macos"], .DropDownCalendar[data-theme="macos"], .DropDownSlider[data-theme="macos"],
+.DropDownTimePanel[data-theme="macos"] {
+  border: 1px solid #222;
+  border-radius: 3px;
+  background-image: linear-gradient(to bottom,#505050 0,#303030 100%);
+  color: #E0E0E0;
+}
+
+.DropDownListBox[data-theme="macos"]:hover, .DropDownListBoxColor[data-theme="macos"]:hover, .DropDownCalendar[data-theme="macos"]:hover, .DropDownSlider[data-theme="macos"]:hover,
+.DropDownTimePanel[data-theme="macos"]:hover {
+  background-image: linear-gradient(to bottom,#707070 0,#303030 100%);
+}
+
+.DropDownListBox[data-theme="macos"]:active, .DropDownListBox[data-theme="macos"][data-opened="true"], .DropDownListBox[data-theme="macos"][data-opened="true"]:hover,
+.DropDownListBoxColor[data-theme="macos"]:active, .DropDownListBoxColor[data-theme="macos"][data-opened="true"], .DropDownListBoxColor[data-theme="macos"][data-opened="true"]:hover,
+.DropDownCalendar[data-theme="macos"]:active, .DropDownCalendar[data-theme="macos"][data-opened="true"], .DropDownCalendar[data-theme="macos"][data-opened="true"]:hover,
+.DropDownSlider[data-theme="macos"]:active, .DropDownSlider[data-theme="macos"][data-opened="true"], .DropDownSlider[data-theme="macos"][data-opened="true"]:hover,
+.DropDownTimePanel[data-theme="macos"]:active, .DropDownTimePanel[data-theme="macos"][data-opened="true"], .DropDownTimePanel[data-theme="macos"][data-opened="true"]:hover {
+  background-image: linear-gradient(to bottom,#404040 0,#303030 100%);
+}
+
+.DropDownListBox[data-theme="macos"] .DropDownListBoxContent input[type="text"],
+.DropDownListBoxColor[data-theme="macos"] .DropDownListBoxColorContent input[type="text"],
+.DropDownCalendarText[data-theme="macos"],
+.DropDownTimePanelText[data-theme="macos"] {
+  background-color: transparent;
+  border: none;
+  padding: 0;
+  color: #E0E0E0;
+}
+
+.DropDownListBox[data-theme="macos"][data-editable="true"] .DropDownListBoxContent,
+.DropDownListBoxColor[data-theme="macos"][data-editable="true"] .DropDownListBoxColorContent {
+  border: 1px solid #202020;
+  background-color: #333;
+}
+
+.Calendar[data-theme="macos"] {
+  border: 1px solid #222;
+  border-radius: 5px;
+  background-image: linear-gradient(to bottom,#707070 0,#303030 100%);
+}
+
+.CalendarContent[data-theme="macos"] {
+  border: 1px solid #303030;
+  background-color: #404040;
+}
+
+.CalendarPrevMonth[data-theme="macos"], .CalendarNow[data-theme="macos"], .CalendarNextMonth[data-theme="macos"], .CalendarMonth[data-theme="macos"] {
+  color: #E0E0E0;
+}
+
+.CalendarPrevMonth[data-theme="macos"]:hover, .CalendarNow[data-theme="macos"]:hover, .CalendarNextMonth[data-theme="macos"]:hover {
+  background-color: #707070;
+  opacity: 0.7;
+  border-radius: 50%;
+}
+
+.Calendar[data-theme="macos"][disabled='disabled'] .CalendarPrevMonth[data-theme="macos"],
+.Calendar[data-theme="macos"][disabled='disabled'] .CalendarNow[data-theme="macos"]:hover,
+.Calendar[data-theme="macos"][disabled='disabled'] .CalendarNextMonth[data-theme="macos"]:hover {
+  background-color: transparent;
+  opacity: 1;
+  border-radius: 0;
+}
+
+.CalendarWeekDays[data-theme="macos"] {
+  border-bottom: 1px solid #E0E0E0;
+}
+
+.CalendarWeekDay[data-theme="macos"], .CalendarDay[data-theme="macos"], .CalendarWeekNum[data-theme="macos"], .CalendarMDC[data-theme="macos"] {
+  color: #E0E0E0;
+}
+
+.CalendarWeekNum[data-theme="macos"] {
+  border-right: 1px solid #E0E0E0;
+}
+
+.CalendarDay[data-theme="macos"]:hover, .CalendarMonth[data-theme="macos"]:hover, .CalendarMDC[data-theme="macos"]:hover {
+  background-color: rgba(147,102,57,0.5);
+  border-radius: 5px;
+}
+
+.Calendar[data-theme="macos"][disabled='disabled'] .CalendarDay[data-theme="macos"],
+.Calendar[data-theme="macos"][disabled='disabled'] .CalendarMonth[data-theme="macos"],
+.Calendar[data-theme="macos"][disabled='disabled'] .CalendarMDC[data-theme="macos"] {
+  background-color: transparent;
+  border-radius: 0;
+}
+
+.CalendarOutMonth[data-theme="macos"] {
+  color: #B0B0B0;
+}
+
+.CalendarThisDay[data-theme="macos"] {
+  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAAQCAYAAAAS7Y8mAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAYdEVYdFNvZnR3YXJlAFBhaW50Lk5FVCB2My4zNqnn4iUAAAIOSURBVDhPpVRbK0RRFB6SEiIvvMjwIlEkRcgl5F6KxjV3hZF5wAxzzrjfclcSjx7lD8iDZy/mnJlhBqW8oLzvfZgn396zJbnPfLU653x7r7W+vdY6W/cTXu6OwqhzLo+qtmaiyAMwC7GPy+Tc7DNFZmaCtVDHdK7m3gwXrp+huTciqDpZTBTrwIcgb2afkJGsil6upVPHbDb2VhNFMoo1M7gUEeodyJqBYGPk3GKFSgN1zGRChV673tMjWCpRbOVQN4h9OcKFw/t4GkRdS0nEDjHM1zmfKJYQ1LVUwrMqciPURAv6X6AXK1EQNoEEnT5CnUrnQdXJMu/DSRAn/QRitLFyoabr4aw2UNpFPdsBBWVAvetRDpmpLWRqqWsxQawFBAg0woZZhl5MgMl7fxywWvQmjqlFOSpZBiu6bRBrAQFxGoidT0WMDh3EJEg1Ys1vYDSTeUkd0+WcgOJRZGrnH34CpYzFAFjw7NGudkIEKRkwe1btejeKE/8Emp4CfzOsn7qWIwTNj5DIC65IjdSzFSzoX4FGReK0tb6fSurQ3FvvQd9AnbOl4q/rhoJ479PZlxPyfHcYTC9X9US11UDhOMyCcc1/vj34XhA2ZPEj+RIM4XKpw7MIfAHeK9CHVtQQ9wjWsQ9cJS6sv5VP82yzazIbQZowLUY4SzB21BFwfUwpdS6kaTf7ocLlG+h0r2x4dtP3nIHMAAAAAElFTkSuQmCC);
+}
+
+.CalendarSelected[data-theme="macos"] {
+  background-color: rgba(147,102,57,0.5);
+  border-radius: 5px;
+}
+
+.CalendarThis[data-theme="macos"] {
+  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACsAAAAmCAYAAABdw2IeAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAYdEVYdFNvZnR3YXJlAFBhaW50Lk5FVCB2My4zNqnn4iUAAATXSURBVFjDzVlvTBNnHL5ZxD+NqGyZTpc5wzYS0gSyJcaQgagZDYZkcZosilmj/HFBJqCB0vYKFSoyqeCcc8vm0M2JY9kH/aLGZImJ24dlo7TX3tUKlI24TbIl2z707lr9sOcI9t5rCwIrvXuTS8j17t7nfX7P7y8UlYL18K+fVwtc70aB6ykS2O6dvKdtH+9/v4n3dtBht4UODzYrryEbzTPHcTkP4bl9vK9rqxA8l/Po3+ASaqFWdOL7Zby/qzLsbrElAJrHxXtam3lf5w5x7Ep2SgCKIxfWg8HtvPdYBZhpSQXIJMxbBO508TzN/JNOCJzJh3mrwoNm2xw3poW7Z+sj41fXRcavZUcn7uSKI325uFeIw+7AVZdUKoNmGiyXi2MDT80aqBD8eC1YrJZe/l9seRxvJPv+o38COjHUv5b3ndgWHqKPJgD2nyyZHVCu97Ww22pOZMvazHvbK3i2u0gc/twQfXDbELl/3YAPG3jWZQRbNWBLIRE8X/6k/SK/fKPHN8vxrjX2LvwBhOXO+CJO+joetio3PNYIvRaKw33Ln6jtUP8qnuvdAq+vhTnfFe6dz5qtNXHglyAfeW+PvRZyWDSd6bfgIRvBpA3gS+BcmVSaFhguVhDlO/FKEm/vM8D0hMnpBiH4yYtUmpc4cjEDOI7IVnXsVDwQZtr18PgW4oF6gXWtpFRakM9bhOYblT96HXsIYdeD1RWUigtSeJWwMC3/wPXkyeHJjNj4UT6l8hJDl18mdTuVNu/oeKajTk57bXsoDSxgyU4Ai3CUS5ifFkcvbdACWHH0S4OMy0JPabV9LxHTKiiNLGh2M+FgZilELANqy+ObyFr5mgHr6yKjwQEppRoIj7NF7t9YqhWwYU/roRhYxlkqSaCUcCyTVoAKw+efIYsnnj2VQyEKmIiUVqodvbq2yxa3N0UnflgCsE45pfm7C7QAFKE0A4WMLAGPo+xxJIhRjVCRowkJBD4sUJSIXO+aKRHbY/GVZ3uy1QYa+fVbHcxeI0uz00R4nAwW1ZXqYNHtboorvDeQxUtMBvjhOVXNf+/T1QAo+xBzfLfyJIyzKQY2cMagKquM0ySzam0WQ19lxZeFB+STdJSoBRQJqUjRKLKugmS91ptElqhRxfysq1DRwjAdu6ajPo+suNDbP5tWoFxPsaLNH7JVIVstnqbX+UIPfVgJdsvSEvh/v5UBzy9TAqUbcG/mNgo1wS7iZOhkO59e0Dp17OuV2HOvYhbhthxGBfj8bEyxRjFY8LQeFEYu6BeAzUXYKx+WbIgbMb2Hgn/dXDrJUuVEr61WHP4sZfoVguc2IvK8Ez+GguwOIp3OrTGN/vFdJiJDddyJzShuNiMFzmu4ERm/molAX4D6wyQ5b9wcyyoN5tAULp5fXh6/tgpyqEyYm3odjbz/5DZobX30we2MaaeNf/t16Ir1kwD93bshp6PJJ4v2eqT2vBSIfyAL4ExJN5HYGbIfBvD98FyjwJ4yApQRFpD+rga4OmnEOcP4swV9lVEcvbg0hd46oEMGKYYjNKVoom2R2hLUHlkLF2JC/SuEwAdGaO7InOezbmmY11kpcKc3RX+7uTydiQY9/KUXpHksJPA2zL0fIUhqgyYvSECKHlWT/8xgnFuFu2fzHv75Y8pHT/8B48uoQeKkaPoAAAAASUVORK5CYII=);
+}
+
+.CalendarMonths[data-theme="macos"], .CalendarDecades[data-theme="macos"], .CalendarCenturies[data-theme="macos"] {
+  background-color: #404040;
+}
+
+.Rating[data-theme="macos"][data-orientation="horizontal"][data-normalimg=""],
+.Rating[data-theme="macos"][data-orientation="vertical"][data-normalimg=""],
+.GridviewCellRating[data-theme="macos"] {
+  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABIAAAAQCAYAAAAbBi9cAAAB2UlEQVQ4T52TTUsCYRDHd13f3zaDToGHCAIDQdQQFZQOQiB1DIKiPkGdgj5B0Kk+QVEQdDQ6eQgFEUnFU3uKDkInD+b762r/WdpQXLUamMPzMPN75j8zD8vMMbfbHaSQfD6fmhXKzgMFAoHYcDjk0ul09N8gl8vlsFqtrwSoVqvrhUJBmAabWZHf7781GAz7lNxqte5Q1cGfQeiNHZB3nuc5Sq5UKiJgK+hVUQk2VlEwGHR3Op0lnU5nHwwGuyaTaVOr1Up53W6XaTQazyqV6gExRcSUUqlUXoayTqdzzWKxxDmOs8MZlmUl12g0DJ1HTRRFptfrMWi+5HSGF2u1WkSqyOv1hvDCk9FoNBPgN0bAZrNZR3XRbDab/JFGsvBKHLBFWc40IMkEpITKt2R5Yz2icQMUN5vNy2q1WpHT7/eZer3+AVBkdB0mxk8yAUoAqAgCgEBhkjMaMAHy+XyHmNa1Xq9XBLXbbZreUSaTuZkJwhJeAnQs94maSiYP4XsNrrCcJ/NACXyLEPZIGjUS7ykB4D2CYY/ouyQBCs8EYXqfSOIhIQnIaS6Xe6EEj8ezgfsLSA7hvoJpLUwFORyOVZvNFsNunAHwqNQkALexc+flcnlHEIQ3OeYLMtLcwlsocVQAAAAASUVORK5CYII=);
+}
+
+.Rating[data-theme="macos"][data-orientation="horizontal"][data-selectedimg=""] div,
+.Rating[data-theme="macos"][data-orientation="vertical"][data-selectedimg=""] div,
+.GridviewCellRating[data-theme="macos"] div {
+  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABIAAAAQCAYAAAAbBi9cAAACb0lEQVQ4T52SSUxTYRSF7+OnfZ1rWwoWsIZC1NCVMkpbWlEIGoLuTHCIAwtZoRsTFyYkLkzcKCtc4BAHEndCjCFFsaUtM7oqUSMlVKBiaWvnvtZHfUMwNJQSvbubd86X/5z7MNhl/B/q9LREfmzKnkuK7QYK2w2DGAZIpLO1/TfI8/Zwpayk0kkDAivzWtWpT/M7wXK+KOTQPxNoOi/Q5pir/7lEZ7/4zyD/SJUaFwhdgroBxICmOkgiFtXIm+fc2WAZL4pO6qsScVLJ4yN1msTO4vvPNeWr2hnfb88QEEsvRzGUfkVp3JTGK6y3z21CGVDEYVhCCKnzhGUA+RLAuApA8qOQJ9ECePpZraoTNkJOIP0TkE76KHIINqKLQJKkOxgKtjCgwGiNkYvz3uDlXSKkNLFGYhlg/TVAOsXuGAeg4AwAXsqspNcCxEJfJEkk2mRNM9a/0ehYVBwzT3NVjgpbAJbvZ++19AaQP82QcD3yUjFPbsbL6Ig+t1gqNvMOdJfQ0WC1LxNW3MVES3ztXQkHwy1bf4dt56djCoqqLdxDtwF+vMgE7T0Pyc93ILY2a6LjbP24HTTWcElYfOIJp+waQNABwK9g9fFvAFIdpBYfQnT13WVZ4/jTnKCwTf+AX36lGxW1sqX6KBg1SKFj97VhiC887hUb7NdzgxwGi0DbY0wTXqrUEUgGvwzQBq70YAcqbAYMV0LM2WMV62ymnKDIeOMvjrxGmvRNW4lE/GbB8dlp2rD+vroW5/HvcRW1xpR/JihqGNuzI+j78JEKmUQ4mEqlbsmMk0PZ7h+w1rdzOJy7gVD09L7Wj1Rx7PwBDMXsAiSh/voAAAAASUVORK5CYII=);
+}
+
+.Rating[data-theme="macos"][data-orientation="horizontal"][data-hoveredimg=""]:hover div,
+.Rating[data-theme="macos"][data-orientation="vertical"][data-hoveredimg=""]:hover div {
+  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABIAAAAQCAYAAAAbBi9cAAACRklEQVQ4T2NkIAB2d6jZgJS4Vtw6gk8pIyGD9nUabGRgYGZ2Kj/rQ7ZBGxpUtKQlRa+CDHj6/LV2QMOda7gMw+uifX0mi5RVuWNBmu/e/rrYqehMHMkG7e4wlmPhYrtnbs7JDNJ88uT3v3++/VJyrTj7CJthKC7aN83G+NePn6JsHOxyDH//hSvIsTpJikOUPH/5n+HBo9/7GJiZVgLVPAKqee2UdeQszFDGi6ssPd6/YZnJxMQsx83FwMDCwsDAxsrAICTIwMDHg2r3py8MDO/eMzD8+s3A8OcPA8PXbwwM//79ffTx80c3sHXbJlnac7KyblGWZ+IRFSIUjxD51++A4fbw35fvv3/7eOUdPwj32r7ZjsZM/xh2KcowCIkJ/8dr2qu3jAz3n/x//Y+J0dMpdT/YeyhhtKHHXIufl2uXuhKLtJAAdrPefWBguHnvz9OPn7+5BZSchCcHjOjfNsnWXkqC64CmGjCgsIDrt34zPHvxzcEr7/BBZGkMg/ZOd0iQkuWZr6zEidWgu/e+Mzx7/CXROfPAAvwGzXGeoKomlC8pDYxCIHjz6geYFhHjgCSDp98Ybt96N9E5ZW8BXoP2z3M9oG8qY//jxx+GF08+M3x4/20ZSIOAIFeUhAwvAwcHC8PF008OOibtdsBv0HyPD6KS/Pyvn308+PPn1zKPzMOnQBp2TLc1Y2fn7hKV4rd//fzjR8fEHSjRgRJGG6daqvBz82/89etnpVva/k3YAmnXLEc/Njb29o9fP/r7Zx+/A1MDAFy+06BMb9dRAAAAAElFTkSuQmCC);
+}
+
+.GridView[data-theme="macos"] {
+  border: 1px solid #303030;
+  border-radius: 3px;
+  background-color: #404040;
+}
+
+.GridView_Content[data-theme="macos"] {
+  border: 1px solid #222;
+  border-radius: 2px;
+}
+
+.GridView_row[data-theme="macos"] .GridView_rowIndic[data-theme="macos"] {
+  background-color: #303030;
+  border-bottom: none;
+}
+
+.GridView_row[data-theme="macos"][data-alternate="true"] {
+  background-color: #333;
+}
+
+.GridView_rowLine[data-theme="macos"] {
+  border-bottom: 1px solid #222;
+}
+
+.GridView_header[data-theme="macos"], .GridView_header[data-theme="macos"] .GridView_rowIndic[data-theme="macos"] {
+  background-image: linear-gradient(to bottom,#505050 0,#303030 100%);
+}
+
+.GridView_header[data-theme="macos"].GridView_rowLine[data-theme="macos"] {
+  border-bottom: 1px solid #222;
+}
+
+.GridView_colLine[data-theme="macos"] {
+  border-right: 1px solid #222;
+}
+
+.GridView_row[data-theme="macos"][data-iscurrent="true"] {
+  background-color: rgba(244,187,64,0.8);
+}
+
+.GridView_rowIndic[data-theme="macos"]:before {
+  color: #E0E0E0;
+}
+
+.GridView_row[data-theme="macos"][data-iscurrent="true"] .GridView_cell[data-theme="macos"] .GridView_cellValue[data-theme="macos"] {
+  color: #222;
+}
+
+.GridView_row[data-theme="macos"][data-iscurrent="true"] .GridView_cell[data-theme="macos"][data-iscurrent="true"] {
+  background-color: rgb(244,187,64);
+}
+
+.GridviewCellLabel[data-theme="macos"] {
+  right: 3px;
+  left: 3px;
+  overflow: hidden;
+}
+
+.GridviewCellCheckBox[data-theme="macos"] {
+  padding: 0;
+  margin: 0;
+  transform: translate(-50%,-50%);
+  -webkit-transform: translate(-50%,-50%);
+  left: 50%;
+  width: 13px;
+}
+
+.GridviewCellRating[data-theme="macos"] {
+  right: 3px;
+  left: 3px;
+  overflow: hidden;
+  padding: 0;
+  margin: 0;
+}
+
+.GridPager[data-theme="macos"] {
+  border: 1px solid #222;
+  border-bottom-right-radius: 2px;
+  border-bottom-left-radius: 2px;
+  background-color: #404040;
+}
+
+.LinkCell[data-theme="macos"] a {
+  color: #E0E0E0;
+}
+
+.NavButton[data-theme="macos"], .NavButton[data-theme="macos"][disabled=disabled]:hover {
+  border: 1px solid #404040;
+  border-radius: 3px;
+  background-image: linear-gradient(to bottom,#505050 0,#353535 100%);
+  color: #E0E0E0;
+}
+
+.NavButton[data-theme="macos"]:hover {
+  background-image: linear-gradient(to bottom,#707070 0,#353535 100%);
+}
+
+.NavButton[data-theme="macos"]:active {
+  background-image: linear-gradient(to bottom,#404040 0,#353535 100%);
+}
+
+.NavButton[data-theme="macos"] .RowSelected[data-theme="macos"], .NavButton .RowSelected[data-theme="macos"]:hover {
+  background-image: none;
+}
+
+.MainMenu[data-theme="macos"] {
+  background-color: #E8E8E8;
+  border-bottom:1px solid #ABABAB;
+}
+
+.MainMenu[data-theme="macos"] div.MenuItem:hover,
+.MainMenu[data-theme="macos"] div.MenuItem[data-active="true"] {
+  background-image:linear-gradient(to bottom, #5170F6 0,#1A43F3 100%);
+}
+
+.MenuItemCaption[data-theme="macos"], .MenuItemCaption[data-theme="macos"] u,
+.MenuItemShortCut[data-theme="macos"] {
+  color: #000;
+}
+
+.MenuItem[data-theme="macos"]:hover .MenuItemCaption[data-theme="macos"], .MenuItem[data-theme="macos"]:hover .MenuItemCaption[data-theme="macos"] u,
+.MenuItem[data-theme="macos"]:hover .MenuItemHasSubMenu[data-theme="macos"]:before,
+.MenuItem[data-theme="macos"]:hover .MenuItemShortCut[data-theme="macos"],
+.MenuItem[data-theme="macos"][data-active="true"] .MenuItemCaption,
+.MenuItem[data-theme="macos"][data-active="true"] .MenuItemCaption u,
+.MenuItem[data-theme="macos"][data-active="true"] .MenuItemHasSubMenu[data-theme="macos"]:before,
+.MenuItem[data-theme="macos"][data-active="true"] .MenuItemShortCut[data-theme="macos"] {
+  color: #FFF;
+}
+
+.PopupBox[data-theme="macos"], .PopupMenu[data-theme="macos"] {
+  background-color: #E8E8E8;
+  box-shadow:0 2px 10px 0 #777;
+}
+
+.subMenu[data-theme="macos"] {
+  border: 1px solid #B6B6B6;
+}
+
+.subMenu[data-theme="macos"]:before {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 29px;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5);
+  z-index: -1;
+}
+
+.MenuItemSep[data-theme="macos"] {
+  background-color: #898989;
+}
+
+.MenuItemCaption[data-theme="macos"] {
+  padding-left: 25px;
+  line-height: 20px;
+}
+
+.MainMenu[data-theme="macos"] .MenuItem[data-theme="macos"] .MenuItemCaption[data-theme="macos"] {
+  padding-left: 0;
+}
+
+.MenuItem[data-theme="macos"]:hover,
+.MenuItem[data-theme="macos"][data-active="true"] {
+  background-color: rgba(0,60,142,0.5);
+  background-image:none;
+}
+
+.MenuItemHasSubMenu[data-theme="macos"]:before {
+  color: #000;
+}
+
+.RowSelected[data-theme="macos"] {
+  background-color: #3169B6;
+  color:#FFF;
+}
+
+.TextBox[data-theme="macos"][data-focused="true"],
+.PasswordTextBox[data-theme="macos"][data-focused="true"],
+.RoundTextBox[data-theme="macos"][data-focused="true"],
+.SpinBox[data-theme="macos"][data-focused="true"],
+.MaskedTextBox[data-theme="macos"][data-focused="true"],
+.TextBoxClearBtn[data-theme="macos"][data-focused="true"],
+.ListBox[data-theme="macos"][data-focused="true"],
+.TreeView[data-theme="macos"][data-focused="true"],
+.Memo[data-theme="macos"][data-focused="true"]
+{
+  box-shadow: 0 0 4px 1px #699BD3;
+}
+
+[data-theme="macos"]::selection {
+  background-color: #3169B6;
+  color: #FFF;
+}
+
+[data-theme="macos"]::-moz-selection {
+  background-color: #3169B6;
+  color: #FFF;
+}
+
+[data-theme="macos"]::-webkit-selection {
+  background-color: #3169B6;
+  color: #FFF;
+}
+
+.ItemsWheel[data-theme="macos"], .NumberWheel[data-theme="macos"] {
+  border: 1px solid #222222;
+  background-color: #404040;
+}
+
+.ItemsWheelSep[data-theme="macos"], .NumberWheelSep[data-theme="macos"] {
+  background-color: #6F6F6F;
+}
+
+.ItemsWheelContent[data-theme="macos"], .NumberWheelContent[data-theme="macos"] {
+  border-left: 1px solid #6F6F6F;
+  border-right: 1px solid #6F6F6F;
+}
+
+.ItemsWheelItem[data-theme="macos"], .NumberWheelItem[data-theme="macos"] {
+  color: #E0E0E0;
+}
+
+.TimePanel[data-theme="macos"] {
+  background-color: #333;
+  border: 1px solid #303030;
+}
+
+.ImageControl[data-theme="macos"] {
+  border: 1px solid #303030;
+  border-radius: 3px;
+  background-image: linear-gradient(to bottom,#303030 0,#404040 70%, #404040 100%);
+}
+
+.ImageViewer[data-theme="macos"] {
+  border: 1px solid #303030;
+  background-color: #404040;
+}
+
+.nonVisual[data-theme="macos"] div {
+  color: #E0E0E0;
+}
+
+.MenuItem[data-theme="macos"][data-ischecked="true"] .MenuItemCaption {
+  background-image: none;
+}
+
+.MenuItem[data-theme="macos"][data-ischecked="true"][data-isradioitem="false"] .MenuItemCaption:before,
+.MenuItem[data-theme="macos"][data-ischecked="true"][data-isradioitem="true"] .MenuItemCaption:before {
+  position: absolute;
+  left: 0;
+  width: 29px;
+  height: 0;
+  text-align: center;
+  font-family: "JaGui";
+  color: #F69E2D;
+}
+
+.MenuItem[data-theme="macos"][data-ischecked="true"][data-isradioitem="false"] .MenuItemCaption:before {
+  content: "4";
+  top: -6px;
+  font-size: 8pt;
+}
+
+.MenuItem[data-theme="macos"][data-ischecked="true"][data-isradioitem="true"] .MenuItemCaption:before {
+  content: "3";
+  font-size: 5pt;
+}
+
+.frDlgDestinationDdlb[data-theme="macos"],
+.frDlgFindDdlb[data-theme="macos"],
+.frDlgReplaceDdlb[data-theme="macos"],
+.frDlgSB_Btn[data-theme="macos"],
+.frDlgSB_PopBtn[data-theme="macos"],
+.frDlgSwitchBtn[data-theme="macos"] {
+  border: 1px solid #404040;
+}
+
+.frDlgSB_PopBtn[data-theme="macos"] {
+  border-left: 1px solid #333;
+}
+
+
+.frDlgDestinationDdlb[data-theme="macos"][data-focused="true"],
+.frDlgFindDdlb[data-theme="macos"][data-focused="true"],
+.frDlgReplaceDdlb[data-theme="macos"][data-focused="true"],
+.frDlgSwitchBtn[data-theme="macos"][data-focused="true"] {
+  box-shadow: 0 0 0 #000;
+}
+
+.frDlgAllBtn[data-theme="macos"] span,
+.frDlgAllBtn[data-theme="macos"].pressed span {
+  background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAAAiElEQVQoU51SQQ6AIAyTsx/xQ77SD/kRz0gXSsokQ91BgmnX0S4tHyqXSqVAsQ/qOrasPdb9TADyHwjdnSQAR+IEk9jOiMjRhqeO6FXDUSNi5Ju9C2SqqcqI+HD1TSpdHDMFH0dT1C4Aqf0keVdtATzQ5zZV1K7W0W9Kvf8aVQ3s9i/MrS43MTco65v/WF3cWgAAAABJRU5ErkJggg==');
+  background-position: center center;
+  background-size: 14px 14px;
+  background-repeat: no-repeat;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.frDlgAllBtn[data-theme="macos"].pressed span {
+  background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOCAYAAAAfSC3RAAAAfElEQVQoU5VSQQ7AIAiT/z/aAbGkOByTw4iG0q5Vxl1NHReD+MdqavEO0bJruktnBxpoDVb8AAPovQNC2qsLSyxYz1Ib4NG6SmoyqUBmV3+mkuLoGLCTXfUcYwsiXT0yppmSEYN7bi0jZ4VXVcUR5txIDQ/39/hlLv/zeACqHDkLZLFpUwAAAABJRU5ErkJggg==');
+  background-color: #F5AB28;
+}
+
+.frDlgNextBtn[data-theme="macos"] span,
+.frDlgNextBtn[data-theme="macos"].pressed span {
+  background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAOCAYAAAAbvf3sAAAAbElEQVQoU2NkIAD+AwEjEMCUwRkgga+rNf4j6+cOvcGIUwNIMUgBuoUgDchicAX4NMCcBLYNppskDchuR3cWyU5C9xOGJwkFMzjYcClCDn94PMA0IEtiE8OqAcODSDFMHQ0wU4hyEjaPY/M0AKjzX/89c7POAAAAAElFTkSuQmCC');
+  background-position: center center;
+  background-size: 12px 14px;
+  background-repeat: no-repeat;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.frDlgNextBtn[data-theme="macos"].pressed span {
+  background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAOCAYAAAAbvf3sAAAAYElEQVQoU62R0Q4AIARF8/8fLRaGLLPlyXDcm2D1gTQCOmYJF5DC80DB5RLgYRnImnGJdhtAnaBZGgHee2FrbCm8KVypv/C5b5BM0LXQA76pS1ogq/0H7B8leSpUR7qADZ8oKgs4qGTrAAAAAElFTkSuQmCC');
+  background-color: #F5AB28;
+}
+
+.frDlgRegExpBtn[data-theme="macos"] span,
+.frDlgRegExpBtn[data-theme="macos"].pressed span {
+  background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAKCAYAAACALL/6AAAATklEQVQYV2NkIAD+AwEjEMCUwRm49JGkAaQYbjLUFqw2ICtEtxmvk7DaABTUQDPlCdD2LzDFIA8js+EcJE2aQDU30D0L4+PUgCvUaK8BAJxuPQc8YYM8AAAAAElFTkSuQmCC');
+  background-position: center center;
+  background-size: 13px 11px;
+  background-repeat: no-repeat;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.frDlgRegExpBtn[data-theme="macos"].pressed span {
+  background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAKCAYAAACALL/6AAAAVElEQVQYV2NkIAz+A5UwwpTBGXj0kaQBpBjFcFw2ICtEsZyQkzBt+P//vwaa+58wMjJ+AYrBFIMMhbOROWB9QAM0gRpuQBUhuwDseXwasAYc7TUAAN/IIgpwxRbfAAAAAElFTkSuQmCC');
+  background-color: #F5AB28;
+}
+
+.frDlgWordBtn[data-theme="macos"] span,
+.frDlgWordBtn[data-theme="macos"].pressed span {
+  background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA0AAAALCAYAAACksgdhAAAAm0lEQVQoU2P8DwQMJAJGEtWDlcM1AS3cCORbMzIyioAkgHwNIHUdyEcxGOQyZE23gIreAvFyoLpJBDUBFeQBFTsD8V4gjgRqsiRG03Gg4jKg4sNAxW9AToRpQvYzyKlw52EJwSlAxVOR/QRWDNMEZE8GSsoB+f7QAAA5NQeI/fBpAgXAFJDnYU4BORHIzgfiJTidR2pcgT1GqiYAgq5s6MtqsqgAAAAASUVORK5CYII=');
+  background-position: center center;
+  background-size: 13px 11px;
+  background-repeat: no-repeat;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.frDlgWordBtn[data-theme="macos"].pressed span {
+  background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA0AAAALCAYAAACksgdhAAAAu0lEQVQoU2NkYGD4D8QkAUaSVEMVwzXJyMh8evLkCS9QHCz2//9/DUZGxuswPpLh/5Ft+s/Hx/dHT0/v+JEjR+wIarKxsTn04MEDAwUFhQuXLl2y/PTpEytBTUAbfn/8+NEJ6JzD0IBhRNKE7G2Qy+DOQwlBXV3dR0Ab3dH8BFID0QRU8PD9+/eCwEDgAxkJcirQT7ZAmzRxagLpBCo8DPI8cgg5Ojqu279/fxBalKA4j6ToAuskSQdQMQBFD1UDcRgcUgAAAABJRU5ErkJggg==');
+  background-color: #F5AB28;
+}
+
+.frDlgSwitchBtn[data-theme="macos"] span {
+  color: #E0E0E0;
+}
+
+.colorDlg_pnlRGB[data-theme="macos"],
+.colorDlg_pnlHSL[data-theme="macos"],
+.colorDlg_pnlHSV[data-theme="macos"] {
+  border-width: 2px;
+  border-radius: 8px;
+}
+
+.colorDlg_btnRGB[data-theme="macos"] {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.colorDlg_btnHSL[data-theme="macos"] {
+  border-left: none;
+  border-right: none;
+  border-radius: 0;
+}
+
+.colorDlg_btnHSV[data-theme="macos"] {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.colorDlg_btnRGB[data-theme="macos"][data-focused="true"],
+.colorDlg_btnHSL[data-theme="macos"][data-focused="true"],
+.colorDlg_btnHSV[data-theme="macos"][data-focused="true"] {
+  box-shadow: 0 0 0 #000;
+}
+
+.vResizeLine[data-theme="macos"] {
+  border-right: 1px dotted #E0E0E0;
+}
+
+.hResizeLine[data-theme="macos"] {
+  border-bottom: 1px dotted #E0E0E0;
+}
+
+.Splitter[data-theme="macos"][data-orientation="horizontal"] {
+  border-bottom: 1px solid #303030;
+  border-top: 1px solid #6D6D6D;
+  background-color: #505050;
+}
+
+.Splitter[data-theme="macos"][data-orientation="vertical"] {
+  border-right: 1px solid #303030;
+  border-left: 1px solid #6D6D6D;
+  background-color: #505050;
+}
+
+.Splitter[data-theme="macos"][data-orientation="horizontal"]:before {
+  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAMAAAADCAYAAABWKLW/AAAAHklEQVQIW2NkYGD4D8QgwMgI4+Tm5jKAOAxABlgWAFuzBZCcNaxyAAAAAElFTkSuQmCC);
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 27px;
+  left: 50%;
+  -webkit-transform: translateX(-50%);
+  transform: translateX(-50%);
+}
+
+.Splitter[data-theme="macos"][data-orientation="vertical"]:before {
+  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAMAAAADCAYAAABWKLW/AAAAHklEQVQIW2NkYGD4D8QgwMgI4+Tm5jKAOAxABlgWAFuzBZCcNaxyAAAAAElFTkSuQmCC);
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 27px;
+  top: 50%;
+  -webkit-transform: translateY(-50%);
+  transform: translateY(-50%);
+}
+
+.Splitter[data-theme="macos"]:hover:before {
+  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAMAAAADCAYAAABWKLW/AAAAJElEQVQIW2P8ulrjPwMDAwN36A1GRhgneK4CAyNI1MPDAywLAOY6CbLm3HvHAAAAAElFTkSuQmCC);
+}
+
+.vGhostSplitter[data-theme="macos"] {
+  background-color: rgba(246,159,45,0.43);
+  top: 0;
+  bottom: 0;
+  width: 5px;
+}
+
+.hGhostSplitter[data-theme="macos"] {
+  background-color: rgba(246,159,45,0.43);
+  left: 0;
+  right: 0;
+  height: 5px;
+}
+
+.TableLayout[data-theme="macos"][data-showcells="true"] > div {
+  outline: 1px #FFF dotted;
+}

@@ -1,0 +1,3271 @@
+﻿@font-face {
+  font-family: "JaGui";
+  /*src: url("../fonts/jagui.woff") format("woff");*/
+  src: url("../fonts/jagui.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+.basefont, html, body, input, textarea {
+  font-family: "Tahoma";
+  font-size: 8pt;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+html, body, div, span, label, img {
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+}
+
+.Desktop, body {
+  background-position:center center;
+  background-repeat:no-repeat;
+  background-size:100% 100%;
+}
+
+.noImage {
+  background-image:none;
+}
+
+input {
+  margin: 0;
+}
+
+::-moz-focus-inner {
+  border: 0;
+}
+
+:focus {
+  outline: none;
+}
+
+::-ms-clear, ::-ms-reveal {
+  display: none;
+}
+
+.canvas:after {
+  content: "Canvas";
+  color: White;
+}
+
+.dom:after {
+  color: White;
+  content: "DOM";
+}
+
+.noSelection {
+  -ms-user-select: none;
+  -moz-user-select: none;
+  -khtml-user-select: none;
+  -o-user-select: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.JAGUI {
+  position: absolute;
+  right: 2px;
+  bottom: 20px;
+  height: 15px;
+  width: 42px;
+  z-index: 99999999;
+}
+
+.JAGUI:after
+{
+  position: absolute;
+  font-size: 30pt;
+  font-family: JaGui;
+  content:"D";
+  width:0;
+  height:0;
+  line-height:0;
+  color:#E0E0E0;
+}
+
+#jaguiClipboard {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100px;
+  height: 50px;
+  z-index: -99999;
+  margin: 0;
+  border: 0 none;
+  padding: 1px;
+  resize: none;
+  outline: medium none;
+  overflow: hidden;
+  background: none repeat scroll 0 0 transparent;
+  font-family: Consolas;
+}
+
+.logo {
+  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAACX0lEQVQ4jY2SPUwiURCAp7be/mrq19AQQEgWs9kzC+Ryu7DK8bOAyyInxDPEZ8470UsUUbGAnMHCQpsl0YrYmLgtsVACxlisCRSE2nquYo9r4Cb5msnM92beewAAoGma//n5Gd/e3iwajUaXEDIHs8JFCNNsNs2npydsNBr65eVl3TCM+9fXV6SUhmcKTk9Pc/1+H8/PzyvjnCAItoeHBzQMo0sIYaYKms3mqNfrIc/z/xReXV3pw+EQo9GoMlXwa3e3NBgM8LBcvhjnFEVh2u023t7ejgAAWJZ1LC8v1/8i160DFUWZu7u76z4+Pr7f3NwUDcNQdF1vm6aJlNIcAMC39fXW2dlvnERV1ZY1RS6X83c6HXx5ebG4vr5uAQCkUim2Wj3BtbWvbY5bUDhuQaF0s12pHKIkSawloZSS4+Nji3w+zwAAFDc2RoflMrIej2NcGwwGHdXqCVJK7y0Bx3H1jzxv4fN6/Xa73Xawv4+l0k538t4IIcyP7W3c2fmJAACwyPPFbDaLq6urFl8iEdNFCJNOJ/V6vYbRSKQ4FqTTyUqtVkNVVUswPz//IZFIjOKxmOl1uxW3260IgnCR1TT8FAyWeJ5n9vZ2zYODfSwU8lgo5PHoqILft7ZMl8vFQFiSSllNQ47jipMjJuLxbiIWQ7vdblsKh4uUbuIksiz7AQBAFMXRSjqNHqfTMbnnkizrWiaDPp/PP/UjBRYXWXVlBUOSZL2rz+v1Z1QVxc9id1qvFaIotrRMBsOhEIYkCWPRKKaSyXdBEGz/JXA6nY6wJOGSLFsEAoGL2Z0AfwDabUsWO8PtqwAAAABJRU5ErkJggg==);
+}
+
+.Icon {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background-size:32px 32px;
+  background-position:center center;
+  background-repeat:no-repeat;
+}
+
+.Confirmation {
+  background-image:url(data:image/png;base64,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);
+}
+
+.Information {
+  background-image:url(data:image/png;base64,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);
+}
+
+.Warning {
+  background-image:url(data:image/png;base64,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);
+}
+
+.Error {
+  background-image:url(data:image/png;base64,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);
+}
+
+.BitmapIcon, .LinkIcon, .ControlIcon, .HTMLIcon {
+  font-family: JaGui;
+  font-size: 8pt;
+  vertical-align: middle;
+}
+
+canvas, div, label, fieldset, svg, object {
+  position: absolute;
+  background-size: 100% 100%;
+  box-sizing: border-box;
+}
+
+svg {
+  overflow: visible;
+}
+
+div svg {
+  height: 100%;
+  width: 100%;
+}
+
+div[data-enabled="false"] {
+  opacity: 0.5;
+}
+
+div:before, div:after, span:before, span:after {
+  box-sizing:border-box;
+}
+
+
+.hidden {
+  visibility: hidden;
+}
+
+.noDisplay {
+  display:none;
+}
+
+.Ellipse, .Circle {
+  border-radius: 50%;
+}
+
+.Pie {
+  background-position: center center;
+  background-repeat: no-repeat;
+}
+
+.relative, .TabSheet, .CalendarHeader, .MenuItem {
+  position: relative;
+}
+
+.static {
+  position: static;
+}
+
+.center {
+  text-align: center;
+  padding: 0;
+}
+
+.horizontalCenter {
+  left: 50%;
+  -webkit-transform: translateX(-50%);
+  transform: translateX(-50%);
+}
+
+.verticalCenter {
+  top: 50%;
+  -webkit-transform: translateY(-50%);
+  transform: translateY(-50%);
+}
+
+.centerCenter {
+  left: 50%;
+  top: 50%;
+  -webkit-transform: translate(-50%,-50%);
+  transform: translate(-50%,-50%);
+}
+
+.repaint {
+  -webkit-transform: translateZ(0);
+  -ms-transform: translateZ(0);
+  -o-transform: translateZ(0);
+  -moz-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+.disabled {
+  text-shadow: 0 1px 1px white;
+}
+
+.noBorder {
+  border: none;
+}
+
+.noEvents {
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 999;
+}
+
+.ValueLabel {
+  padding: 0 5px;
+}
+
+.Button, .RoundButton, .CircleButton, .CornerButton, .PopupButton, .PathButton, .BitmapButton {
+  white-space: nowrap;
+  overflow:hidden;
+}
+
+.Button span, .RoundButton span, .CircleButton span, .CornerButton span, .PopupButton span {
+  text-align: center;
+  vertical-align: middle;
+  left:50%;
+  -webkit-transform: translate(-50%,-50%);
+  transform: translate(-50%,-50%);
+  position:absolute;
+  top:49%;
+}
+
+.Button[data-wordwrap="true"] span, .RoundButton[data-wordwrap="true"] span, .CircleButton[data-wordwrap="true"] span, .CornerButton[data-wordwrap="true"] span, .PopupButton[data-wordwrap="true"] span,
+.SpeedButton[data-wordwrap="true"] span, .BitmapButton[data-wordwrap="true"] span, .PathButton[data-wordwrap="true"] span, .ToolButton[data-wordwrap="true"] span, .PathToolButton[data-wordwrap="true"] span
+{
+  white-space:normal;
+}
+
+.CircleButton:not([data-theme=""]):before,
+.CircleButton:not([data-theme=""]):hover:before,
+.CircleButton:not([data-theme=""]):active:before
+.CircleButton:not([data-theme=""]):after,
+.CircleButton:not([data-theme=""]):hover:after,
+.CircleButton:not([data-theme=""]):active:after,
+.AngleButton:not([data-theme=""]):before,
+.AngleButton:not([data-theme=""]):hover:before,
+.AngleButton:not([data-theme=""]):active:before
+.AngleButton:not([data-theme=""]):after,
+.AngleButton:not([data-theme=""]):hover:after,
+.AngleButton:not([data-theme=""]):active:after {
+  border-radius:50%;
+}
+
+.PopupButton div {
+  right:0;
+  top:0;
+  bottom:0;
+}
+
+.PopupButton div:before {
+  width: 5px;
+  top: 50%;
+  right: 4px;
+  font-family: jagui;
+  font-size: 4pt;
+  -webkit-transform: translateY(-50%);
+  transform: translateY(-50%);
+  content:"8";
+  position:absolute;
+}
+
+.SpeedButton {
+  overflow: hidden;
+  outline: none;
+}
+
+.SpeedButton img, .BitmapButton img, .PathButton img, .IPhoneButton img, .ToolButton img, .PathToolButton img {
+  position: absolute;
+}
+
+.SpeedButton span, .BitmapButton span, .PathButton span, .ToolButton span, .PathToolButton span {
+  position: absolute;
+  margin: 0;
+  overflow: hidden;
+  text-align: center;
+}
+
+.IPhoneButton span {
+  visibility:hidden;
+}
+
+.ColorButton {
+  font-size: 8pt;
+}
+
+.ColorButtonColor {
+  left: 5px;
+  top: 5px;
+  right: 5px;
+  bottom: 5px;
+}
+
+.Panel {
+  overflow:hidden;
+}
+
+.StatusBar {
+  z-index: 9;
+}
+
+.StatusBar:before {
+  content: "";
+  position: absolute;
+  background-repeat: no-repeat;
+  cursor: nw-resize;
+}
+
+.ToolBar {
+  height: 40px;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 9;
+}
+
+.CheckBox:before, .RadioButton:before {
+  position: absolute;
+  content: "";
+  top: 1px;
+  left: 0;
+}
+
+.CheckBox:after, .RadioButton:after {
+  position: absolute;
+  content: "";
+  width: 12px;
+  height: 0;
+  left: 1px;
+  top: 9px;
+  font-size: 8.5pt;
+  font-family: JaGui;
+  display:none;
+  line-height: 0;
+  box-sizing:border-box;
+}
+
+.CheckBox[data-state='grayed']:after {
+  content: "";
+  display:block;
+  left: 4px;
+  top: 5px;
+  width: 7px;
+  height: 7px;
+}
+
+.CheckBox[data-ischecked='true']:after {
+  content: "4";
+  display:block;
+}
+
+.RadioButton[data-ischecked='true']:after {
+  content: "";
+  display:block;
+  border-radius: 50%;
+}
+
+.PathCheckBox svg path {
+  fill:#FFF;
+}
+
+.PathCheckBox svg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 13px;
+  height: 13px;
+  opacity:0.25;
+}
+
+.PathCheckBox[data-ischecked='true'] svg {
+  opacity:1;
+}
+
+.DownText {
+  padding-left: 1px;
+  padding-top: 1px;
+}
+
+.DownText2 {
+  padding-left: 1px;
+  padding-top: 2px;
+}
+
+.CircleButton {
+  border-radius: 50%;
+}
+
+.ToolButton, .PathToolButton, .SplitToolButton {
+  position: relative;
+  float: left;
+  height: 100%;
+  overflow:hidden;
+}
+
+.PathCheckBoxLabel:before {
+  position: absolute;
+  content: "";
+  left: 0;
+  opacity: 0;
+  height: 13px;
+  width: 13px;
+  top: 3px;
+}
+
+.AngleButton {
+  padding: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  vertical-align: middle;
+  outline: none;
+  text-align: center;
+  border-radius: 50%;
+}
+
+.AngleButton:before,
+.AngleButton:after {
+  border-radius: 50%;
+}
+
+.AngleButton_knob, .AngleButton_text {
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  text-align: center;
+}
+
+.AngleButton_knob:before {
+  position: absolute;
+  border-radius: 50%;
+  content: "";
+  top: 50%;
+  right: 2px;
+  margin-top: -2px;
+  width: 4px;
+  height: 4px;
+}
+
+.ProgressBar {
+  overflow: hidden;
+}
+
+.ProgressBar_progress {
+  margin: 1px;
+  overflow: hidden;
+}
+
+.ProgressBar[data-orientation="horizontal"] {
+  height:18px;
+}
+
+.ProgressBar[data-orientation="horizontal"] .ProgressBar_progress {
+  left: 0;
+  top: 0;
+  bottom: 0;
+}
+
+.ProgressBar[data-orientation="horizontal"] .ProgressBar_progress:before {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 62px;
+  content: "";
+}
+
+.ProgressBar[data-orientation="vertical"] {
+  width:18px;
+}
+
+.ProgressBar[data-orientation="vertical"] .ProgressBar_progress {
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.ProgressBar[data-orientation="vertical"] .ProgressBar_progress:before {
+  position: absolute;
+  right: 0;
+  left: 0;
+  bottom: 0;
+  height: 62px;
+  content: "";
+}
+
+.GridviewCellProgressBar {
+  height:10px;
+}
+
+.Splitter[data-orientation="horizontal"] {
+  height: 5px;
+  left: 0;
+  right: 0;
+  cursor: s-resize;
+}
+
+.Splitter[data-orientation="vertical"] {
+  width: 5px;
+  top: 0;
+  bottom: 0;
+  cursor: w-resize;
+}
+
+.GroupBox {
+  overflow:hidden;
+}
+
+.IPhoneButton {
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0,0,0,.5);
+}
+
+.IPhoneButton:before {
+  position: absolute;
+  content: "";
+  background-image: linear-gradient(to bottom,rgba(255,255,255,.7) 0,rgba(255,255,255,.2) 100%);
+  left: 0;
+  top: 0;
+  right: 0;
+  height: 45%;
+  border-top-right-radius: 38px;
+  border-top-left-radius: 38px;
+  border-bottom-right-radius: 120px 20px;
+  border-bottom-left-radius: 120px 20px;
+  box-shadow: inset 0 2px 1px rgba(255,255,255,.5);
+}
+
+.ScrollBar[data-orientation="horizontal"] .ScrollBarFirstButton {
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 18px;
+  text-align: center;
+  color: black;
+  border-top-left-radius: 3px;
+  border-bottom-left-radius: 3px;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.ScrollBar[data-orientation="horizontal"] .ScrollBarFirstButton span:before {
+  position: absolute;
+  left: 0;
+  height: 0;
+  right: 0;
+  font-family: Jagui;
+  font-size: 5pt;
+  line-height: 0;
+  top: 50%;
+  content:"*";
+}
+
+.ScrollBar[data-orientation="horizontal"] .ScrollBarLastButton {
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 18px;
+  text-align: center;
+  color: black;
+  font-family: Jagui;
+  font-size: 5pt;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-top-right-radius: 3px;
+  border-bottom-right-radius: 3px;
+}
+
+.ScrollBar[data-orientation="horizontal"] .ScrollBarLastButton span:before {
+  position: absolute;
+  left: 0;
+  height: 0;
+  right: 0;
+  font-family: Jagui;
+  font-size: 5pt;
+  line-height: 0;
+  top: 50%;
+  content:")";
+}
+
+.ScrollBar[data-orientation="vertical"] .ScrollBarFirstButton {
+  left: 0;
+  top: 0;
+  right: 0;
+  height: 18px;
+  text-align: center;
+  color: black;
+  font-family: Jagui;
+  font-size: 5pt;
+  border-top-left-radius: 3px;
+  border-bottom-left-radius: 0;
+  border-top-right-radius: 3px;
+  border-bottom-right-radius: 0;
+}
+
+.ScrollBar[data-orientation="vertical"] .ScrollBarFirstButton span:before {
+  position: absolute;
+  left: 2px;
+  height: 0;
+  right: 2px;
+  line-height: 0;
+  top: 50%;
+  content:"#";
+}
+
+.ScrollBar[data-orientation="vertical"] .ScrollBarLastButton {
+  right: 0;
+  left: 0;
+  bottom: 0;
+  height: 18px;
+  text-align: center;
+  color: black;
+  font-family: Jagui;
+  font-size: 5pt;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 3px;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 3px;
+}
+
+.ScrollBar[data-orientation="vertical"] .ScrollBarLastButton span:before {
+  position: absolute;
+  left: 2px;
+  height: 0;
+  right: 2px;
+  line-height: 0;
+  top: 10px;
+  content:"8";
+}
+
+.ScrollBar_inner {
+  overflow:hidden;
+}
+
+.ScrollBox, .ImageViewer {
+  overflow: hidden;
+}
+
+.ScrollBoxViewPort, .TreeViewContent, .GridView_ViewPort {
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.ScrollBoxContent {
+  left: 0;
+  top: 0;
+  min-height: 100%;
+  min-width: 100%;
+}
+
+.ListBoxContent, .ListBoxPopupContent, .DropDownListBoxColorContent {
+  left: 0;
+  top: 0;
+  z-index: 1;
+  right: 0;
+  bottom: 0;
+}
+
+.ScrollBoxSB[data-orientation="horizontal"],
+.ListBoxSB[data-orientation="horizontal"],
+.TreeViewSB[data-orientation="horizontal"],
+.MemoSB[data-orientation="horizontal"],
+.GridViewSB[data-orientation="horizontal"] {
+  bottom: 0;
+  left: 0;
+  right: 16px;
+}
+
+.ScrollBoxSB[data-orientation="vertical"],
+.ListBoxSB[data-orientation="vertical"],
+.TreeViewSB[data-orientation="vertical"],
+.MemoSB[data-orientation="vertical"],
+.GridViewSB[data-orientation="vertical"] {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 16px;
+}
+
+.ScrollBox[data-scrollbars='vertical'] .ScrollBoxViewPort,
+.ListBox[data-scrollbars='vertical'] .ListBoxContent,
+.ListBoxPopup[data-scrollbars='vertical'] .ListBoxPopupContent,
+.DropDownListBoxColor[data-scrollbars='vertical'] .DropDownListBoxColorContent,
+.TreeView[data-scrollbars='vertical'] .TreeViewContent,
+.Memo[data-scrollbars='vertical'] .MemoViewPort,
+.GridView[data-scrollbars='vertical'] .GridView_Content .GridView_ViewPort,
+.ImageViewer[data-scrollbars='vertical'] .ScrollBoxViewPort {
+  right: 16px;
+  bottom: 0;
+}
+
+.ScrollBox[data-scrollbars='vertical'] .ScrollBoxSB,
+.ListBox[data-scrollbars='vertical'] .ListBoxSB,
+.ListBoxPopup[data-scrollbars='vertical'] .ListBoxSB,
+.Memo[data-scrollbars='vertical'] .ScrollBoxSB,
+.GridView[data-scrollbars='vertical'] .GridView_Content .GridViewSB,
+.ImageViewer[data-scrollbars='vertical'] .ScrollBoxSB {
+  bottom: 0;
+}
+
+.TreeView[data-scrollbars='vertical'] .TreeViewSB[data-orientation="horizontal"],
+.TreeView[data-scrollbars='none'] .TreeViewSB,
+.Memo[data-scrollbars='vertical'] .MemoSB[data-orientation="horizontal"],
+.GridView[data-scrollbars='vertical'] .GridView_Content .GridViewSB[data-orientation="horizontal"],
+.GridView[data-scrollbars='none'] .GridView_Content .GridViewSB,
+.ImageViewer[data-scrollbars='vertical'] .ScrollBoxSB[data-orientation="horizontal"],
+.ImageViewer[data-scrollbars='none'] .ScrollBoxSB {
+  visibility:hidden;
+}
+
+.ScrollBox[data-scrollbars='horizontal'] .ScrollBoxViewPort,
+.ListBox[data-scrollbars='horizontal'] .ListBoxContent,
+.TreeView[data-scrollbars='horizontal'] .TreeViewContent,
+.Memo[data-scrollbars='horizontal'] .MemoViewPort,
+.GridView[data-scrollbars='horizontal'] .GridView_Content .GridView_ViewPort,
+.ImageViewer[data-scrollbars='horizontal'] .ScrollBoxViewPort {
+  right: 0;
+  bottom: 16px;
+}
+
+.ScrollBox[data-scrollbars='horizontal'] .ScrollBoxSB,
+.ListBox[data-scrollbars='horizontal'] .ListBoxSB,
+.Memo[data-scrollbars='horizontal'] .MemoSB[data-orientation="horizontal"],
+.GridView[data-scrollbars='horizontal'] .GridView_Content .GridViewSB,
+.ImageViewer[data-scrollbars='horizontal'] .ScrollBoxSB {
+  right: 0;
+}
+
+.TreeView[data-scrollbars='horizontal'] .TreeViewSB[data-orientation="vertical"],
+.TreeView[data-scrollbars='none'] .TreeViewSB,
+.Memo[data-scrollbars='horizontal'] .MemoSB[data-orientation="vertical"],
+.Memo[data-scrollbars='none'] .MemoSB,
+.GridView[data-scrollbars='horizontal'] .GridView_Content .GridViewSB[data-orientation="vertical"],
+.GridView[data-scrollbars='none'] .GridView_Content .GridViewSB,
+.ImageViewer[data-scrollbars='horizontal'] .ScrollBoxSB[data-orientation="vertical"],
+.ImageViewer[data-scrollbars='none'] .ScrollBoxSB {
+  visibility:hidden;
+}
+
+.ScrollBox[data-scrollbars='both'] .ScrollBoxViewPort,
+.TreeView[data-scrollbars='both'] .TreeViewContent,
+.Memo[data-scrollbars='both'] .MemoViewPort,
+.GridView[data-scrollbars='both'] .GridView_Content .GridView_ViewPort,
+.ImageViewer[data-scrollbars='both'] .ScrollBoxViewPort {
+  right: 16px;
+  bottom: 16px;
+}
+
+.ScrollBox[data-scrollbars='both'] .ScrollBoxSB[data-orientation="vertical"],
+.TreeView[data-scrollbars='both'] .TreeViewSB[data-orientation="vertical"],
+.Memo[data-scrollbars='both'] .MemoSB[data-orientation="vertical"],
+.GridView[data-scrollbars='both'] .GridView_Content .GridViewSB[data-orientation="vertical"],
+.ImageViewer[data-scrollbars='both'] .ScrollBoxSB[data-orientation="vertical"] {
+  bottom: 16px;
+}
+
+.ListBoxPopup {
+  position: relative;
+}
+
+.ListBox, .ListBoxContent, .TreeView, .ListBoxPopup, .ListBoxPopupContent, .DropDownListBoxColorContent {
+  overflow: hidden;
+}
+
+.HListBoxItem {
+  width: 32px;
+  text-align: left;
+  bottom: 0;
+  top: 0;
+}
+
+.VListBoxItem, .ListBoxItemPopup, .ListBoxItemColor {
+  height: 16px;
+  text-align: left;
+  padding-left: 2px;
+  right: 0;
+  line-height: 16px;
+  left: 0;
+}
+
+.ListBoxItemPopup, .ListBoxItemColor, .GridViewCellColor {
+  height: 13px;
+  line-height: 13px;
+}
+
+.ListBoxItemColor, .GridViewCellColor {
+  padding-left: 18px;
+}
+
+.ListBoxItemColor div,
+.GridViewCellColor div {
+  left: 1px;
+  top: 1px;
+  width: 12px;
+  height: 12px;
+}
+
+.ListBoxItemHeader {
+  font-style: italic;
+}
+
+.TreeViewItem {
+  text-align: left;
+  height: 16px;
+  white-space: nowrap;
+  padding-left: 10px;
+  left: 0;
+  top: 0;
+  right: 0;
+  overflow: hidden;
+}
+
+.TreeViewItem span {
+  height: 16px;
+  padding: 0 2px;
+  display: inline-block;
+}
+
+.TreeViewContent {
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  margin: 2px;
+}
+
+.TreeViewRoot {
+  padding-left: 0;
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+
+.TVIHasChild {
+  height: auto;
+}
+
+.TVIHasChild:before {
+  content: "7";
+  position: absolute;
+  width: 10px;
+  font-family: JaGui;
+  font-size: 4pt;
+  transform: rotate(-45deg);
+  -webkit-transform: rotate(-45deg);
+  left: -1px;
+  top: 5px;
+  height: 0;
+  line-height: 0;
+}
+
+.TVIHasChild[data-expanded="true"]:before {
+  left: 0;
+  top: 8px;
+  transform: rotate(0);
+  -webkit-transform: rotate(0);
+}
+
+.ExpanderHeader {
+  left: 0;
+  top: 0;
+  right: 0;
+}
+
+.ExpanderViewPort {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+}
+
+.ExpanderCheckBox {
+  left: 22px;
+  top: 50%;
+  height: 14px;
+  width: 22px;
+  text-align: center;
+  -webkit-transform: translateY(-50%);
+  transform: translateY(-50%);
+}
+
+.ExpanderCheckBox:before {
+  opacity: .3;
+  position: absolute;
+  content: "0";
+  font-family: Jagui;
+  font-size: 14pt;
+  left: 0;
+  right: 0;
+  top: 50%;
+  line-height: 0;
+  height: 0;
+}
+
+.ExpanderCheckBox[data-checked="true"]:before {
+  opacity: 1;
+}
+
+.ExpanderButton {
+  top: 50%;
+  left: 5px;
+  width: 13px;
+  height: 16px;
+  -webkit-transform: translateY(-50%);
+  transform: translateY(-50%);
+}
+
+.ExpanderButton span:before {
+  position: absolute;
+  font-size: 8pt;
+  font-family: Jagui;
+  left: 0;
+  height: 0;
+  right: 0;
+  line-height: 0;
+  top: 50%;
+  content:"7";
+}
+
+.ExpanderButton[data-expanded="false"] span:before {
+  -webkit-transform: rotate(-45deg);
+  transform: rotate(-45deg);
+  left: -5px;
+  top: 35%;
+}
+
+.ExpanderCaption {
+  left: 50px;
+  top: 0;
+  height: 25px;
+  right: 0;
+}
+
+.Slider_thumb, .AlphaSlider_thumb, .BWSlider_thumb, .HUESlider_thumb {
+  min-width: 14px;
+  max-width: 14px;
+  min-height: 14px;
+  max-height: 14px;
+}
+
+.Slider[data-mode="normal"] div.Slider_thumb:nth-child(3) {
+  visibility:hidden;
+}
+
+.Window {
+  z-index: 99;
+  display:inline-block;
+}
+
+.WindowLayout, .WindowTitleBar, .WindowContent, .MainMenu, .ToolBar, .StatusBar {
+  left: 0;
+  right: 0;
+}
+
+.WindowLayout {
+  top: 0;
+  /*bottom: 0;*/
+  overflow: hidden;
+  right:auto;
+  position:relative;
+  min-width: 130px;
+  min-height: 36px;
+}
+
+.Window[data-windowstate="maximized"],
+.Window[data-windowstate="maximized"] .WindowLayout {
+  left:0;
+  top:0;
+  right:0;
+  bottom:0;
+  position:absolute;
+}
+
+.WindowTitleBar {
+  top: 0;
+  height: 25px;
+  min-height: 25px;
+  max-height: 25px;
+  text-align:left;
+}
+
+.WindowContent {
+  top: 0;
+  bottom: 0;
+}
+
+/* borderStyle = none */
+
+.WindowTitle {
+  display:inline-block;
+  position:absolute;
+  height: 25px;
+  line-height: 25px;
+  max-height: 25px;
+  min-height: 25px;
+  padding-left:2px;
+}
+
+.WindowIcon {
+  background-size: 16px;
+  background-position: 2px center;
+  background-repeat: no-repeat;
+  padding-left:20px;
+}
+
+/* sizeToolWin, ToolWindow */
+/*.Window[data-borderstyle*="oolW"] .WindowLayout .WindowTitleBar,
+.Window[data-borderstyle*="oolW"] .WindowLayout .WindowTitleBar .WindowTitle {
+  left: 0;
+  line-height: 18px;
+  height: 18px;
+  min-height: 18px;
+  max-height: 18px;
+}
+
+.Window[data-borderstyle*="oolW"] .WindowLayout .WindowTitleBar .WindowTitle {
+  right: 20px;
+}*/ 
+
+.Window[data-borderstyle*="oolW"] .WindowLayout .WindowTitleBar .WindowIcon,
+.Window[data-borderstyle="dialog"] .WindowLayout .WindowTitleBar .WindowIcon {
+  background: none;
+  padding-left:0;
+}
+
+/*.Window[data-borderstyle="dialog"] .WindowLayout .WindowTitleBar .WindowTitle {
+  left: 2px;
+}*/
+
+.WindowCloseButton, .WindowMinimizeButton, .WindowMaxRestoreButton, .WindowHelpButton,
+.WindowRollUpDownButton, .WindowStayOnOffButton {
+  white-space: nowrap;
+  left: auto;
+  float: right;
+  position: relative;
+  width: 18px;
+  min-width: 18px;
+  max-width: 18px;
+  height: 18px;
+  min-height: 18px;
+  max-height: 18px;
+  top: 4px;
+  margin-right: 2px;
+}
+
+.WindowCloseButton span:before, .WindowMinimizeButton span:before, .WindowMaxRestoreButton span:before, .WindowHelpButton span:before,
+.WindowRollUpDownButton span:before, .WindowStayOnOffButton span:before {
+  white-space: nowrap;
+  text-align: center;
+  vertical-align: middle;
+  font-family:JaGui;
+  left:50%;
+  -webkit-transform: translate(-50%,-50%);
+  transform: translate(-50%,-50%);
+  position:absolute;
+  top:50%;
+  content:"";
+}
+
+.WindowCloseButton span:before {
+  content:"C";
+}
+
+.WindowMinimizeButton span:before {
+  content:":";
+}
+
+.WindowMaxRestoreButton span:before {
+  content:";";
+}
+
+.WindowHelpButton span:before {
+  content:"9";
+}
+
+.WindowRollUpDownButton span:before {
+  content:">";
+}
+
+.WindowStayOnOffButton span:before {
+  content:"@";
+}
+
+.Window[data-borderstyle*="oolW"] .WindowLayout .WindowTitleBar .WindowCloseButton,
+.Window[data-borderstyle*="oolW"] .WindowLayout .WindowTitleBar .WindowMinimizeButton,
+.Window[data-borderstyle*="oolW"] .WindowLayout .WindowTitleBar .WindowMaxRestoreButton,
+.Window[data-borderstyle*="oolW"] .WindowLayout .WindowTitleBar .WindowHelpButton,
+.Window[data-borderstyle*="oolW"] .WindowLayout .WindowTitleBar .WindowRollUpDownButton,
+.Window[data-borderstyle*="oolW"] .WindowLayout .WindowTitleBar .WindowStayOnOffButton {
+  margin-right: 0;
+  width: 16px;
+  min-width: 16px;
+  max-width: 16px;
+  height: 16px;
+  min-height: 16px;
+  max-height: 16px;
+  top: 1px;
+}
+
+.Window[data-borderstyle*="oolW"] .WindowLayout .WindowTitleBar .WindowCloseButton span:before,
+.Window[data-borderstyle*="oolW"] .WindowLayout .WindowTitleBar .WindowMinimizeButton span:before,
+.Window[data-borderstyle*="oolW"] .WindowLayout .WindowTitleBar .WindowMaxRestoreButton span:before,
+.Window[data-borderstyle*="oolW"] .WindowLayout .WindowTitleBar .WindowHelpButton span:before,
+.Window[data-borderstyle*="oolW"] .WindowLayout .WindowTitleBar .WindowRollUpDownButton span:before,
+.Window[data-borderstyle*="oolW"] .WindowLayout .WindowTitleBar .WindowStayOnOffButton span:before {
+  font-size: 5pt;
+}
+
+.Window[data-borderstyle*="oolW"] .WindowLayout .WindowTitleBar .WindowMinimizeButton,
+.Window[data-borderstyle*="oolW"] .WindowLayout .WindowTitleBar .WindowMaxRestoreButton,
+.Window[data-borderstyle*="oolW"] .WindowLayout .WindowTitleBar .WindowHelpButton,
+.Window[data-borderstyle*="oolW"] .WindowLayout .WindowTitleBar .WindowRollUpDownButton,
+.Window[data-borderstyle*="oolW"] .WindowLayout .WindowTitleBar .WindowStayOnOffButton,
+.Window[data-borderstyle="dialog"] .WindowLayout .WindowTitleBar .WindowMinimizeButton,
+.Window[data-borderstyle="dialog"] .WindowLayout .WindowTitleBar .WindowMaxRestoreButton,
+.Window[data-borderstyle="dialog"] .WindowLayout .WindowTitleBar .WindowHelpButton,
+.Window[data-borderstyle="dialog"] .WindowLayout .WindowTitleBar .WindowRollUpDownButton,
+.Window[data-borderstyle="dialog"] .WindowLayout .WindowTitleBar .WindowStayOnOffButton {
+  display: none;
+}
+
+/* sizeToolWin, toolWindow */
+
+/* sizeable, sizeToolWin */
+.Window[data-borderstyle^="size"] .WindowLayout {
+  left: 4px;
+  top: 4px;
+  bottom: 4px;
+  right: 4px;
+}
+/* sizeable, sizeToolWin */
+
+.TabSheet {
+  text-align: center;
+  margin-top: 2px;
+  height: 17px;
+  display: inline-block;
+  padding: 0 10px;
+  font-size:8pt;
+}
+
+.PageControl {
+  /*padding-left: 2px;*/
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.TabSheets_container {
+  top:0;
+  left:2px;
+  height:20px;
+  right:22px;
+  overflow:hidden;
+  z-index:1;
+  list-style:none;
+  position:absolute;
+  margin:0;
+  padding:0;
+  font-size: 0;
+}
+
+.PagesContent {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: 19px;
+}
+
+.PageContent {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: 0;
+  overflow:hidden;
+}
+
+.PageControl_LeftBtn, .PageControl_RightBtn {
+  right:0;
+  top:0;
+  width:10px;
+  height:18px;
+  text-align: center;
+}
+
+.PageControl_LeftBtn span,
+.PageControl_RightBtn span {
+  position: absolute;
+  left: 0;
+  height: 0;
+  right: 0;
+  font-family: Jagui;
+  font-size: 5pt;
+  line-height: 0;
+  top: 9px;
+}
+
+.PageControl_LeftBtn {
+  right:11px;
+}
+
+.PageControl_LeftBtn span:before {
+  left: -1px;
+  content:"*";
+}
+
+.PageControl_RightBtn span:before {
+  content:")";
+}
+
+.AlphaSlider:before {
+  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAYAAAAGCAYAAADgzO9IAAAAJ0lEQVQImWNYtGjR/0WLFv1///49HC9atOg/AzIHWREZEjjtwCUBAECKeHPjub7wAAAAAElFTkSuQmCC);
+  background-position-y: 1px;
+}
+
+.AlphaSlider[data-orientation="horizontal"]:after {
+  background: linear-gradient(to right,transparent 0,#FFF 100%);
+}
+
+.AlphaSlider[data-orientation="vertical"]:after {
+  background: linear-gradient(to bottom,transparent 0,#FFF 100%);
+}
+
+.BWSlider[data-orientation="horizontal"]:before {
+  background-image: linear-gradient(to right,#000 0,#FFF 100%);
+}
+
+.BWSlider[data-orientation="vertical"]:before {
+  background-image: linear-gradient(to bottom,#000 0,#FFF 100%);
+}
+
+.HUESlider[data-orientation="horizontal"]:before {
+  background-image: linear-gradient(to right,#FF0000 0,#FFFF00 16%,#00FF00 33%,#00FFFF 50%,#0000FF 66%,#FF00FF 83%,#FF0000 100%);
+}
+
+.HUESlider[data-orientation="vertical"]:before {
+  background-image: linear-gradient(to bottom,#FF0000 0,#FFFF00 16%,#00FF00 33%,#00FFFF 50%,#0000FF 66%,#FF00FF 83%,#FF0000 100%);
+}
+
+.ColorBox {
+  background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAYAAAAGCAYAAADgzO9IAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAadEVYdFNvZnR3YXJlAFBhaW50Lk5FVCB2My41LjEwMPRyoQAAADFJREFUGFdjeP/+/X8YXrx48f9FixaBMQOyBExw4cKF2CXAOmCqQDSybtIk3r59+x8AQNt4bWIYrwAAAAAASUVORK5CYII=);
+  box-shadow: inset 0 0 0 1000px rgba(255,0,0,1);
+}
+
+.ColorBox:before {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  content: "";
+  border: 1px solid black;
+}
+
+.ColorBox:after {
+  position: absolute;
+  left: 1px;
+  top: 1px;
+  right: 1px;
+  bottom: 1px;
+  content: "";
+  border: 1px solid white;
+}
+
+.ColorQuad {
+  background: linear-gradient(to top, #000 0, rgba(0, 0, 0, 0) 100%),linear-gradient(to right, #FFF 0, rgba(255, 255, 255, 0) 100%);
+}
+
+.ColorQuad[data-format="hsl"] {
+ /*background: linear-gradient(to center bottom, hsl(0, 0%, 100%) 0, hsla(0, 0%, 100%, 0) 50%, hsla(0, 0%, 0%, 0) 50%, hsl(0, 0%, 0%) 100%) repeat scroll 0 0, linear-gradient(to right center, hsl(0, 0%, 50%) 0, hsla(0, 0%, 50%, 0) 100%) repeat scroll 0 0 #f00;*/
+ background: linear-gradient(to bottom, rgb(255, 255, 255) 0%, rgba(255, 255, 255, 0) 50%, rgba(0, 0, 0, 0) 50%, rgb(0, 0, 0) 100%), linear-gradient(to right, rgb(127, 127, 127) 0%, rgba(127, 127, 127, 0) 100%);
+}
+
+.ColorPicker {
+  background-image: linear-gradient(to bottom,#FF0000 0,#FFFF00 16%,#00FF00 33%,#00FFFF 50%,#0000FF 66%,#FF00FF 83%,#FF0000 100%);
+  text-align: center;
+}
+
+.ColorPickerIndicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid #FFF;
+  z-index: 1;
+}
+
+.ColorPicker .ColorPickerIndicator
+{
+  left:50%;
+  -webkit-transform: translate(-50%,0);
+  transform: translate(-50%,0);
+}
+
+.ColorPickerIndicator[data-selected='true'] {
+  border: 1px dotted #FF0000;
+  z-index: 99;
+}
+
+.ColorPickerIndicator:before {
+  position: absolute;
+  content: "";
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 50%;
+  border: 1px solid #000;
+}
+
+.GradientEdit {
+  min-height: 20px;
+  min-width: 100px;
+  overflow: hidden;
+}
+
+.GradientEdit_gradient {
+  left: 5px;
+  top: 0;
+  right: 5px;
+  bottom: 10px;
+  overflow: hidden;
+  background-image: linear-gradient(to right,#000000 0,#FFFFFF 100%);
+}
+
+.GradientEdit_colorStops {
+  left: 0;
+  height: 10px;
+  right: 0;
+  bottom: 0;
+}
+
+.TextBox, .RoundTextBox, .MaskedTextBox, .TextBoxClearBtn, .PasswordTextBox {
+  min-height: 20px;
+  padding: 0 2px;
+}
+
+.TextBox input, .RoundTextBox input, .MaskedTextBox input, .PasswordTextBox input, .TextBoxClearBtn input, .SpinBox input {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background-color: transparent;
+  white-space: nowrap;
+}
+
+.TextBox[data-required="true"]:before, .RoundTextBox[data-required="true"]:before, .MaskedTextBox[data-required="true"]:before,
+.PasswordTextBox[data-required="true"]:before, .TextBoxClearBtn[data-required]:before, .SpinBox[data-required="true"]:before {
+  position: absolute;
+  content: "*";
+  color: red;
+  height: 100%;
+  right: -10px;
+  top: 0;
+}
+
+.TextBox[data-haserror="true"], .RoundTextBox[data-haserror="true"], .MaskedTextBox[data-haserror="true"],
+.PasswordTextBox[data-haserror="true"], .TextBoxClearBtn[data-haserror], .SpinBox[data-haserror="true"] {
+  outline: 1px solid red;
+}
+
+.TextBox[data-haserror="true"]:after, .RoundTextBox[data-haserror="true"]:after, .MaskedTextBox[data-haserror="true"]:after,
+.PasswordTextBox[data-haserror="true"]:after, .TextBoxClearBtn[data-haserror]:after, .SpinBox[data-haserror="true"]:after {
+  position: absolute;
+  content: "";
+  right: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 7px 7px 0;
+  border-color: transparent red transparent transparent;
+}
+
+.PasswordTextBox input, .TextBoxClearBtn input {
+  width: auto;
+}
+
+.PasswordTextBox_btn, .TextBoxClearBtn_btn {
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 20px;
+}
+
+.PasswordTextBox[data-length="0"] .PasswordTextBox_btn,
+.TextBoxClearBtn[data-length="0"] .TextBoxClearBtn_btn {
+  visibility:hidden;
+}
+
+.PasswordTextBox_btn span:before {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  line-height: 0;
+  font-family: Jagui;
+  font-size: 13pt;
+  top:10px;
+  content:"0";
+}
+
+.TextBoxClearBtn_btn span:before {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  line-height: 0;
+  font-family: Jagui;
+  font-size: 10pt;
+  top: 11px;
+  content:"C";
+}
+
+.RoundTextBox {
+  text-align: center;
+}
+
+.RoundTextBox, .RoundTextBox input {
+  border-radius: 12px;
+}
+
+.RoundTextBox input {
+  width: 95%;
+}
+
+.SpinBox {
+  min-height: 19px;
+  min-width: 81px;
+}
+
+.SpinBox_input {
+  width: 60%;
+  min-width: 60%;
+  max-width: 60%;
+  text-align: center;
+}
+
+.SpinBox_Minus, .SpinBox_Plus {
+  border-radius: 50%;
+  width: 16px;
+}
+
+.SpinBox_Minus {
+  padding-top: 2px;
+  left: 1px;
+  top: 1px;
+  bottom: 1px;
+}
+
+.SpinBox_Minus span:before {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  height: 0;
+  right: 0;
+  font-family: Jagui;
+  font-size: 4pt;
+  line-height: 0;
+  content:"*";
+}
+
+.SpinBox_Plus {
+  padding-top: 2px;
+  right: 1px;
+  top: 1px;
+  bottom: 1px;
+}
+
+.SpinBox_Plus span:before {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  height: 0;
+  right: 0;
+  font-family: Jagui;
+  font-size: 4pt;
+  line-height: 0;
+  content:")";
+}
+
+.TextBoxClearBtnText, .TextBoxDate, .TextBoxTime {
+  float: left;
+  border: none;
+  background-color: transparent;
+  padding-left: 6px;
+  padding-right: 4px;
+  height: 20px;
+}
+
+.TextBoxClearBtn_Btn, .DatePickerBtn, .TimePickerBtn {
+  float: left;
+  width: 16px;
+  height: 16px;
+  line-height: 16px;
+  opacity: 1;
+  font-family: Jagui;
+  text-align: center;
+}
+
+.TextBoxDate {
+  min-width: 60px;
+  max-width: 60px;
+}
+
+.TextBoxTime {
+  min-width: 50px;
+  max-width: 50px;
+}
+
+.Memo {
+  overflow: hidden;
+}
+
+.MemoViewPort {
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.MemoViewPort textarea {
+  overflow: hidden;
+  margin: 0;
+  border: none;
+  resize: none;
+  padding:0;
+  white-space: pre;
+  word-wrap: normal;
+  position: relative;
+  left:2px;
+  top:2px;
+}
+
+.DropDownListBox, .DropDownListBoxColor, .DropDownCalendar, .DropDownSlider, .DropDownTimePanel {
+  width: 100px;
+  min-height: 20px;
+}
+
+.DropDownCalendar {
+  min-width: 80px;
+  width: 80px;
+}
+
+.DropDownSlider {
+  min-width: 50px;
+  width: 50px;
+}
+
+.DropDownTimePanel {
+  min-width: 85px;
+  width: 85px;
+}
+
+.DropDownListBox span, .DropDownListBoxColor span, .DropDownCalendar span, .DropDownSlider span, .DropDownTimePanel span {
+  position: absolute;
+  right:0;
+  top:0;
+  bottom:0;
+}
+
+.DropDownListBox span:before, .DropDownListBoxColor span:before, .DropDownCalendar span:before, .DropDownSlider span:before, .DropDownTimePanel span:before {
+  position: absolute;
+  font-family: jagui;
+  font-size: 8pt;
+  right: 2px;
+  height: 0;
+  width: 12px;
+  line-height: 0;
+  top: 50%;
+  -webkit-transform:translateY(-50%);
+  transform:translateY(-50%);
+  content:"(";
+}
+
+.PopupCalendar {
+  border-radius: 6px;
+}
+
+.PopupCalendar .Calendar, .PopupTimePanel .TimePanel, .PopupListBox .ListBox {
+  position: relative;
+}
+
+.PopupSlider {
+  border-radius: 3px;
+  height:24px;
+  width:110px;
+}
+
+.PopupSlider .Slider {
+  left:5px;
+  top:5px;
+}
+
+.DropDownListBoxContent, .DropDownListBoxColorContent, .DropDownCalendarText, .DropDownSliderValue, .DropDownTimePanelText {
+  white-space: nowrap;
+  left: 2px;
+  top: 2px;
+  bottom: 2px;
+  right: 18px;
+  overflow: hidden;
+  line-height: 14px;
+}
+
+.DropDownSliderValue {
+  text-align: center;
+}
+
+.DropDownListBoxColorContent {
+  left: 22px;
+}
+
+.DropDownListBoxColor_color {
+  left: 2px;
+  top: 2px;
+  bottom: 2px;
+  width: 16px;
+}
+
+.DropDownListBoxContent input[type="text"], .DropDownListBoxColorContent input[type="text"] {
+  position: relative;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.Calendar {
+  max-height: 148px;
+  max-width: 187px;
+  min-height: 148px;
+  min-width: 187px;
+  overflow: hidden;
+}
+
+.CalendarContent {
+  top: 5px;
+  left: 5px;
+  right: 5px;
+  bottom: 5px;
+}
+
+.CalendarMonths, .CalendarDecades, .CalendarCenturies {
+  top: 27px;
+  left: 6px;
+  right: 6px;
+  bottom: 6px;
+  overflow: hidden;
+  -webkit-animation: CalendarZoomIn .3s 1 ease;
+  -webkit-animation-fill-mode: forwards;
+  -moz-animation: CalendarZoomIn .3s 1 ease;
+  -moz-animation-fill-mode: forwards;
+  -o-animation: CalendarZoomIn .3s 1 ease;
+  -o-animation-fill-mode: forwards;
+  animation: CalendarZoomIn .3s 1 ease;
+  animation-fill-mode: forwards;
+}
+
+.CalendarMonths[data-view="false"], .CalendarDecades[data-view="false"], .CalendarCenturies[data-view="false"] {
+  z-index:-1;
+}
+
+.CalendarHeader {
+  margin-left: 1px;
+  margin-right: 1px;
+  height: 21px;
+}
+
+.CalendarPrevMonth {
+  left: 0;
+  top: 0;
+  bottom: 0;
+}
+
+.CalendarPrevMonth span:before {
+  position: absolute;
+  left: 4px;
+  right: 0;
+  font-family: jagui;
+  height: 0;
+  line-height: 0;
+  top: 50%;
+  content:"*";
+}
+
+.CalendarNextMonth {
+  left: 43px;
+  top: 0;
+  bottom: 0;
+}
+
+.CalendarNextMonth span:before {
+  position: absolute;
+  left: 6px;
+  right: 0;
+  font-family: jagui;
+  height: 0;
+  line-height: 0;
+  top: 50%;
+  content:")";
+}
+
+.CalendarPrevMonth, .CalendarNextMonth, .CalendarNow {
+  width: 21px;
+  height: 21px;
+}
+
+.CalendarNow {
+  left: 22px;
+  top: 0;
+  height: 21px;
+}
+
+.CalendarNow span:before {
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  font-size: 4px;
+  font-family: jagui;
+  height: 0;
+  line-height: 0;
+  content:"3";
+}
+
+.CalendarMonth {
+  right: 0;
+  top: 0;
+  bottom: 0;
+  text-align: center;
+  line-height: 21px;
+  font-weight: bold;
+  width: 105px;
+}
+
+.CalendarWeek {
+  left: 0px;
+  right: 0px;
+  height: 16px;
+}
+
+.CalendarFirstWeek {
+  top: 0px;
+}
+
+.CalendarSecondWeek {
+  top: 16px;
+}
+
+.CalendarThirdWeek {
+  top: 32px;
+}
+
+.CalendarFourthWeek {
+  top: 48px;
+}
+
+.CalendarFifthWeek {
+  top: 64px;
+}
+
+.CalendarSixthWeek {
+  top: 80px;
+}
+
+.CalendarWeekDays, .CalendarWeeks {
+  left: 6px;
+  right: 6px;
+  height: 15px;
+  top: 22px;
+}
+
+.Calendar[data-viewweeknum="true"] .CalendarWeekDays, .Calendar[data-viewweeknum="true"] .CalendarWeeks {
+  left: 0;
+  right: 0;
+}
+
+.CalendarWeeks {
+  top: 38px;
+  bottom: 0px;
+  height: auto;
+}
+
+.CalendarWeekDay, .CalendarDay, .CalendarWeekNum {
+  position: relative;
+  float: left;
+  width: 23px;
+  text-align: center;
+  line-height: 16px;
+  height: 100%;
+  font-size: 8pt;
+}
+
+.CalendarWeekNum {
+  display: none;
+}
+
+.Calendar[data-viewweeknum="true"] .CalendarWeekDay,
+.Calendar[data-viewweeknum="true"] .CalendarDay {
+  width: 22px;
+}
+
+.Calendar[data-viewweeknum="true"] .CalendarWeekNum {
+  width: 18px;
+  display: block;
+  opacity: 0.5;
+}
+
+.Calendar[data-viewweeknum="true"] .CalendarDay {
+  width: 22px;
+}
+
+.CalendarMonths[data-view="true"], .CalendarDecades[data-view="true"], .CalendarCenturies[data-view="true"] {
+  -webkit-animation: CalendarZoomOut .3s 1 ease;
+  -webkit-animation-fill-mode: forwards;
+  -moz-animation: CalendarZoomOut .3s 1 ease;
+  -moz-animation-fill-mode: forwards;
+  -o-animation: CalendarZoomOut .3s 1 ease;
+  -o-animation-fill-mode: forwards;
+  animation: CalendarZoomOut .3s 1 ease;
+  animation-fill-mode: forwards;
+}
+
+@-webkit-keyframes CalendarZoomOut {
+  from {
+    -webkit-transform: scale(1.7);
+    opacity: 0;
+  }
+
+  to {
+    -webkit-transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@-moz-keyframes CalendarZoomOut {
+  from {
+    -moz-transform: scale(1.7);
+    opacity: 0;
+  }
+
+  to {
+    -moz-transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@-o-keyframes CalendarZoomOut {
+  from {
+    -o-transform: scale(1.7);
+    opacity: 0;
+  }
+
+  to {
+    -o-transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes CalendarZoomOut {
+  from {
+    transform: scale(1.7);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@-webkit-keyframes CalendarZoomIn {
+  from {
+    -webkit-transform: scale(1);
+    opacity: 1;
+  }
+
+  to {
+    -webkit-transform: scale(1.7);
+    opacity: 0;
+  }
+}
+
+@-moz-keyframes CalendarZoomIn {
+  from {
+    -moz-transform: scale(1);
+    opacity: 1;
+  }
+
+  to {
+    -moz-transform: scale(1.7);
+    opacity: 0;
+  }
+}
+
+@-o-keyframes CalendarZoomIn {
+  from {
+    -o-transform: scale(1);
+    opacity: 1;
+  }
+
+  to {
+    -o-transform: scale(1.7);
+    opacity: 0;
+  }
+}
+
+@keyframes CalendarZoomIn {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  to {
+    transform: scale(1.7);
+    opacity: 0;
+  }
+}
+
+.CalendarMDC {
+  position: relative;
+  float: left;
+  width: 43px;
+  height: 38px;
+  line-height: 38px;
+  text-align: center;
+}
+
+.CalendarMDCx2 {
+  line-height: 19px;
+}
+
+.Rating, .Rating div {
+  background-size: auto auto;
+}
+
+.Rating[data-orientation="horizontal"], .Rating[data-orientation="horizontal"] div,
+.Rating[data-orientation="horizontal"][disabled='disabled'] div,
+.Rating[data-orientation="horizontal"] .Rating-selected {
+  background-repeat: repeat-x;
+  background-position: left top;
+}
+
+.Rating[data-orientation="horizontal"],
+.GridviewCellRating {
+  height: 16px;
+  margin: 0;
+  overflow: hidden;
+  padding: 0;
+  min-width: 90px;
+  max-width: 90px;
+}
+
+.Rating[data-orientation="horizontal"] div,
+.GridviewCellRating div {
+  border: none;
+  height: 100%;
+  left: 0;
+  margin: 0;
+  outline: none;
+  overflow: hidden;
+  padding: 0;
+  top: 0;
+}
+
+.Rating[data-orientation="vertical"], .Rating[data-orientation="vertical"] div {
+  background-repeat: repeat-y;
+  background-position: left top;
+}
+
+.Rating[data-orientation="vertical"]:hover div, .Rating[data-orientation="vertical"] div:hover {
+  background-position: right top;
+}
+
+.Rating[data-orientation="vertical"][disabled='disabled'] div,
+.Rating[data-orientation="vertical"][disabled='disabled'] div {
+  background-position: center top;
+}
+
+.Rating[data-orientation="vertical"] .Rating-selected {
+  background-position: center top;
+}
+
+.Rating[data-orientation="vertical"] {
+  width: 16px;
+  margin: 0;
+  overflow: hidden;
+  padding: 0;
+  min-height: 80px;
+  max-height: 80px;
+}
+
+.Rating[data-orientation="vertical"] div {
+  border: none;
+  width: 100%;
+  top: 0;
+  margin: 0;
+  outline: none;
+  overflow: hidden;
+  padding: 0;
+  left: 0;
+}
+
+.GridView, .GridView_Content, .GridView_ViewPort {
+  overflow:hidden;
+}
+
+.GridView_Content {
+  left:1px;
+  top:1px;
+  right:1px;
+  bottom:1px;
+}
+
+.GridView[data-showpager="true"] .GridView_Content
+{
+  bottom:35px;
+}
+
+.GridView_header
+{
+  position:absolute;
+  left:0;
+  top:0;
+  right:0;
+  z-index:2;
+  height: 24px;
+}
+
+.GridView_rowIndic
+{
+  width:20px;
+  left:0;
+  z-index:1;
+}
+
+.GridView_rowIndic:before
+{
+  position:absolute;
+  content:")";
+  top:50%;
+  font-family:JaGui;
+  font-size:6pt;
+  left:50%;
+  -webkit-transform:translate(-50%,-50%);
+  transform:translate(-50%,-50%);
+  visibility:hidden;
+}
+
+.GridView_rowIndic[data-visible="true"]:before
+{
+  visibility:visible;
+}
+
+.GridView_row
+{
+  left:0;
+  right:0;
+}
+
+.GridView_rowIndic,
+.GridView_cell {
+  height:100%;
+  overflow:hidden;
+}
+
+.GridView_cellValue
+{
+  margin-left:3px;
+  position:absolute;
+  font-weight:bold;
+  white-space:nowrap;
+}
+
+.GridView .GridView_Content .GridView_ViewPort .GridView_header .GridView_cell .GridView_colResizer
+{
+  right:0;
+  top:0;
+  width:5px;
+  bottom:0;
+  visibility:hidden;
+}
+
+.GridView[data-colsizing] .GridView_Content .GridView_ViewPort .GridView_header .GridView_cell .GridView_colResizer
+{
+  visibility:visible;
+}
+
+
+.GridView_header .GridView_cell .GridView_cellValue:after
+{
+  position:relative;
+  content:"#";
+  font-family:JaGui;
+  font-size:4pt;
+  visibility:hidden;
+  margin-left:8px;
+  top:-1px;
+}
+
+.GridView_header .GridView_cell[data-sortedorder="desc"] .GridView_cellValue:after
+{
+  content:"8";
+}
+
+.GridView_header .GridView_cell[data-sorted="true"] .GridView_cellValue:after
+{
+  visibility:visible;
+}
+
+.GridviewCellImage {
+  margin:0;
+}
+
+.MainMenu {
+  height: 20px;
+  left: 0;
+  top: 0;
+  right: 0;
+}
+
+.MainMenu div.MenuItem {
+  float: left;
+  position: relative;
+  width: auto;
+  padding: 0 12px;
+  min-width: 0;
+  display: block;
+}
+
+.MainMenu .MenuItemCaption {
+  padding: 0;
+}
+
+.PopupBox {
+  box-shadow: 3px 3px 2px rgba(0,0,0,.7);
+  z-index: 10000;
+}
+
+.MenuItem {
+  min-width: 100px;
+  white-space: nowrap;
+  height: 20px;
+  display: table-row;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.MenuItemCaption {
+  padding: 0 12px 0 6px;
+  display: block;
+  position: relative;
+  background-position: 6px center;
+  background-repeat: no-repeat;
+}
+
+.MenuItemSep {
+  height: 1px;
+  line-height: 1px;
+  margin: 1px 0 2px 30px;
+  position: relative;
+}
+
+.subMenu {
+  position: relative;
+  display: table;
+  overflow: hidden;
+}
+
+.MenuItemHasSubMenu, .MenuItemShortCut {
+  position: relative;
+  display: table-cell;
+}
+
+.MenuItemHasSubMenu {
+  width: 13px;
+}
+
+.MenuItemHasSubMenu:before {
+  position: absolute;
+  content: ")";
+  right: 5px;
+  top: 10px;
+  width: 5px;
+  font-family: 'JaGui';
+  height: 0;
+  line-height: 0;
+  font-size: 5pt;
+}
+
+.MenuItemHasSubMenu[data-visible='false']:before {
+  display: none;
+}
+
+.loading {
+  position: absolute;
+  text-align: center;
+  width: 200px;
+  height: 100px;
+  z-index: 999999;
+  left: 50%;
+  top: 50%;
+  margin-left: -100px;
+  margin-top: -50px;
+}
+
+.loading_logo {
+  position: absolute;
+  left: 50%;
+  top: 10px;
+  width: 40px;
+  height: 40px;
+  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAYAAACM/rhtAAAEpUlEQVRYhb1ZX2gcRRi/0ERsEKrSKmgjKNgHoQ990JT2SRCF+uBbKY2C0bDxsnvz7TXgk8q1DyJoJWKul935dgMWjFxA8M9LHqRFJQ3YFwmlFYRo1lzvMjPbw9hYk5rxoTkzt7d7uwt3+eB7+377+8038818M5vJBEwIcVQIIRP6h0F8V01K2cM5v5JC4AZj7NCuCWSMDaUQJ4UQkjH2za6Iq1Qq/Zxzr0HMOV/xff9UmHPOZwNCX+y6QMbYWZWUc/5aVOza2toBIURdib0mpeztmriVlZUBzvm6QrggpexphxFC5NUBra6uGl0TKISYUci2qtXqYBxGStnHOb+h4ES9Xn+o4+JqtdoxNRO+73+WFOv7/onAsvik4wI55wsKwfry8vJjKfFzishNz/Oe7qhAxthFdXo5588mxUopeznn1xU8W1paerCjAj3Pe5xzflshmY8rkIYJISCwPLIdFacQvRfYfIfiMJVKZb8Q4paCW5RS7umKQM/z9gohlpW16FUqlf52GMbYBXVQtVrthbA418UPEOmdOHcce71UKh2JJPR9/3Qgi+faxB4WQtxVYr8OF+c+dY8cZUL/IVKglLJHCDGvVrQQYirCF9WGIapyHcf+MoU46Tgobds+GSmyWq0OCiG2UjYM58PFOc+rxIj4leM4r4c73lTifisUCvdHigxsO3Eeuq2Uy+U9iPRnhfTPiYmJR6M4bdt+I5DFdyIFCiEO+r5/iTF2Oc593z8d9g1EHFUJXRffjiTM3FterkuvKpi/HMdJdWAkNsuy9jkOrjbIKKW/lsvl++JwiHg8sCQSH7mpDBHPq0SU0ldSYGcU7BYiPtdRcZOTk4cQ6cYOifNdGnyxWBxwHPx7J4v0x44KLJVKjyDSujJNi+VyOfHpUiqVjiDSf5UBzrYEjYyMHASAS6ZpXo5zAGgpEtfFfPPe5ryVVCCl9Hsle3copU+2BOUJuWgCyITOTNNs2mYsy+pDpL8oRMyyrH1x4mzbPtlc+fb7LUG6rg8CIVspBEpCyMfB71iW9XIgix+1E1cul/e6Lv1dwdwsFosPBON6AGBBIV8HgKlQJ2SxEQeEbOi63nI3RsQ5hfCf6enpyEaWUuvd5uxNDbcEAcCrTdkxzchmwTCMw0DIXSX+22CM67rPINJNpWB+cl2cCHNEentHHL3a0o9qmtZvAvyhZMXTNK1tuwUAF9QBGYbxUqtI+9O0zQIiHm8hM03znEqWy+ViG9bx8fH9AHCrgckTcq1QKDTdjRHxYUQqkoqjlH4RloknTID1/7MHMJ/JZBK1/HnDgEDB5IIxlNI3HQcX4hwR54vF4kCYwM+Vqd0CgMSXpkKh0EsIua6IFNlstrN342DlGoaRqoswTXNOwW+Ojo529tpJCDkWqN7EXcQZXT+hYvMAnb+4b4ucUadZ1/XYpw9N0/oA4EZXp7dhY2NjA4FCWcjEFEoeIK9mDwC693i0TXg2UJGRz2/Dw8MHTIB6uy2m46ZpWj8Q4ilTvUJ0/VSYm7ncbNPaGxvr/gNmJpPJ5HK5oTSNwnb2ducJeNt6CCFXkoqLahS6amey2aOJM2iaXf8N8R9X8PKv8yj33gAAAABJRU5ErkJggg==);
+  margin-left: -20px;
+}
+/*.rotateAnimation{
+  -moz-animation-name: spin; 
+  -moz-animation-duration: 5000ms;
+  -moz-animation-iteration-count: infinite; 
+  -moz-animation-timing-function: linear;
+  -webkit-animation-name: spin; 
+  -webkit-animation-duration: 5000ms;
+  -webkit-animation-iteration-count: infinite; 
+  -webkit-animation-timing-function: linear;
+  -ms-animation-name: spin; 
+  -ms-animation-duration: 5000ms;
+  -ms-animation-iteration-count: infinite; 
+  -ms-animation-timing-function: linear;
+}*/
+.loading_progressOuter {
+  position: absolute;
+  left: 8px;
+  height: 5px;
+  width: 0;
+  bottom: 10px;
+  border-top: 1px solid gray;
+  border-left: 1px solid gray;
+  border-right: 1px solid white;
+  border-bottom: 1px solid white;
+  overflow: hidden;
+}
+
+.loading_progressInner {
+  position: absolute;
+  left: 1px;
+  top: 1px;
+  bottom: 1px;
+  width: 0;
+  background-color: blue;
+}
+
+.loading_text {
+  position: absolute;
+  left: 1px;
+  height: auto;
+  bottom: 20px;
+  right: 1px;
+  text-align: left;
+  text-overflow: ellipsis;
+  word-break: break-all;
+}
+
+.GhostWindow {
+  z-index: 9999999999;
+  border: 2px dotted white;
+  background-color: Transparent;
+}
+
+.noshadow {
+  box-shadow: 0px 0px 0px;
+}
+
+.Password_eye {
+  content: "m 1664,576 q -152,236 -381,353 61,-104 61,-225 0,-185 -131.5,-316.5 Q 1081,256 896,256 711,256 579.5,387.5 448,519 448,704 448,825 509,929 280,812 128,576 261,371 461.5,249.5 662,128 896,128 1130,128 1330.5,249.5 1531,371 1664,576 z M 944,960 q 0,20 -14,34 -14,14 -34,14 -125,0 -214.5,-89.5 Q 592,829 592,704 q 0,-20 14,-34 14,-14 34,-14 20,0 34,14 14,14 14,34 0,86 61,147 61,61 147,61 20,0 34,14 14,14 14,34 z m 848,-384 q 0,-34 -20,-69 Q 1632,277 1395.5,138.5 1159,0 896,0 633,0 396.5,139 160,278 20,507 0,542 0,576 q 0,34 20,69 140,229 376.5,368 236.5,139 499.5,139 263,0 499.5,-139 236.5,-139 376.5,-368 20,-35 20,-69 z";
+}
+
+/*.resize-triggers {
+  visibility: hidden;
+}
+
+.resize-triggers, .resize-triggers div, .contract-trigger:before {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.resize-triggers div {
+  background: #eee;
+  overflow: auto;
+}
+
+.contract-trigger:before {
+  width: 200%;
+  height: 200%;
+}*/
+
+.win8loader {
+  text-align: left;
+}
+
+.win8loader .win8circle {
+  position: absolute;
+  left: 5px;
+  top: 5px;
+  right: 5px;
+  bottom: 5px;
+  opacity: 0;
+  -moz-animation-iteration-count: infinite;
+  -moz-animation-name: orbit;
+  -moz-animation-duration: 5.5s;
+  -webkit-transform: rotate(225deg);
+  -webkit-animation-iteration-count: infinite;
+  -webkit-animation-name: orbit;
+  -webkit-animation-duration: 5.5s;
+  -ms-animation-iteration-count: infinite;
+  -ms-animation-name: orbit;
+  -ms-animation-duration: 5.5s;
+  -o-animation-iteration-count: infinite;
+  -o-animation-name: orbit;
+  -o-animation-duration: 5.5s;
+  transform: rotate(225deg);
+  animation-iteration-count: infinite;
+  animation-name: orbit;
+  animation-duration: 5.5s;
+}
+
+.win8loader .win8circle:after {
+  content: '';
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.win8loader .win8circle:nth-child(2) {
+  -moz-animation-delay: 240ms;
+  -webkit-animation-delay: 240ms;
+  -ms-animation-delay: 240ms;
+  -o-animation-delay: 240ms;
+  animation-delay: 240ms;
+}
+
+.win8loader .win8circle:nth-child(3) {
+  -moz-animation-delay: 480ms;
+  -webkit-animation-delay: 480ms;
+  -ms-animation-delay: 480ms;
+  -o-animation-delay: 480ms;
+  animation-delay: 480ms;
+}
+
+.win8loader .win8circle:nth-child(4) {
+  -moz-animation-delay: 720ms;
+  -webkit-animation-delay: 720ms;
+  -ms-animation-delay: 720ms;
+  -o-animation-delay: 720ms;
+  animation-delay: 720ms;
+}
+
+.win8loader .win8circle:nth-child(5) {
+  -moz-animation-delay: 960ms;
+  -webkit-animation-delay: 960ms;
+  -ms-animation-delay: 960ms;
+  -o-animation-delay: 960ms;
+  animation-delay: 960ms;
+}
+
+.ballIndic {
+  opacity: .9;
+  border-top: 5px solid rgba(0,0,0,0);
+  border-left: 5px solid rgba(0,0,0,0);
+  border-radius: 50%;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  -moz-animation: spin .5s infinite linear;
+  -webkit-animation: spin .5s infinite linear;
+  -ms-animation: spin .5s infinite linear;
+  -o-animation: spin .5s infinite linear;
+  animation: spin .5s infinite linear;
+}
+
+.ball1Indic {
+  opacity: .9;
+  border-top: 5px solid rgba(0,0,0,0);
+  border-left: 5px solid rgba(0,0,0,0);
+  border-radius: 50%;
+  left: 10px;
+  top: 10px;
+  right: 10px;
+  bottom: 10px;
+  -moz-animation: spinoff .5s infinite linear;
+  -webkit-animation: spinoff .5s infinite linear;
+  -ms-animation: spinoff .5s infinite linear;
+  -o-animation: spinoff .5s infinite linear;
+  animation: spinoff .5s infinite linear;
+}
+
+.circleIndic {
+  opacity: .9;
+  border-right: 5px solid rgba(0,0,0,0);
+  border-left: 5px solid rgba(0,0,0,0);
+  border-radius: 50%;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  -moz-animation: spinPulse 1s infinite ease-in-out;
+  -webkit-animation: spinPulse 1s infinite linear;
+  -ms-animation: spinPulse 1s infinite linear;
+  -o-animation: spinPulse 1s infinite linear;
+  animation: spinPulse 1s infinite linear;
+}
+
+.circle1Indic {
+  opacity: .9;
+  border-left: 5px solid rgba(0,0,0,0);
+  border-right: 5px solid rgba(0,0,0,0);
+  border-radius: 50%;
+  left: 10px;
+  top: 10px;
+  right: 10px;
+  bottom: 10px;
+  -moz-animation: spinoffPulse 1s infinite linear;
+  -webkit-animation: spinoffPulse 1s infinite linear;
+  -ms-animation: spinoffPulse 1s infinite linear;
+  -o-animation: spinoffPulse 1s infinite linear;
+  animation: spinoffPulse 1s infinite linear;
+}
+
+.ItemsWheel, .NumberWheel {
+  width: 20px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: 2px;
+}
+
+.ItemsWheel:before, .NumberWheel:before {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  content: "";
+  z-index: 1;
+  background-image: linear-gradient(to bottom,rgba(0,0,0,0.9) 0,rgba(0,0,0,0) 100%);
+}
+
+.ItemsWheel:after, .NumberWheel:after {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  content: "";
+  z-index: 1;
+  background-image: linear-gradient(to top,rgba(0,0,0,0.9) 0,rgba(0,0,0,0) 100%);
+}
+
+.ItemsWheelSep, .NumberWheelSep {
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+}
+
+.ItemsWheelContent, .NumberWheelContent {
+  left: 0;
+  right: 0;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.ItemsWheelItem, .NumberWheelItem {
+  left: 0px;
+  width: 100%;
+  height: 15px;
+  line-height: 15px;
+  position: relative;
+  text-align: center;
+}
+
+.TimePanel {
+  padding: 1px 1px 0 1px;
+  border-radius: 2px;
+  min-height: 43px;
+}
+
+.TimePanel .ItemsWheel, .TimePanel .NumberWheel {
+  position: relative;
+  float: left;
+}
+
+.TimePanel[data-use24h="false"] .TimePanel_Meridiem,
+.TimePanelPopup[data-use24h="false"] .TimePanel_Meridiem {
+  display: none;
+}
+
+.TimePanel[data-viewseconds="false"] .TimePanel_Seconds,
+.TimePanelPopup[data-viewseconds="false"] .TimePanel_Seconds {
+  display: none;
+}
+
+.ImageControl img {
+  position: absolute;
+}
+
+.ImageViewer .ScrollBoxContent {
+  min-width: 0;
+  min-height: 0;
+}
+
+.ImageControl, .Layout {
+  overflow: hidden;
+}
+
+.BitmapStateButton {
+  background-size: auto auto;
+}
+
+.timer_design {
+  background-repeat: no-repeat;
+  background-position: center top;
+  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAYAAAByDd+UAAABRUlEQVRIS+2WMW6DQBBFx4UvYh8BiS43IB0SFa25AS4RZegpdiskWgoKyrhHSDRcgpoTxHzkWMQKu0OyQpaSqSh2983/MzvL7mMM2jB2AA7DsAmyLEv6Bxq1+nksbZqGiqJgqXNdl2zbZq1dVBiGIQkhWIcEQUBJkrDWaoE4TBVIyiiQk7Yx4OnEs1RKQ5YC2LatUqRlWbTfd5SmKYlXQcOLemIpa8hV+AlEZjqotmk4Ney6m8JbA6mgWiCnS+dAJIg9S1AtcI3C83h3D8fjtGUJahw4T/BtHAaPSrXANZZCIeL9cqGqqqZvx3HI87x7HlrgGktxRRC4Skujziiw7/sJGEURSSm/hWqBXEvrur5b5/v+BI3jmPI8/2KSFsix9HGWAojaoY5s4G/fQzxvqOm8YZD887z4HCt/suaPKMyybNNf/SvAybKtAphgYwAAAABJRU5ErkJggg==);
+}
+
+.nonVisualImg {
+  background-repeat: no-repeat;
+  background-position: center top;
+  min-width: 28px;
+  min-height: 28px;
+  background-size: auto auto;
+  display: none;
+}
+
+.nonVisual[data-designer="true"] .nonVisualImg {
+  display: block;
+}
+
+.nonVisualCaption {
+  position: relative;
+  margin-top: 30px;
+}
+
+.imageList_design {
+  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABwAAAAcCAYAAAByDd+UAAADyUlEQVRIS+WWXWgcVRiGn5mdmf3JJmmTtCWpoJRWJSVKVMQL26oVYy/9o0QMUiEVUiqxxVy0vRAvSgyiF7aFlmBXQhMotqQXKiWYtlLUkiqU2DZogkkssQndmN1kf+dnPTPb3WYLm8x6EQQPMzsXZ+Y8+33v+33nSBkxWMEh2cBIJLIiyP7+fv77wI6OjpKy0dXVlX+/5Aht2K63XysJePLLM+SgJQFzsBO9zzJdbRJXyjAlEFd+SFIGxWOgyAaSZJFIe+h8/jKHO4/Q09NDScDu7m52vLyVvsuPEw14BEQG8VBVnYA3jl9NIAtgUvdydVwhuhAEM8PHLwy6B5aqlx1q+4e7OPWTzs9/PEE87hPA79wB/41eNtDWrO3QHjq/1TDkGPvrw+6Avb0hhq63MlsuEStLYGRWFWi2WC/Vo4tUaugmec22t7/I+OwgO+va3AMHxncTLrf1UrLGkIVFFIugfwFNMUgJvRIpP6YuI1l2wzJFCi84gO3tm5lKjfJKZas74O+/jTAWeYqEZvtQIiNJSJ4Mfi3J6sAsXk+apOEj9EOG6UgNZtL+U7ZJspptaX+U8fhNWqr2Lg0s1Sg73z/I0Yt+7typLgA2HWzk0o8X2Pf0oeJAWzdLbnKiSmkZrFwq71aaiBNZtvDIJpYlY1pQHT3PdLISaWMtk5EbtG7Y7AD272vldniSybG/2f3uXmeFgjrMubLr3JZ7ut3VzOdNOXUmsuroFksEQLeXuKfZns43GZw4k9esoaGB4eFhp+BzowhwWxYoiVuzqArOUVs5RXVZGEV0j7nEKkZnNhCNVBSk8J2P3mDg1ukCze7vgUWAz2WBskywfJ6H143y2PprND7wC14lxc3b9Zy/0cTIxCMFwLZP3uKLb44UaOYKePjsSwKY7Vx1a8M889AVXm88zYNrrzuAhVgdnw5+INpXAK+ffGEfOPAe3w99zdYnd+RN4gp4bKCGcIWJ6vOwripCfe2vbNt4iQpRe7ZRDEvi3LVXmZj5Cq/mzRf2saOfcevPsaKwoqYZmR8iXhMVdjBI62kSui6K28AwLCxxGkkkYxji9qsqWpmaN0lzczN9fX0FJnEV4amrx5lbHUZWJLETqCiKB1VTRTIzjkudHwGOTicJ1viWNIkr4Nm/TjKvRTBiJguzSSrXBClfI/Y+wxT9Jrv72ecuKyUxNTqzpEmWBNqTJ45/zqb1tehaWiwtXOM0NYR22cAkJ8TssETElthoFxf2/YBlgfYLLS0ty31XML+4sJf7sKQdf7nF3Mz/T4ChUGhFj/r/AFQrtLy3XEgVAAAAAElFTkSuQmCC);
+}
+
+.ToolTip {
+  opacity: 0;
+}
+
+.ToolTip[data-fade="on"] {
+  opacity: 1;
+  -webkit-transition: opacity 0.5s ease-in-out;
+  transition: opacity 0.5s ease-in-out;
+}
+
+.vResizeLine
+{
+  width:0;
+  height:100%;
+  border-right:1px dotted white;
+  z-index:99;
+}
+
+.hResizeLine
+{
+  width:100%;
+  height:0;
+  border-bottom:1px dotted white;
+}
+
+.TableLayout div[data-visible="false"] {
+  visibility:hidden;
+}
+
+/*----------------------------- Css for FindReplaceDlg begin ----------------------------*/
+.FindReplaceDlg
+{
+  height:72px;
+  width:280px;
+}
+
+.FindReplaceDlg[data-replace='on']
+{
+  height:100px;
+}
+
+.frDlgReplaceDdlb, .frDlgNextBtn, .frDlgAllBtn
+{
+  visibility:hidden;
+}
+
+.FindReplaceDlg[data-replace='on'] .frDlgReplaceDdlb,
+.FindReplaceDlg[data-replace='on'] .frDlgNextBtn,
+.FindReplaceDlg[data-replace='on'] .frDlgAllBtn
+{
+  visibility:visible;
+}
+
+.frDlgCaseBtn
+{
+  left:24px;
+  width:21px;
+  height:21px;
+}
+
+.frDlgWordBtn
+{
+  left:48px;
+  width:21px;
+  height:21px;
+}
+
+.frDlgRegExpBtn
+{
+  left:72px;
+  width:21px;
+  height:21px;
+}
+
+.frDlgFindDdlb
+{
+  left:24px;
+  top:4px;
+  height:21px;
+  width:197px;
+}
+
+.frDlgNextSplitBtn
+{
+  left:224px;
+  top:4px;
+  height:23px;
+  width:33px;
+}
+
+.frDlgReplaceDdlb
+{
+  left:24px;
+  top:29px;
+  height:21px;
+  width:197px;
+}
+
+.frDlgDestinationDdlb
+{
+  left:96px;
+  top:54px;
+  height:21px;
+  width:173px;
+}
+
+.frDlgNextBtn
+{
+  top:29px;
+  left:224px;
+  width:21px;
+  height: 21px;
+}
+
+.frDlgAllBtn
+{
+  top:29px;
+  left:248px;
+  width:21px;
+  height:21px;
+}
+
+.frDlgCaseBtn,
+.frDlgWordBtn,
+.frDlgRegExpBtn,
+.frDlgDestinationDdlb
+{
+  top:29px;
+}
+
+.FindReplaceDlg[data-replace='on'] .frDlgCaseBtn,
+.FindReplaceDlg[data-replace='on'] .frDlgWordBtn,
+.FindReplaceDlg[data-replace='on'] .frDlgRegExpBtn,
+.FindReplaceDlg[data-replace='on'] .frDlgDestinationDdlb
+{
+  top:54px;
+}
+
+.frDlgSwitchBtn
+{
+  top:4px;
+  left:0;
+  width:21px;
+  height:21px;
+}
+
+.frDlgSwitchBtn span
+{
+  font-family:'JaGui';
+  font-size:8pt;
+  -webkit-transform: translate(-50%,-50%);
+  transform: translate(-50%,-50%);
+  position:absolute;
+  top:49%;
+  left:50%;
+}
+
+.frDlgSB_Btn {
+  font-family:jagui;
+}
+/*----------------------------- Css for FindReplaceDlg end ----------------------------*/
+
+.SplitButton .BitmapButton, .SplitToolButton .BitmapButton
+{
+  left:0;
+  top:0;
+  bottom:0;
+  right:13px;
+}
+
+.SplitButton .PopupButton, .SplitToolButton .PopupButton
+{
+  top:0;
+  bottom:0;
+  right:0;
+  width:14px;
+}
+
+input[readonly] {
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+}
+
+/*----------------------------- Css for FontDlg begin ----------------------------*/
+.FontDlg .WindowLayout
+{
+  width:350px;
+  height:220px;
+}
+
+.fontDlg_Police
+{
+  left:12px;
+  top:12px;
+}
+
+.fontDlg_Style
+{
+  left:166px;
+  top:12px;
+}
+
+.fontDlg_Size
+{
+  left:286px;
+  top:12px;
+}
+
+.frDlgbtnOk,
+.frDlgbtnCancel
+{
+  top:0;
+  height:22px;
+  width:71px;
+}
+
+.fontDlg_btnCont
+{
+  overflow:visible;
+  height:24px;
+  bottom:5px;
+}
+
+.fontDlgDdlbPolice
+{
+  left:12px;
+  top:27px;
+  width:146px;
+  height:20px;
+}
+
+.fontDlgDdlbStyle
+{
+  left:166px;
+  top:27px;
+  width:111px;
+  height:20px;
+}
+
+.fontDlgDdlbSize
+{
+  left:285px;
+  top:27px;
+  width:54px;
+  height:20px;
+}
+
+.fontDlg_gbEffects
+{
+  top:54px;
+  left:10px;
+  width:146px;
+  height:90px;
+}
+
+.fontDlg_gbPreview
+{
+  top:54px;
+  width:157px;
+  height:90px;
+  left:164px;
+  color:black;
+}
+
+.fontDlg_lblPreview
+{
+  left:50%;
+  top:50%;
+  -webkit-transform: translate(-50%,-50%);
+  transform: translate(-50%,-50%);
+  font-family:Arial;
+  font-size:8pt;
+}
+
+.fontDlg_chkUnderline
+{
+  top:20px;
+  left:10px;
+}
+
+.fontDlg_lblColor
+{
+  top:40px;
+  left:10px;
+}
+
+.fontDlg_colorBtn
+{
+  top:58px;
+  left:10px;
+  width:123px;
+  height:20px;
+}
+/*----------------------------- Css for FontDlg end ----------------------------*/
+/*----------------------------- Css for ColorDlg begin ----------------------------*/
+.ColorDlg .WindowLayout
+{
+  width:570px;
+  height:293px;
+}
+
+.colorDlg_clrQuad
+{
+  left:17px;
+  top:17px;
+  width:234px;
+  height:234px;
+}
+
+.colorDlg_clrPicker
+{
+  left:260px;
+  top:17px;
+  width:20px;
+  height:234px;
+}
+
+.colorDlg_lblCurColor
+{
+  left:300px;
+  top:21px;
+}
+
+.colorDlg_lblNewColor
+{
+  left:429px;
+  top:21px;
+}
+
+.colorDlg_clrBoxCurColor
+{
+  left:295px;
+  top:36px;
+  width:128px;
+  height:21px;
+}
+
+.colorDlg_clrBoxNewColor
+{
+  left:423px;
+  top:36px;
+  width:128px;
+  height:21px;
+}
+
+#colorDlg_btnContainer {
+  left:363px;
+  height:25px;
+  width:120px;
+  z-index:1;
+  top:67px;
+}
+
+.colorDlg_btnRGB
+{
+  left:0;
+  top:0;
+  width:40px;
+  height:25px;
+}
+
+.colorDlg_btnHSL
+{
+  left:40px;
+  top:0;
+  width:40px;
+  height:25px;
+}
+
+.colorDlg_btnHSV
+{
+  left:80px;
+  top:0;
+  width:40px;
+  height:25px;
+}
+
+.colorDlg_pnlRGB,
+.colorDlg_pnlHSL,
+.colorDlg_pnlHSV
+{
+  left:295px;
+  top:79px;
+  width:256px;
+  height:108px;
+}
+
+.colorDlg_lblRed
+{
+  left:13px;
+  top:23px;
+}
+
+.colorDlg_slrRed
+{
+  left:90px;
+  top:23px;
+  width:93px;
+  height:14px;
+}
+
+.colorDlg_txtbRed
+{
+  left:192px;
+  top:18px;
+  width:30px;
+  height:23px;
+}
+
+.colorDlg_lblGreen
+{
+  left:13px;
+  top:50px;
+}
+
+.colorDlg_slrGreen
+{
+  left:90px;
+  top:50px;
+  width:93px;
+  height:14px;
+}
+
+.colorDlg_txtbGreen
+{
+  left:192px;
+  top:45px;
+  width:30px;
+  height:23px;
+}
+
+.colorDlg_lblBlue
+{
+  left:13px;
+  top:77px;
+}
+
+.colorDlg_slrBlue
+{
+  left:90px;
+  top:77px;
+  width:93px;
+  height:14px;
+}
+
+.colorDlg_txtbBlue
+{
+  left:192px;
+  top:72px;
+  width:30px;
+  height:23px;
+}
+
+.colorDlg_lblHue
+{
+  left:13px;
+  top:23px;
+}
+
+.colorDlg_slrHue
+{
+  left:90px;
+  top:23px;
+  width:93px;
+  height:14px;
+}
+
+.colorDlg_txtbHSLHue
+{
+  left:192px;
+  top:18px;
+  width:30px;
+  height:23px;
+}
+
+.colorDlg_lblHSLHue
+{
+  left:236px;
+  top:23px;
+}
+
+.colorDlg_lblSat
+{
+  left:13px;
+  top:50px;
+}
+
+.colorDlg_slrSat
+{
+  left:90px;
+  top:50px;
+  width:93px;
+  height:14px;
+}
+
+.colorDlg_txtbHSLSat
+{
+  left:192px;
+  top:45px;
+  width:30px;
+  height:23px;
+}
+
+.colorDlg_lblHSLSat
+{
+  left:236px;
+  top:50px;
+}
+
+.colorDlg_lblLight
+{
+  left:13px;
+  top:77px;
+}
+
+.colorDlg_slrLight
+{
+  left:90px;
+  top:77px;
+  width:93px;
+  height:14px;
+}
+
+.colorDlg_txtbLight
+{
+  left:192px;
+  top:72px;
+  width:30px;
+  height:23px;
+}
+
+.colorDlg_lblHSLLight
+{
+  left:236px;
+  top:77px;
+}
+
+.colorDlg_lblHSVHue
+{
+  left:13px;
+  top:23px;
+}
+
+.colorDlg_slrHSVHue
+{
+  left:90px;
+  top:23px;
+  width:93px;
+  height:14px;
+}
+
+.colorDlg_txtbHSVHue
+{
+  left:192px;
+  top:18px;
+  width:30px;
+  height:23px;
+}
+
+.colorDlg_lblHSVHueDeg
+{
+  left:236px;
+  top:23px;
+}
+
+.colorDlg_lblHSVSat
+{
+  left:13px;
+  top:50px;
+}
+
+.colorDlg_slrHVSSat
+{
+  left:90px;
+  top:50px;
+  width:93px;
+  height:14px;
+}
+
+.colorDlg_txtbHSVSat
+{
+  left:192px;
+  top:45px;
+  width:30px;
+  height:23px;
+}
+
+.colorDlg_lblHSVSatPer
+{
+  left:236px;
+  top:50px;
+}
+
+.colorDlg_lblValue
+{
+  left:13px;
+  top:77px;
+}
+
+.colorDlg_slrValue
+{
+  left:90px;
+  top:77px;
+  width:93px;
+  height:14px;
+}
+
+.colorDlg_txtbValue
+{
+  left:192px;
+  top:72px;
+  width:30px;
+  height:23px;
+}
+
+.colorDlg_lblValuePer
+{
+  left:236px;
+  top:77px;
+}
+
+.colorDlg_lblOpacity
+{
+  left:310px;
+  top:195px;
+}
+
+.colorDlg_slrOpacity
+{
+  left:387px;
+  top:195px;
+  width:93px;
+  height:14px;
+}
+
+.colorDlg_txtbOpacity
+{
+  left:489px;
+  top:190px;
+  width:30px;
+  height:23px;
+}
+
+.colorDlg_lblOpacityPer
+{
+  left:533px;
+  top:195px;
+}
+
+.colorDlg_txtbHex
+{
+  left:310px;
+  top:227px;
+  width:52px;
+  height:23px;
+}
+
+.colorDlgBtnOk
+{
+  left:401px;
+  top:226px;
+  width:71px;
+  height:25px;
+}
+
+.colorDlgBtnCancel
+{
+  left:482px;
+  top:226px;
+  width:71px;
+  height:25px;
+}
+/*----------------------------- Css for ColorDlg end ----------------------------*/
