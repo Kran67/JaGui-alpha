@@ -153,7 +153,7 @@
       this.looper=new Looper();
       this.currentCulture=null;
       this.cultures={};
-      this.folders={"{BASE}":"JaGui6","{GUI}":"gui/","{CORE}":"gui/core/","{COMPONENTS}":"gui/components/","{COMMON}":"gui/components/common/","{COLOR}":"gui/components/color/",
+      this.folders={"{BASE}":"JaGui-alpha","{GUI}":"gui/","{CORE}":"gui/core/","{COMPONENTS}":"gui/components/","{COMMON}":"gui/components/common/","{COLOR}":"gui/components/color/",
                     "{CONTAINERS}":"gui/components/containers/","{DATA}":"gui/components/data/","{EXTENDED}":"gui/components/extended/","{EXTRAS}":"gui/components/extras/",
                     "{LISTS}":"gui/components/lists/","{MENUS}":"gui/components/menus/","{TOOLBARS}":"gui/components/toolbars/","{NONVISUAL}":"gui/components/nonvisual/",
                     "{APPS}":"apps/","{DEMOS}":"demos/","{CULTURES}":"gui/cultures/","{CONTROLS}":"controls/","{CSS}":"css/","{THEMES}":"css/themes/","{IMAGES}":"images/",
