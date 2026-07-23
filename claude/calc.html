@@ -8910,6 +8910,46 @@ function _parse(toks){
 }
 function _refRC(s){ const m=s.replace(/\$/g,'').match(/^([A-Za-z]{1,3})(\d+)$/); return {c:_colIndex(m[1]), r:parseInt(m[2],10)-1}; }
 function _shiftRef(ref,dr,dc){ const m=ref.match(/^(\$?)([A-Za-z]{1,3})(\$?)(\d+)$/); if(!m)return ref; let col=_colIndex(m[2]),row=parseInt(m[4],10)-1; if(!m[1])col=Math.max(0,col+dc); if(!m[3])row=Math.max(0,row+dr); return m[1]+_colName(col)+m[3]+(row+1); }
+// plage {r1,c1,r2,c2} ⇄ notation A1 (« A1:C10 »)
+function _fmtRange(rg){ return _colName(rg.c1)+(rg.r1+1)+':'+_colName(rg.c2)+(rg.r2+1); }
+function _parseRange(str){ const p=String(str).trim().replace(/\$/g,'').split(':'); if(!p[0])return null; if(p[1]==null)p[1]=p[0]; try{ const a=_refRC(p[0]), b=_refRC(p[1]); return { r1:Math.min(a.r,b.r), c1:Math.min(a.c,b.c), r2:Math.max(a.r,b.r), c2:Math.max(a.c,b.c) }; }catch(_){ return null; } }
+// ── suites logiques pour la poignée de recopie ───────────────────────────────
+const _SERIES_LISTS=[
+  ['lundi','mardi','mercredi','jeudi','vendredi','samedi','dimanche'],
+  ['lun','mar','mer','jeu','ven','sam','dim'],
+  ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'],
+  ['janv','févr','mars','avr','mai','juin','juil','août','sept','oct','nov','déc'],
+  ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'],
+  ['mon','tue','wed','thu','fri','sat','sun'],
+  ['january','february','march','april','may','june','july','august','september','october','november','december'],
+  ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'],
+];
+const _ACCENTS={'à':'a','â':'a','ä':'a','á':'a','é':'e','è':'e','ê':'e','ë':'e','î':'i','ï':'i','í':'i','ô':'o','ö':'o','ó':'o','ù':'u','û':'u','ü':'u','ú':'u','ç':'c','ñ':'n'};
+function _deburr(s){ return String(s).toLowerCase().trim().replace(/\.$/,'').replace(/[a-zàâäáéèêëîïíôöóùûüúçñ]/g,ch=>_ACCENTS[ch]||ch); }
+function _applyCase(sample,word){ const s=String(sample);
+  if(s.length>1 && s===s.toUpperCase() && s!==s.toLowerCase()) return word.toUpperCase();
+  if(s[0] && s[0]===s[0].toUpperCase() && s[0]!==s[0].toLowerCase()) return word.charAt(0).toUpperCase()+word.slice(1);
+  return word; }
+function _seriesNumRaw(v){ return String(Math.round(v*1e10)/1e10); }
+// seed = [{raw,num,disp}] (ordre du glissé). Renvoie extra valeurs raw, ou null (=> copie/répétition).
+function _computeFillSeries(seed, extra){ if(extra<=0)return []; const n=seed.length; if(!n)return null;
+  for(const s of seed){ if(s.raw==null||s.raw===''){ return null; } if(typeof s.raw==='string'&&s.raw[0]==='='){ return null; } }
+  const out=[]; const disps=seed.map(s=>String(s.disp!==''&&s.disp!=null?s.disp:s.raw));
+  // 1) numérique — inclut dates/heures (nombres de série, format conservé via le style de la source)
+  if(seed.every(s=>typeof s.num==='number')){ const step=n>=2?(seed[n-1].num-seed[0].num)/(n-1):1; const base=seed[n-1].num;
+    for(let k=1;k<=extra;k++)out.push(_seriesNumRaw(base+step*k)); return out; }
+  // 2) listes intégrées — jours / mois (FR + EN, complets + abrégés), cyclage avec retour
+  { const toks=disps.map(_deburr);
+    for(const list of _SERIES_LISTS){ const deb=list.map(_deburr); const idx=toks.map(t=>deb.indexOf(t));
+      if(idx.every(i=>i>=0)){ const L=list.length; const step=n>=2?(idx[n-1]-idx[0])/(n-1):1; const base=idx[n-1]; const sample=disps[n-1];
+        for(let k=1;k<=extra;k++){ const ni=(((Math.round(base+step*k))%L)+L)%L; out.push(_applyCase(sample,list[ni])); }
+        return out; } } }
+  // 3) texte + nombre en suffixe (« Article1 » → « Article2 ») — hors dates/heures textuelles
+  if(!disps.some(d=>/\d[\/:.\-]\d/.test(d))){ const m=disps.map(d=>d.match(/^(.*?)(\d+)$/));
+    if(m.every(x=>x) && m.every(x=>x[1]===m[0][1])){ const pre=m[0][1], width=m[n-1][2].length, nums=m.map(x=>parseInt(x[2],10));
+      const step=n>=2?Math.round((nums[n-1]-nums[0])/(n-1)):1; const base=nums[n-1];
+      for(let k=1;k<=extra;k++){ const v=Math.max(0,base+step*k); out.push(pre+String(v).padStart(width,'0')); } return out; } }
+  return null; }
 function _translateFormula(raw,dr,dc){ if(typeof raw!=='string'||raw[0]!=='='||(!dr&&!dc))return raw;
   return '='+raw.slice(1).replace(/"(?:[^"]|"")*"|(?<![A-Za-z0-9_$.])\$?[A-Za-z]{1,3}\$?\d+(?::\$?[A-Za-z]{1,3}\$?\d+)?(?![A-Za-z0-9_(])/g, tok=>{
     if(tok[0]==='"')return tok;
@@ -9952,6 +9992,8 @@ class SpreadsheetWidget extends BaseWidget {
     this._copyBuf=null; this._cutFrom=null; this._copyStyle=null; this._painter=false;
     this._dragMode=null; this._dragCol=-1; this._dragRow=-1; this._resizeStart=0;
     this._selObj=null; this._objDrag=null; this._cropObj=null; this._lastX=0; this._lastY=0;
+    this._chartPick=null; this._chartPickDrag=null; this._chartPickOrig=null;
+    this.colHeaderNumeric=false;   // en-tête de colonnes : false = lettres (A,B,C), true = nombres (1,2,3)
     this.onSelChange=null;
     this.tabIndex=0; this.capturesDrag=true; this.cursor='default';
     this._calcCache=new Map(); this._calcStack=new Set();
@@ -10163,13 +10205,18 @@ class SpreadsheetWidget extends BaseWidget {
       if(s){ if(s.dir==='v') this._drawTip(ctx,'Ligne '+(this._firstRowAtScroll(s.scroll)+1), s.x-6, s.trackStart+s.thumbOff+s.thumbLen/2, 'right');
              else            this._drawTip(ctx,'Colonne '+_colName(this._firstColAtScroll(s.scroll)), s.trackStart+s.thumbOff+s.thumbLen/2, s.y-6, 'above'); } }
     ctx.restore(); }
-  _drawTip(ctx,text,tx,ty,anchor){ ctx.save(); ctx.font=fontToCSS(getTheme().label.font); const w=Math.ceil(ctx.measureText(text).width)+16, h=20;
-    let x = anchor==='right'? tx-w : tx-w/2, y = anchor==='above'? ty-h : ty-h/2;
-    x=Math.max(this.bounds.x+2,Math.min(x,this.bounds.x+this.bounds.width-w-2)); y=Math.max(this.bounds.y+this.fbH+2,y);
-    const T=getTheme().tooltip||{}; applyShadow(ctx,{x:0,y:2,blur:6,color:{r:0,g:0,b:0,a:0.35}});
-    ctx.fillStyle=colorToCSS(T.background||hexToColor('#333333')); drawRoundRect(ctx,x,y,w,h,4); ctx.fill(); clearShadow(ctx);
-    ctx.strokeStyle=colorToCSS(T.border?T.border.color:hexToColor('#000000')); ctx.lineWidth=1; drawRoundRect(ctx,x+.5,y+.5,w-1,h-1,4); ctx.stroke();
-    ctx.fillStyle=colorToCSS(T.text||hexToColor('#FFFFFF')); ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(text,x+w/2,y+h/2); ctx.restore(); }
+  // bulle d'info (défilement + poignée de recopie) — même rendu que WindowManager._renderTooltip (fidèle au thème)
+  _drawTip(ctx,text,tx,ty,anchor){ const t=getTheme().tooltip; ctx.save(); ctx.font=fontToCSS(t.font);
+    const w=Math.ceil(ctx.measureText(text).width)+t.padding.x*2, h=t.font.size+t.padding.y*2, r=t.borderRadius||0;
+    let x = anchor==='right'? tx-w : (anchor==='tl'? tx : tx-w/2), y = anchor==='above'? ty-h : (anchor==='tl'? ty : ty-h/2);
+    x=Math.max(this.bounds.x+2,Math.min(x,this.bounds.x+this.bounds.width-w-2)); y=Math.max(this.bounds.y+this.fbH+2,Math.min(y,this.bounds.y+this.bounds.height-h-2));
+    if(t.shadow)applyShadow(ctx,t.shadow);
+    ctx.fillStyle=colorToCSS(t.background); drawRoundRect(ctx,x,y,w,h,r); ctx.fill(); if(t.shadow)clearShadow(ctx);
+    ctx.strokeStyle=colorToCSS(t.border.color); ctx.lineWidth=t.border.width; drawRoundRect(ctx,x+.5,y+.5,w-1,h-1,r); ctx.stroke();
+    ctx.fillStyle=colorToCSS(t.text); ctx.textBaseline='middle';
+    if(anchor==='tl'){ ctx.textAlign='left'; ctx.fillText(text,x+t.padding.x,Math.round(y+h/2)); }
+    else { ctx.textAlign='center'; ctx.fillText(text,x+w/2,Math.round(y+h/2)); }
+    ctx.restore(); }
   _frozenW(){ return this.freezeC?this._axCols[Math.min(this.freezeC,this.nCols)]:0; }
   _frozenH(){ return this.freezeR?this._axRows[Math.min(this.freezeR,this.nRows)]:0; }
   _splitX(){ return this.split?this.split.x:0; }
@@ -10584,6 +10631,23 @@ class SpreadsheetWidget extends BaseWidget {
   insertChart(kind){ const s=this._normSel(); const range={r1:s.r1,c1:s.c1,r2:s.r2,c2:s.c2};
     const obj={type:'chart',r:this.cur.r,c:this.cur.c,dx:20,dy:6,w:340,h:230,chart:{kind:kind||'bar',range,title:''}};
     this.objects.push(obj); this._selObj=obj; this.markDirty(); this._focusSelf(); }
+  // change la plage source d'un graphique via saisie A1 (« A1:C10 »)
+  promptChartRange(o){ if(!o||o.type!=='chart')return; const cur=_fmtRange(o.chart.range);
+    Dialogs.prompt('Source du graphique','Plage de données (ex : A1:C10) :',cur).then(r=>{
+      if(r&&r.result==='ok'){ const rg=_parseRange(r.value); if(rg){ o.chart.range=rg; this.markDirty(); }
+        else Dialogs.alert('Plage invalide : « '+r.value+' ».\nFormat attendu : A1:C10.',{caption:'Source du graphique'}); }
+      this._focusSelf(); }); }
+  // définit la plage source depuis la sélection courante de la feuille
+  chartRangeFromSel(o){ if(!o||o.type!=='chart')return; const s=this._normSel();
+    o.chart.range={r1:s.r1,c1:s.c1,r2:s.r2,c2:s.c2}; this.markDirty(); this._focusSelf(); }
+  // arme la sélection à la souris de la plage source : glissé sur la grille = nouvelle plage
+  startChartPick(o){ if(!o||o.type!=='chart')return; if(this.editing)this._commitEdit();
+    this._selObj=o; this._chartPick=o; this._chartPickDrag=null; this._chartPickOrig={...o.chart.range};
+    this.cursor='crosshair'; this._focusSelf(); this.markDirty(); }
+  _endChartPick(commit){ if(!this._chartPick)return;
+    if(!commit&&this._chartPickOrig)this._chartPick.chart.range=this._chartPickOrig;
+    this._chartPick=null; this._chartPickDrag=null; this._chartPickOrig=null;
+    this.cursor='default'; if(this.onChartPickEnd)this.onChartPickEnd(); this.markDirty(); }
   _chartData(o){ const rg=o.chart.range; const rows=[]; for(let r=rg.r1;r<=rg.r2;r++){ const row=[]; for(let c=rg.c1;c<=rg.c2;c++) row.push({num:this.cellNumeric(r,c), disp:this.cellDisplay(r,c)}); rows.push(row); } return rows; }
   _renderChart(ctx,o,ob){ const C=o.chart; const R=this._chartData(o); if(!R.length||!R[0].length)return;
     const nR=R.length, nC=R[0].length;
@@ -10735,6 +10799,8 @@ class SpreadsheetWidget extends BaseWidget {
       const chartItems = obj.type==='chart'?[
         {label:'Type de graphique',icon:'📊',submenu:[['Barres','bar'],['Lignes','line'],['Secteurs','pie']].map(([lab,k])=>({label:lab,checked:obj.chart.kind===k,action:()=>{ obj.chart.kind=k; this.markDirty(); this._focusSelf(); }}))},
         {label:'Titre du graphique…',action:()=>{ Dialogs.prompt('Titre du graphique','Titre :',obj.chart.title||'').then(r=>{ if(r&&r.result==='ok'){ obj.chart.title=r.value||''; this.markDirty(); } this._focusSelf(); }); }},
+        {label:'Choisir la source à la souris',icon:'🖱',action:()=>{ this.startChartPick(obj); }},
+        {label:'Source des données… ('+_fmtRange(obj.chart.range)+')',icon:'▦',action:()=>{ this.promptChartRange(obj); }},
         {separator:true},
       ]:[];
       const shapeItems=this._shapeMenuItems(obj,wm,o.x+e.x,o.y+e.y);
@@ -10848,6 +10914,12 @@ class SpreadsheetWidget extends BaseWidget {
   _onDown(e){ const x=e.x,y=e.y;
     if(this.editing&&rectContains(this._editor.bounds,x,y))return; // editor handles
     if(this._inFormulaBar(y))return; // children handle
+    // sélection à la souris de la plage source d'un graphique
+    if(this._chartPick){ if(e.button===2){ this._endChartPick(false); return; }
+      const inB = x>=this._gx0()&&x<this._gx0()+this._bodyW()&&y>=this._gy0()&&y<this._gy0()+this._bodyH();
+      if(inB){ const r=this._rowAt(y),c=this._colAt(x); if(r>=0&&c>=0){ this._chartPickDrag={anchorR:r,anchorC:c};
+        this._chartPick.chart.range={r1:r,c1:c,r2:r,c2:c}; this.markDirty(); return; } }
+      this._endChartPick(false); return; }
     // mode dessin armé : clic dans la grille → ancre la forme, le glissé la dimensionne
     if(this._drawArm){ if(e.button===2){ if(this._polyDraw)this._finishPoly(false); else this.cancelDrawShape(); return; }
       const inBody = x>=this._gx0()&&x<this._gx0()+this._bodyW()&&y>=this._gy0()&&y<this._gy0()+this._bodyH();
@@ -10906,6 +10978,10 @@ class SpreadsheetWidget extends BaseWidget {
     const r=this._rowAt(y),c=this._colAt(x); if(r>=0&&c>=0){ this._dragMode='sel'; if(this._painter&&this._copyStyle){ this._setCur(r,c,false); this.cmdPasteStyle(); return; } this._setCur(r,c,e.shiftKey); }
   }
   _onMove(e){ const x=e.x,y=e.y; this._lastX=x; this._lastY=y;
+    if(this._chartPickDrag){ const r=this._rowAt(y),c=this._colAt(x); if(r>=0&&c>=0){ const d=this._chartPickDrag;
+      this._chartPick.chart.range={r1:Math.min(d.anchorR,r),c1:Math.min(d.anchorC,c),r2:Math.max(d.anchorR,r),c2:Math.max(d.anchorC,c)}; this.markDirty(); }
+      this.cursor='crosshair'; return; }
+    if(this._chartPick){ this.cursor='crosshair'; return; }
     if(this._ptDrag){ this._ptSetPoint(this._ptDrag.o,this._ptDrag.i,x,y); this.cursor='crosshair'; return; }
     if(this._drawDrag){ this._updateDraw(x,y,e.shiftKey); this.cursor='crosshair'; return; }
     if(this._polyDraw){ this._polyMove(x,y); this.cursor='crosshair'; return; }
@@ -10973,7 +11049,8 @@ class SpreadsheetWidget extends BaseWidget {
       else if(x<this._gx0()&&y>=this._gy0()){ if(this._rowEdgeAt(y)>=0)cur='row-resize'; } else { const s=this._normSel(); const hx=this._colLeft(s.c2)+this.colW[s.c2],hy=this._rowTop(s.r2)+this.rowH[s.r2]; if(Math.abs(x-hx)<6&&Math.abs(y-hy)<6)cur='crosshair'; else cur='cell'; } } } }
     if(cur!==this.cursor){ this.cursor=cur; }
   }
-  _onUp(e){ if(this._ptDrag){ this._ptDrag=null; this._focusSelf(); return; }
+  _onUp(e){ if(this._chartPickDrag){ this._chartPickDrag=null; this._endChartPick(true); this._focusSelf(); return; }
+    if(this._ptDrag){ this._ptDrag=null; this._focusSelf(); return; }
     if(this._polyDraw)return;                       // le polygone se termine au double-clic / Échap
     if(this._drawDrag){ this._finishDraw(); return; }
     if(this._dragMode==='fill'&&this._fillTo){ this._doFill(); }
@@ -10993,15 +11070,52 @@ class SpreadsheetWidget extends BaseWidget {
       if(e.x<tl.tabsX0||e.x>=tl.tabsRight)return; // flèches nav / bouton + : pas de renommage
       for(const t of tl.tabs){ const l=Math.max(t.x,tl.tabsX0), rr=Math.min(t.x+t.w,tl.tabsRight); if(l<rr&&e.x>=l&&e.x<rr){ this.renameSheet(t.i); return; } } return; }
     const r=this._rowAt(e.y),c=this._colAt(e.x); if(r>=0&&c>=0){ this._setCur(r,c,false); this._startEdit(null); } }
-  _doFill(){ const s=this._fillStart, to=this._fillTo; if(!to||to.r<0||to.c<0)return; if(!this._guard())return; this._pushUndo();
-    // extend downward or rightward repeating the source block pattern
-    const sr=s.r1,sc=s.c1, sh=s.r2-s.r1+1, sw=s.c2-s.c1+1;
-    const er=Math.max(to.r,s.r2), ec=Math.max(to.c,s.c2);
-    for(let r=s.r1;r<=er;r++)for(let c=s.c1;c<=ec;c++){ if(r<=s.r2&&c<=s.c2)continue; const srcR=s.r1+((r-s.r1)%sh),srcC=s.c1+((c-s.c1)%sw); const srcCell=this.cells.get(this._key(srcR,srcC));
-      if(srcCell){ const cell=this.getCell(r,c,true); cell.style=JSON.parse(JSON.stringify(srcCell.style||{})); cell.raw=_translateFormula(srcCell.raw,r-srcR,c-srcC); cell._disp=undefined; }
-      else this.cells.delete(this._key(r,c)); }
-    this.sel={r1:s.r1,c1:s.c1,r2:er,c2:ec}; this.recalc(); this._afterChange(); }
+  // rectangle de recopie verrouillé sur l'axe dominant (bas OU droite), à partir de _fillStart/_fillTo
+  _fillRect(){ const s=this._fillStart, to=this._fillTo; if(!s||!to)return null;
+    const extR=Math.max(0,(to.r==null?-1:to.r)-s.r2), extC=Math.max(0,(to.c==null?-1:to.c)-s.c2);
+    if(extR<=0&&extC<=0)return {er:s.r2,ec:s.c2,axis:null};
+    if(extR>=extC)return {er:s.r2+extR,ec:s.c2,axis:'v'};
+    return {er:s.r2,ec:s.c2+extC,axis:'h'}; }
+  _fillPut(r,c,raw,style){ const cell=this.getCell(r,c,true); cell.style=style?JSON.parse(JSON.stringify(style)):{}; cell.raw=raw; cell._disp=undefined; }
+  _fillCopy(srcCell,r,c,dr,dc){ if(srcCell){ const cell=this.getCell(r,c,true); cell.style=JSON.parse(JSON.stringify(srcCell.style||{})); cell.raw=_translateFormula(srcCell.raw,dr,dc); cell._disp=undefined; }
+    else this.cells.delete(this._key(r,c)); }
+  // poignée de recopie : détecte une suite logique (nombre, date/heure, jour/mois, texte+n°) sinon copie/répète
+  _doFill(){ const fr=this._fillRect(); if(!fr||!fr.axis){ this._fillTo=null; return; } if(!this._guard())return; this._pushUndo();
+    const s=this._fillStart, {er,ec,axis}=fr;
+    if(axis==='v'){ const extra=er-s.r2, sh=s.r2-s.r1+1;
+      for(let c=s.c1;c<=s.c2;c++){ const seed=[];
+        for(let r=s.r1;r<=s.r2;r++){ const cl=this.cells.get(this._key(r,c)); seed.push({raw:cl?cl.raw:'',num:this.cellNumeric(r,c),disp:this.cellDisplay(r,c)}); }
+        const series=_computeFillSeries(seed,extra); const lc=this.cells.get(this._key(s.r2,c)); const lst=lc?lc.style:null;
+        for(let k=1;k<=extra;k++){ const r=s.r2+k;
+          if(series)this._fillPut(r,c,series[k-1],lst);
+          else { const srcR=s.r1+((r-s.r1)%sh); this._fillCopy(this.cells.get(this._key(srcR,c)),r,c,r-srcR,0); } } }
+      this.sel={r1:s.r1,c1:s.c1,r2:er,c2:s.c2};
+    } else { const extra=ec-s.c2, sw=s.c2-s.c1+1;
+      for(let r=s.r1;r<=s.r2;r++){ const seed=[];
+        for(let c=s.c1;c<=s.c2;c++){ const cl=this.cells.get(this._key(r,c)); seed.push({raw:cl?cl.raw:'',num:this.cellNumeric(r,c),disp:this.cellDisplay(r,c)}); }
+        const series=_computeFillSeries(seed,extra); const lc=this.cells.get(this._key(r,s.c2)); const lst=lc?lc.style:null;
+        for(let k=1;k<=extra;k++){ const c=s.c2+k;
+          if(series)this._fillPut(r,c,series[k-1],lst);
+          else { const srcC=s.c1+((c-s.c1)%sw); this._fillCopy(this.cells.get(this._key(r,srcC)),r,c,0,c-srcC); } } }
+      this.sel={r1:s.r1,c1:s.c1,r2:s.r2,c2:ec};
+    }
+    this.recalc(); this._afterChange(); }
+  _fmtRawLike(raw,style){ if(style&&style.fmt==='text')return String(raw); return _formatValue(this._literal(raw),style); }
+  // valeur affichée qui atterrirait dans la cellule du coin le plus éloigné (pour l'info-bulle de recopie)
+  _fillPreviewValue(){ const fr=this._fillRect(); if(!fr||!fr.axis)return null; const s=this._fillStart;
+    const line=(fixed,vary1,vary2,pick)=>{ const seed=[]; for(let i=vary1;i<=vary2;i++)seed.push(pick(i)); return seed; };
+    if(fr.axis==='v'){ const c=s.c2, extra=fr.er-s.r2;
+      const seed=line(c,s.r1,s.r2,r=>{ const cl=this.cells.get(this._key(r,c)); return {raw:cl?cl.raw:'',num:this.cellNumeric(r,c),disp:this.cellDisplay(r,c)}; });
+      const series=_computeFillSeries(seed,extra);
+      if(series){ const lc=this.cells.get(this._key(s.r2,c)); return this._fmtRawLike(series[extra-1],lc?lc.style:null); }
+      const sh=s.r2-s.r1+1, srcR=s.r1+((fr.er-s.r1)%sh); const d=this.cellDisplay(srcR,c); return d===''?null:d; }
+    else { const r=s.r2, extra=fr.ec-s.c2;
+      const seed=line(r,s.c1,s.c2,c=>{ const cl=this.cells.get(this._key(r,c)); return {raw:cl?cl.raw:'',num:this.cellNumeric(r,c),disp:this.cellDisplay(r,c)}; });
+      const series=_computeFillSeries(seed,extra);
+      if(series){ const lc=this.cells.get(this._key(r,s.c2)); return this._fmtRawLike(series[extra-1],lc?lc.style:null); }
+      const sw=s.c2-s.c1+1, srcC=s.c1+((fr.ec-s.c1)%sw); const d=this.cellDisplay(r,srcC); return d===''?null:d; } }
   _onKey(e){ if(this.editing)return; const k=e.key;
+    if(this._chartPick&&(k==='Escape'||k==='Enter')){ this._endChartPick(k!=='Escape'); this._focusSelf(); return; }
     if(this._polyDraw&&(k==='Escape'||k==='Enter')){ this._finishPoly(k==='Escape'&&this._polyDraw.raw.length<=2); return; }
     if(k==='Escape'&&this._ptEdit){ this._ptEdit=null; this.markDirty(); return; }
     if(k==='Escape'&&this._cropObj){ this._cropObj=null; this.markDirty(); return; }
@@ -11141,13 +11255,14 @@ class SpreadsheetWidget extends BaseWidget {
     this._formula.bounds={x:b.x+this.nameW+32,y:b.y+2,width:b.width-this.nameW-36,height:this.fbH-4};
     this._nameBox.render(ctx); this._formula.render(ctx);
   }
+  _colHdr(c){ return this.colHeaderNumeric?String(c+1):_colName(c); }  // libellé d'en-tête de colonne (nombre ou lettre)
   _renderHeadersSplit(ctx){ const b=this.bounds, T=getTheme().spreadsheet, s=this._normSel();
     ctx.font=fontToCSS(getTheme().label.font); ctx.textBaseline='middle';
     for(const cb of this._colBands()){ if(cb.rw<=0)continue; ctx.save(); ctx.beginPath(); ctx.rect(cb.rx,b.y+this.fbH,cb.rw,this.headerH); ctx.clip();
       for(const c of this._visColsFor(cb)){ const x=cb.rx-cb.sx+this._axCols[c], w=this.colW[c], active=c>=s.c1&&c<=s.c2;
         ctx.fillStyle=colorToCSS(active?T.headerActiveBg:T.headerBg); ctx.fillRect(x,b.y+this.fbH,w,this.headerH);
         ctx.strokeStyle=colorToCSS(T.gridLine); ctx.strokeRect(x+.5,b.y+this.fbH+.5,w,this.headerH);
-        ctx.fillStyle=colorToCSS(active?T.headerActiveText:T.headerText); ctx.textAlign='center'; ctx.fillText(_colName(c),x+w/2,b.y+this.fbH+this.headerH/2);
+        ctx.fillStyle=colorToCSS(active?T.headerActiveText:T.headerText); ctx.textAlign='center'; ctx.fillText(this._colHdr(c),x+w/2,b.y+this.fbH+this.headerH/2);
         if(this.filters&&c>=this.filters.c1&&c<=this.filters.c2){ ctx.fillStyle=colorToCSS(T.headerText); ctx.font='9px sans-serif'; ctx.fillText('▾',x+w-8,b.y+this.fbH+this.headerH/2); ctx.font=fontToCSS(getTheme().label.font); } }
       ctx.restore(); }
     for(const rb of this._rowBands()){ if(rb.rh<=0)continue; ctx.save(); ctx.beginPath(); ctx.rect(b.x,rb.ry,this.headerW,rb.rh); ctx.clip();
@@ -11164,7 +11279,7 @@ class SpreadsheetWidget extends BaseWidget {
       for(const c of cols){ const x=this._colLeft(c), w=this.colW[c], active=c>=s.c1&&c<=s.c2;
         ctx.fillStyle=colorToCSS(active?T.headerActiveBg:T.headerBg); ctx.fillRect(x,b.y+this.fbH,w,this.headerH);
         ctx.strokeStyle=colorToCSS(T.gridLine); ctx.strokeRect(x+.5,b.y+this.fbH+.5,w,this.headerH);
-        ctx.fillStyle=colorToCSS(active?T.headerActiveText:T.headerText); ctx.textAlign='center'; ctx.fillText(_colName(c),x+w/2,b.y+this.fbH+this.headerH/2);
+        ctx.fillStyle=colorToCSS(active?T.headerActiveText:T.headerText); ctx.textAlign='center'; ctx.fillText(this._colHdr(c),x+w/2,b.y+this.fbH+this.headerH/2);
         if(this.filters&&c>=this.filters.c1&&c<=this.filters.c2){ ctx.fillStyle=colorToCSS(T.headerText); ctx.font='9px sans-serif'; ctx.fillText('▾',x+w-8,b.y+this.fbH+this.headerH/2); ctx.font=fontToCSS(getTheme().label.font); } }
       ctx.restore(); };
     drawColHdr(VC.main, gx+fw, bw-fw); if(fw)drawColHdr(VC.frozen, gx, fw);
@@ -11413,8 +11528,27 @@ class SpreadsheetWidget extends BaseWidget {
     if(!this.editing){ ctx.strokeStyle=colorToCSS(T.activeBorder); ctx.lineWidth=2; ctx.strokeRect(ax+1,ay+1,aw-2,ah-2);
       // fill handle
       ctx.fillStyle=colorToCSS(T.fillHandle); ctx.fillRect(x2-3,y2-3,6,6); ctx.strokeStyle='#fff'; ctx.lineWidth=1; ctx.strokeRect(x2-3.5,y2-3.5,6,6); }
-    // fill preview
-    if(this._dragMode==='fill'&&this._fillTo&&this._fillTo.r>=0){ const er=Math.max(this._fillTo.r,s.r2),ec=Math.max(this._fillTo.c,s.c2); const fx2=this._colLeft(ec)+this.colW[ec], fy2=this._rowTop(er)+this.rowH[er]; ctx.strokeStyle=colorToCSS(T.selBorder); ctx.setLineDash([4,3]); ctx.lineWidth=1; ctx.strokeRect(x1+.5,y1+.5,fx2-x1,fy2-y1); ctx.setLineDash([]); }
+    // fill preview — verrouillé sur l'axe dominant (comme le remplissage réel)
+    if(this._dragMode==='fill'&&this._fillTo){ const fr=this._fillRect(); if(fr&&fr.axis){ const fx2=this._colLeft(fr.ec)+this.colW[fr.ec], fy2=this._rowTop(fr.er)+this.rowH[fr.er]; ctx.strokeStyle=colorToCSS(T.selBorder); ctx.setLineDash([4,3]); ctx.lineWidth=1; ctx.strokeRect(x1+.5,y1+.5,fx2-x1,fy2-y1); ctx.setLineDash([]); }
+      // info-bulle « dernière valeur de la suite » près du curseur — réutilise _drawTip (même design que les bulles de défilement)
+      const pv=this._fillPreviewValue();
+      if(pv!=null&&pv!=='') this._drawTip(ctx, pv, this._lastX+16, this._lastY+12, 'tl'); }
+    // sélection de source de graphique : plage surlignée + bandeau d'aide
+    if(this._chartPick){ const rg=this._chartPick.chart.range;
+      const gx=this._gx0(),gy=this._gy0(),bw=this._bodyW(),bh=this._bodyH();
+      ctx.save(); ctx.beginPath(); ctx.rect(gx,gy,bw,bh); ctx.clip();
+      const rx=this._colLeft(rg.c1), ry=this._rowTop(rg.r1), rx2=this._colLeft(rg.c2)+this.colW[rg.c2], ry2=this._rowTop(rg.r2)+this.rowH[rg.r2];
+      ctx.fillStyle='rgba(33,161,33,0.12)'; ctx.fillRect(rx,ry,rx2-rx,ry2-ry);
+      ctx.strokeStyle='#21A121'; ctx.lineWidth=2; ctx.setLineDash([5,3]); ctx.strokeRect(rx+.5,ry+.5,rx2-rx-1,ry2-ry-1); ctx.setLineDash([]); ctx.restore();
+      const msg='◉ Glissez pour choisir la source — Échap pour annuler';
+      ctx.save(); ctx.beginPath(); ctx.rect(gx,gy,bw,bh); ctx.clip();
+      ctx.font='12px -apple-system,Segoe UI,Arial'; ctx.textAlign='left'; ctx.textBaseline='middle';
+      const tw=ctx.measureText(msg).width, pad=8, bwn=tw+pad*2, bhn=22;
+      const ob=this._objBounds(this._chartPick);                 // bandeau collé au graphe (jamais sur des cellules libres)
+      let bx=ob.x+(ob.width-bwn)/2, by=ob.y+4;
+      bx=Math.max(gx+2,Math.min(bx,gx+bw-bwn-2)); by=Math.max(gy+2,Math.min(by,gy+bh-bhn-2));
+      ctx.fillStyle='rgba(20,45,20,0.92)'; ctx.beginPath(); if(ctx.roundRect)ctx.roundRect(bx,by,bwn,bhn,4); else ctx.rect(bx,by,bwn,bhn); ctx.fill();
+      ctx.fillStyle='#fff'; ctx.fillText(msg,bx+pad,by+bhn/2); ctx.restore(); }
   }
 }
 
@@ -11518,6 +11652,12 @@ window.openCalcWindow = function(){
       { separator:true },
       { label:'Scinder au niveau de la sélection', icon:'⊞', action:()=>{ ss.splitAtSel(); focusSS(); } },
       { label:'Supprimer le fractionnement', action:()=>{ ss.removeSplit(); focusSS(); } },
+    ]},
+    { label:'Paramètres', items:[
+      { label:'En-têtes de colonnes', icon:'🔠', submenu:[
+        { label:'Lettres (A, B, C)',  get checked(){ return !ss.colHeaderNumeric; }, action:()=>{ ss.colHeaderNumeric=false; ss.markDirty(); focusSS(); } },
+        { label:'Nombres (1, 2, 3)',  get checked(){ return  ss.colHeaderNumeric; }, action:()=>{ ss.colHeaderNumeric=true;  ss.markDirty(); focusSS(); } },
+      ]},
     ]},
   ]});
   w.setMenuBar(mb, 26);
@@ -11735,6 +11875,9 @@ window.openCalcWindow = function(){
   tbCht.addWidget(ddCKind,{width:120});                                          // Type de graphique
   tbCht.addButton({ icon:'🔤', tooltip:'Titre du graphique', onClick:()=>{ const o=selCht(); if(!o)return;
     Dialogs.prompt('Titre du graphique','Titre :',o.chart.title||'').then(r=>{ if(r&&r.result==='ok'){ o.chart.title=r.value||''; ss.markDirty(); } focusSS(); }); } });
+  tbCht.addButton({ text:'🖱', tooltip:'Choisir la source à la souris (glisser sur la grille)', minWidth:26, onClick:()=>{ const o=selCht(); if(o)ss.startChartPick(o); else focusSS(); } });
+  tbCht.addButton({ text:'▦', tooltip:'Source des données (saisir la plage)', minWidth:26, onClick:()=>{ const o=selCht(); if(o)ss.promptChartRange(o); else focusSS(); } });
+  tbCht.addButton({ text:'⤢', tooltip:'Source = sélection courante', minWidth:26, onClick:onCht(o=>ss.chartRangeFromSel(o)) });
   tbCht.addSeparator();
   tbCht.addButton({ text:'↺', tooltip:'Rotation −90°', minWidth:26, onClick:onCht(o=>ss.rotateObj(o,-90)) });
   tbCht.addButton({ text:'↻', tooltip:'Rotation +90°', minWidth:26, onClick:onCht(o=>ss.rotateObj(o,90)) });
@@ -11751,6 +11894,7 @@ window.openCalcWindow = function(){
     const ki=CHART_KINDS.findIndex(([k])=>k===(o.chart.kind||'bar')); ddCKind.selectedIndex=ki<0?0:ki;
     btnCShadow.toggled=!!o.shadow; ddCOpa.selectedIndex=_opaIndex(o);
     tbCht.markDirty(); };
+  ss.onChartPickEnd = ()=>{ refreshChtTB(); focusSS(); };
   tbCht.setSize(ca.bounds.width, 34);
 
   // affiche la barre contextuelle correspondant à l'objet sélectionné (forme / image / widget / graphique)
