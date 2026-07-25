@@ -1038,6 +1038,249 @@ class TextBox extends BaseWidget {
   }
 }
 
+// ── Tokenizer JS minimal (coloration syntaxique du CodeEditor) ──────────────
+const _JS_KW = new Set(['var','let','const','function','return','if','else','for','while','do','switch','case','default','break','continue','new','typeof','instanceof','this','true','false','null','undefined','in','of','try','catch','finally','throw','delete','void','class','extends','super','yield','await','async']);
+// text : une ligne ; inBlock : commence-t-on dans un commentaire /* … */ ouvert.
+// → { tokens:[{col,text,type}], endInBlock }.  type : comment|string|number|keyword|ident|punct
+function _jsTokenize(text, inBlock){
+  const toks=[]; let i=0; const n=text.length;
+  if(inBlock){ const end=text.indexOf('*/'); if(end<0){ if(n)toks.push({col:0,text,type:'comment'}); return {tokens:toks,endInBlock:true}; } toks.push({col:0,text:text.slice(0,end+2),type:'comment'}); i=end+2; }
+  while(i<n){ const ch=text[i];
+    if(ch===' '||ch==='\t'){ i++; continue; }
+    if(ch==='/'&&text[i+1]==='/'){ toks.push({col:i,text:text.slice(i),type:'comment'}); i=n; break; }
+    if(ch==='/'&&text[i+1]==='*'){ const end=text.indexOf('*/',i+2); if(end<0){ toks.push({col:i,text:text.slice(i),type:'comment'}); return {tokens:toks,endInBlock:true}; } toks.push({col:i,text:text.slice(i,end+2),type:'comment'}); i=end+2; continue; }
+    if(ch==='"'||ch==="'"||ch==='`'){ let j=i+1; while(j<n){ if(text[j]==='\\'){ j+=2; continue; } if(text[j]===ch){ j++; break; } j++; } toks.push({col:i,text:text.slice(i,j),type:'string'}); i=j; continue; }
+    if((ch>='0'&&ch<='9')||(ch==='.'&&text[i+1]>='0'&&text[i+1]<='9')){ let j=i+1; while(j<n){ const d=text[j]; if((d>='0'&&d<='9')||d==='.'||(d>='a'&&d<='f')||(d>='A'&&d<='F')||d==='x'||d==='X'){ j++; continue; } if((d==='+'||d==='-')&&/[eE]/.test(text[j-1])){ j++; continue; } break; } toks.push({col:i,text:text.slice(i,j),type:'number'}); i=j; continue; }
+    if(/[A-Za-z_$]/.test(ch)){ let j=i+1; while(j<n&&/[\w$]/.test(text[j]))j++; const w=text.slice(i,j); toks.push({col:i,text:w,type:_JS_KW.has(w)?'keyword':'ident'}); i=j; continue; }
+    toks.push({col:i,text:ch,type:'punct'}); i++;
+  }
+  return {tokens:toks,endInBlock:false};
+}
+
+// ── CodeEditor : éditeur de code multiligne (canvas) ────────────────────────
+// Police mono, gouttière de n° de ligne, sélection multi-ligne, molette +
+// auto-scroll sur le caret, presse-papier système multi-ligne, scrollbar V.
+// Utilisé par l'éditeur de macros. Crochet _highlight() laissé pour plus tard.
+class CodeEditor extends BaseWidget {
+  constructor(bounds){
+    super(undefined, bounds);
+    this.lines=[''];
+    this.caret={ln:0,col:0}; this.anchor={ln:0,col:0};
+    this._focused=false; this._caretTimer=0; this._caretVisible=true; this._hovered=false;
+    this._scrollX=0; this._scrollY=0; this._selecting=false; this._sbDrag=false;
+    this._font={family:'Consolas,"DejaVu Sans Mono",Menlo,monospace', size:13};
+    this._lh=18; this._pad=4; this.readOnly=false;
+    this.completions=null;                 // {objects:{Sheet,event,widget}, globals} — active IntelliSense
+    this._tokDirty=true; this._blockStart=[];
+    this._acOpen=false; this._acItems=[]; this._acSel=0; this._acFrom=0; this._acPrefix=''; this._acScroll=0;
+    this._undo=[]; this._redo=[]; this._undoKind=null; this._undoAt=0;
+    this.tabIndex=0; this.capturesDrag=true; this.cursor='text'; this.background=null;
+    this.on('mouseenter',()=>{this._hovered=true;this.markDirty();});
+    this.on('mouseleave',()=>{this._hovered=false;this.markDirty();});
+    this.on('focus',()=>{this._focused=true;this._caretTimer=0;this._caretVisible=true;this.markDirty();});
+    this.on('blur',()=>{this._focused=false;this._selecting=false;this._sbDrag=false;this._acOpen=false;this.markDirty();});
+    this.on('keydown',e=>this._handleKey(e));
+    this.on('mousedown',e=>this._onDown(e));
+    this.on('mousemove',e=>this._onMove(e));
+    this.on('mouseup',()=>{this._selecting=false;this._sbDrag=false;});
+    this.on('wheel',e=>this._onWheel(e));
+  }
+  get value(){ return this.lines.join('\n'); }
+  set value(v){ this.lines=String(v??'').split('\n'); if(!this.lines.length)this.lines=['']; this.caret={ln:0,col:0}; this.anchor={ln:0,col:0}; this._scrollX=0; this._scrollY=0; this._tokDirty=true; this._acOpen=false; this.markDirty(); }
+  // ── géométrie ──
+  _charW(){ _measureCtx.font=fontToCSS(this._font); return _measureCtx.measureText('M').width||8; }
+  _gutterW(){ const n=String(Math.max(1,this.lines.length)).length; return Math.ceil(this._charW()*n)+12; }
+  _viewW(){ return this.bounds.width-this._gutterW()-this._pad*2-14; }
+  _viewH(){ return this.bounds.height-this._pad*2; }
+  _lineLen(ln){ return (this.lines[ln]||'').length; }
+  _clampCaret(){ this.caret.ln=Math.max(0,Math.min(this.lines.length-1,this.caret.ln)); this.caret.col=Math.max(0,Math.min(this._lineLen(this.caret.ln),this.caret.col)); }
+  // ── sélection ──
+  _hasSel(){ return this.caret.ln!==this.anchor.ln||this.caret.col!==this.anchor.col; }
+  _ordered(){ const a=this.anchor,c=this.caret; if(a.ln<c.ln||(a.ln===c.ln&&a.col<=c.col))return {s:{...a},e:{...c}}; return {s:{...c},e:{...a}}; }
+  _selText(){ if(!this._hasSel())return ''; const {s,e}=this._ordered(); if(s.ln===e.ln)return this.lines[s.ln].slice(s.col,e.col); const out=[this.lines[s.ln].slice(s.col)]; for(let i=s.ln+1;i<e.ln;i++)out.push(this.lines[i]); out.push(this.lines[e.ln].slice(0,e.col)); return out.join('\n'); }
+  selectAll(){ this.anchor={ln:0,col:0}; this.caret={ln:this.lines.length-1,col:this._lineLen(this.lines.length-1)}; this.markDirty(); }
+  _collapse(toStart){ const {s,e}=this._ordered(); this.caret=toStart?{...s}:{...e}; this.anchor={...this.caret}; this._ensureVisible(); this.markDirty(); }
+  _delSel(){ if(!this._hasSel())return; const {s,e}=this._ordered(); if(s.ln===e.ln){ this.lines[s.ln]=this.lines[s.ln].slice(0,s.col)+this.lines[s.ln].slice(e.col); } else { this.lines[s.ln]=this.lines[s.ln].slice(0,s.col)+this.lines[e.ln].slice(e.col); this.lines.splice(s.ln+1,e.ln-s.ln); } this.caret={...s}; this.anchor={...s}; }
+  _insertText(str){ if(this.readOnly)return; this._snapUndo(String(str).length===1&&str!=='\n'?'type':null); if(this._hasSel())this._delSel(); str=String(str).replace(/\r\n?/g,'\n'); const ln=this.caret.ln,col=this.caret.col,line=this.lines[ln]; const parts=str.split('\n');
+    if(parts.length===1){ this.lines[ln]=line.slice(0,col)+parts[0]+line.slice(col); this.caret.col=col+parts[0].length; }
+    else { const before=line.slice(0,col),after=line.slice(col); const nl=[before+parts[0]]; for(let i=1;i<parts.length-1;i++)nl.push(parts[i]); nl.push(parts[parts.length-1]+after); this.lines.splice(ln,1,...nl); this.caret.ln=ln+parts.length-1; this.caret.col=parts[parts.length-1].length; }
+    this.anchor={...this.caret}; this._emit('change'); this._ensureVisible(); this.markDirty(); }
+  // ── presse-papier système (multi-ligne) ──
+  _onCopy(){ return this._hasSel()?this._selText():null; }
+  _onCut(){ if(!this._hasSel())return null; const t=this._selText(); if(!this.readOnly){ this._snapUndo(null); this._delSel(); this._emit('change'); this._ensureVisible(); this.markDirty(); } return t; }
+  _onPaste(text){ if(text==null)return; this._insertText(text); }
+  // ── clavier ──
+  _move(ln,col,extend){ this.caret={ln,col}; this._clampCaret(); if(!extend)this.anchor={...this.caret}; this._caretTimer=0;this._caretVisible=true; this._ensureVisible(); this.markDirty(); }
+  // navigation par mot (Ctrl+←/→)
+  _isWord(ch){ return !!ch && /[\w$]/.test(ch); }
+  _wordLeft(ln,col){ if(col===0)return ln>0?[ln-1,this._lineLen(ln-1)]:[ln,0]; const s=this.lines[ln]; let c=col; while(c>0&&!this._isWord(s[c-1]))c--; while(c>0&&this._isWord(s[c-1]))c--; return [ln,c]; }
+  _wordRight(ln,col){ const s=this.lines[ln], n=s.length; if(col>=n)return ln<this.lines.length-1?[ln+1,0]:[ln,n]; let c=col; while(c<n&&!this._isWord(s[c]))c++; while(c<n&&this._isWord(s[c]))c++; return [ln,c]; }
+  // undo / redo (coalescence de la frappe)
+  _snapUndo(kind){ const now=performance.now(); if(kind&&kind===this._undoKind&&now-this._undoAt<600){ this._undoAt=now; return; } this._undo.push(JSON.stringify({lines:this.lines,caret:this.caret,anchor:this.anchor})); if(this._undo.length>300)this._undo.shift(); this._redo.length=0; this._undoKind=kind||null; this._undoAt=now; }
+  _applyState(s){ const st=JSON.parse(s); this.lines=st.lines.length?st.lines:['']; this.caret=st.caret; this.anchor=st.anchor||{...st.caret}; this._clampCaret(); this._tokDirty=true; this._acOpen=false; this._ensureVisible(); this._emit('change'); this.markDirty(); }
+  _doUndo(){ if(!this._undo.length)return; this._redo.push(JSON.stringify({lines:this.lines,caret:this.caret,anchor:this.anchor})); this._applyState(this._undo.pop()); this._undoKind=null; }
+  _doRedo(){ if(!this._redo.length)return; this._undo.push(JSON.stringify({lines:this.lines,caret:this.caret,anchor:this.anchor})); this._applyState(this._redo.pop()); this._undoKind=null; }
+  _handleKey(e){ if(!this.enabled||!this._focused)return; const k=e.key, ext=e.shiftKey, C=this.caret;
+    // Bloque le défaut navigateur pour les touches consommées (sauf presse-papier Ctrl+C/X/V routé par le DOM).
+    const _clip=e.ctrlKey&&(k==='c'||k==='C'||k==='x'||k==='X'||k==='v'||k==='V');
+    const _nav=['Backspace','Delete','Enter','Tab','Home','End','PageUp','PageDown','ArrowLeft','ArrowRight','ArrowUp','ArrowDown'];
+    if(!_clip && ( (k.length===1&&!e.ctrlKey&&!e.altKey&&!e.metaKey) || _nav.includes(k) || (e.ctrlKey&&/^[azyAZY]$/.test(k)) || (e.ctrlKey&&(k===' '||k==='Spacebar')) )) e.preventDefault&&e.preventDefault();
+    // Undo / Redo
+    if(e.ctrlKey&&!e.altKey&&(k==='z'||k==='Z')){ if(e.shiftKey)this._doRedo(); else this._doUndo(); return; }
+    if(e.ctrlKey&&!e.altKey&&(k==='y'||k==='Y')){ this._doRedo(); return; }
+    if(e.ctrlKey && (k===' '||k==='Spacebar')){ this._updateAutocomplete(true); return; }
+    if(this._acOpen){
+      if(k==='ArrowDown'){ this._acSel=(this._acSel+1)%this._acItems.length; this.markDirty(); return; }
+      if(k==='ArrowUp'){ this._acSel=(this._acSel-1+this._acItems.length)%this._acItems.length; this.markDirty(); return; }
+      if(k==='Enter'||k==='Tab'){ this._acAccept(); e.preventDefault&&e.preventDefault(); return; }
+      if(k==='Escape'){ this._acClose(); return; }
+      if(k==='ArrowLeft'||k==='ArrowRight'||k==='Home'||k==='End'||k==='PageUp'||k==='PageDown')this._acClose();
+    }
+    switch(k){
+      case 'ArrowLeft': if(e.ctrlKey){ const w=this._wordLeft(C.ln,C.col); this._move(w[0],w[1],ext); } else if(!ext&&this._hasSel())this._collapse(true); else if(C.col>0)this._move(C.ln,C.col-1,ext); else if(C.ln>0)this._move(C.ln-1,this._lineLen(C.ln-1),ext); break;
+      case 'ArrowRight': if(e.ctrlKey){ const w=this._wordRight(C.ln,C.col); this._move(w[0],w[1],ext); } else if(!ext&&this._hasSel())this._collapse(false); else if(C.col<this._lineLen(C.ln))this._move(C.ln,C.col+1,ext); else if(C.ln<this.lines.length-1)this._move(C.ln+1,0,ext); break;
+      case 'ArrowUp': if(e.ctrlKey){this._scrollY=Math.max(0,this._scrollY-this._lh);this.markDirty();} else this._move(C.ln-1,C.col,ext); break;
+      case 'ArrowDown': if(e.ctrlKey){this._scrollY=Math.min(this._maxScrollY(),this._scrollY+this._lh);this.markDirty();} else this._move(C.ln+1,C.col,ext); break;
+      case 'Home': this._move(C.ln,0,ext); break;
+      case 'End': this._move(C.ln,this._lineLen(C.ln),ext); break;
+      case 'PageUp': { const n=Math.max(1,Math.floor(this._viewH()/this._lh)); this._move(C.ln-n,C.col,ext); break; }
+      case 'PageDown': { const n=Math.max(1,Math.floor(this._viewH()/this._lh)); this._move(C.ln+n,C.col,ext); break; }
+      case 'Backspace': if(this.readOnly)break; this._snapUndo('del'); if(this._hasSel()){this._delSel();this._emit('change');} else if(C.col>0){ this.lines[C.ln]=this.lines[C.ln].slice(0,C.col-1)+this.lines[C.ln].slice(C.col); this.caret.col--; this.anchor={...this.caret}; this._emit('change'); } else if(C.ln>0){ const pl=this._lineLen(C.ln-1); this.lines[C.ln-1]+=this.lines[C.ln]; this.lines.splice(C.ln,1); this.caret={ln:C.ln-1,col:pl}; this.anchor={...this.caret}; this._emit('change'); } this._ensureVisible(); this.markDirty(); break;
+      case 'Delete': if(this.readOnly)break; this._snapUndo('del'); if(this._hasSel()){this._delSel();this._emit('change');} else if(C.col<this._lineLen(C.ln)){ this.lines[C.ln]=this.lines[C.ln].slice(0,C.col)+this.lines[C.ln].slice(C.col+1); this._emit('change'); } else if(C.ln<this.lines.length-1){ this.lines[C.ln]+=this.lines[C.ln+1]; this.lines.splice(C.ln+1,1); this._emit('change'); } this._ensureVisible(); this.markDirty(); break;
+      case 'Enter': { if(this.readOnly)break; const indent=(this.lines[C.ln].match(/^\s*/)||[''])[0]; this._insertText('\n'+indent); break; }
+      case 'Tab': if(this.readOnly)break; this._insertText('  '); e.preventDefault&&e.preventDefault(); break;
+      case 'a': case 'A': if(e.ctrlKey){this.selectAll();break;} if(!e.altKey&&!e.metaKey)this._insertText(k); break;
+      case 'c': case 'C': case 'x': case 'X': case 'v': case 'V': if(e.ctrlKey)break; if(!e.altKey&&!e.metaKey)this._insertText(k); break;
+      default: if(k&&k.length===1&&!e.ctrlKey&&!e.altKey&&!e.metaKey)this._insertText(k);
+    }
+    // mise à jour de la complétion après édition
+    if(k==='Backspace'||k==='Delete'){ if(this._acOpen)this._updateAutocomplete(); }
+    else if(k&&k.length===1&&!e.ctrlKey&&!e.altKey&&!e.metaKey){ if(/[\w$.]/.test(k))this._updateAutocomplete(); else this._acClose(); }
+    this._caretTimer=0;this._caretVisible=true;
+  }
+  // ── souris ──
+  _inScrollbar(x){ return x>=this.bounds.x+this.bounds.width-14; }
+  _posAt(x,y){ const gw=this._gutterW(), cw=this._charW(); const tx=this.bounds.x+gw+this._pad-this._scrollX, ty=this.bounds.y+this._pad-this._scrollY; let ln=Math.floor((y-ty)/this._lh); ln=Math.max(0,Math.min(this.lines.length-1,ln)); let col=Math.round((x-tx)/cw); col=Math.max(0,Math.min(this._lineLen(ln),col)); return {ln,col}; }
+  _onDown(e){ if(!this.enabled)return;
+    if(this._acOpen){ const g=this._acGeom(); if(e.x>=g.x&&e.x<g.x+g.w&&e.y>=g.y&&e.y<g.y+g.h){ const r=Math.floor((e.y-g.y-2)/g.itemH)+this._acScroll; if(r>=0&&r<this._acItems.length){ this._acSel=r; this._acAccept(); } return; } this._acClose(); }
+    if(this._inScrollbar(e.x)){ this._sbDrag=true; this._sbScroll(e.y); return; } const p=this._posAt(e.x,e.y); this.caret={...p}; this.anchor={...p}; this._selecting=true; this._caretTimer=0;this._caretVisible=true; this._ensureVisible(); this.markDirty(); }
+  _onMove(e){ if(this._sbDrag){this._sbScroll(e.y);return;} if(!this._selecting)return; const p=this._posAt(e.x,e.y); this.caret={...p}; this._ensureVisible(); this.markDirty(); }
+  _onWheel(e){ const d=(e.deltaY>0?1:-1)*this._lh*3; this._scrollY=Math.max(0,Math.min(this._maxScrollY(),this._scrollY+d)); this.markDirty(); e.preventDefault&&e.preventDefault(); }
+  _sbScroll(y){ const b=this.bounds,maxSY=this._maxScrollY(); if(maxSY<=0)return; const trackH=b.height-4, thumbH=Math.max(20,trackH*this._viewH()/(this.lines.length*this._lh)); const rel=(y-b.y-2-thumbH/2)/Math.max(1,trackH-thumbH); this._scrollY=Math.max(0,Math.min(maxSY,rel*maxSY)); this.markDirty(); }
+  _maxScrollY(){ return Math.max(0,this.lines.length*this._lh-this._viewH()); }
+  _ensureVisible(){ const cw=this._charW(); const cy=this.caret.ln*this._lh; if(cy<this._scrollY)this._scrollY=cy; else if(cy+this._lh>this._scrollY+this._viewH())this._scrollY=cy+this._lh-this._viewH(); const cx=this.caret.col*cw; if(cx<this._scrollX)this._scrollX=Math.max(0,cx-cw*2); else if(cx>this._scrollX+this._viewW())this._scrollX=cx-this._viewW()+cw*2; this._scrollY=Math.max(0,Math.min(this._maxScrollY(),this._scrollY)); this._scrollX=Math.max(0,this._scrollX); }
+  _emit(type){ if(type==='change')this._tokDirty=true; const ev={type,target:this,x:0,y:0,stopPropagation(){this.stopped=true;},preventDefault(){this.defaultPrevented=true;},stopped:false,defaultPrevented:false}; this.emit(ev); }
+  // ── coloration ──
+  _reflow(){ const bs=new Array(this.lines.length); let inB=false; for(let i=0;i<this.lines.length;i++){ bs[i]=inB; inB=_jsTokenize(this.lines[i],inB).endInBlock; } this._blockStart=bs; this._tokDirty=false; }
+  _codeColors(){ const bg=_solid(getTheme().textBox.normal.background); const lum=0.299*bg.r+0.587*bg.g+0.114*bg.b, dark=lum<128;
+    return dark ? {keyword:'#569CD6',string:'#CE9178',number:'#B5CEA8',comment:'#6A9955',ident:'#D4D4D4',api:'#4EC9B0',punct:'#CCCCCC'}
+                : {keyword:'#0000FF',string:'#A31515',number:'#098658',comment:'#008000',ident:'#001080',api:'#267F99',punct:'#333333'}; }
+  // ── IntelliSense ──
+  _acClose(){ if(this._acOpen){ this._acOpen=false; this.markDirty(); } this._acItems=[]; }
+  _updateAutocomplete(force){ if(this.readOnly||!this.completions){ this._acClose(); return; }
+    const before=this.lines[this.caret.ln].slice(0,this.caret.col); let items=null, from=this.caret.col, prefix='';
+    const mem=before.match(/(?:([A-Za-z_$][\w$]*)|(\)))\s*\.\s*([A-Za-z_$][\w$]*)?$/);
+    if(mem){ const obj=mem[1], paren=mem[2]; prefix=mem[3]||''; const objs=this.completions.objects||{}; let schema=null;
+      if(obj&&objs[obj])schema=objs[obj];
+      else if(paren&&objs.widget&&/\b(?:widget|insertWidget)\s*\([^()]*\)\s*\.\s*[\w$]*$/.test(before))schema=objs.widget;  // Sheet.widget(...). → membres widget
+      else if((paren||obj)&&objs.Sheet&&/\bSheet\b/.test(before))schema=objs.Sheet;      // chaînage Sheet.…().
+      if(schema){ from=this.caret.col-prefix.length; items=schema; } }
+    if(!items){ const idm=before.match(/([A-Za-z_$][\w$]*)$/); if(idm&&(force||idm[1].length>=1)){ prefix=idm[1]; from=this.caret.col-prefix.length; items=this.completions.globals||[]; } }
+    if(!items){ this._acClose(); return; }
+    const p=prefix.toLowerCase(); const filt=items.filter(it=>it.name.toLowerCase().startsWith(p));
+    if(!filt.length || (filt.length===1 && filt[0].name===prefix && !force)){ this._acClose(); return; }
+    this._acItems=filt; this._acFrom=from; this._acPrefix=prefix; this._acSel=0; this._acScroll=0; this._acOpen=true; this.markDirty(); }
+  _acAccept(){ if(!this._acOpen||!this._acItems.length)return; this._snapUndo(null); const it=this._acItems[this._acSel]||this._acItems[0]; const ln=this.caret.ln, line=this.lines[ln];
+    const before=line.slice(0,this._acFrom), after=line.slice(this.caret.col); let ins=it.name, caretCol=this._acFrom+it.name.length;
+    if(it.kind==='method'){ const noArgs=it.sig&&/\(\s*\)/.test(it.sig); ins=it.name+'()'; caretCol=this._acFrom+it.name.length+(noArgs?2:1); }
+    this.lines[ln]=before+ins+after; this.caret={ln,col:caretCol}; this.anchor={...this.caret}; this._acClose(); this._emit('change'); this._ensureVisible(); this.markDirty(); }
+  _acGeom(){ const cw=this._charW(), lh=this._lh, pad=this._pad, gw=this._gutterW(), b=this.bounds, rows=Math.min(8,this._acItems.length), itemH=Math.max(16,lh);
+    _measureCtx.font=fontToCSS(this._font); let w=140; for(const it of this._acItems){ const s=it.name+(it.sig?'  '+it.sig:''); w=Math.max(w,_measureCtx.measureText(s).width+34); } w=Math.min(w,b.width-16);
+    const h=rows*itemH+4; let x=b.x+gw+pad+this._acFrom*cw-this._scrollX, y=b.y+pad+this.caret.ln*lh-this._scrollY+lh+1;
+    if(x+w>b.x+b.width-4)x=b.x+b.width-4-w; if(x<b.x+2)x=b.x+2;
+    if(y+h>b.y+b.height-2)y=b.y+pad+this.caret.ln*lh-this._scrollY-h-1;
+    return {x,y,w,h,itemH,rows}; }
+  update(dt){ if(this._focused){ this._caretTimer+=dt; if(this._caretTimer>=530){this._caretTimer=0;this._caretVisible=!this._caretVisible;this.markDirty();} } super.update(dt); }
+  render(ctx){ const b=this.bounds, t=getTheme().textBox, cw=this._charW(), gw=this._gutterW(), lh=this._lh, pad=this._pad, rr=t.borderRadius||3;
+    ctx.save();
+    ctx.fillStyle=colorToCSS(this.background??t.normal.background); drawRoundRect(ctx,b.x,b.y,b.width,b.height,rr); ctx.fill();
+    ctx.strokeStyle=colorToCSS(t.normal.border.color); ctx.lineWidth=1; drawRoundRect(ctx,b.x+.5,b.y+.5,b.width-1,b.height-1,rr); ctx.stroke();
+    const txtCol=colorToCSS(this.enabled?t.normal.text:t.disabled.text), subtle=colorToCSS(_rgba(_solid(t.normal.text),0.45));
+    const first=Math.max(0,Math.floor(this._scrollY/lh)), last=Math.min(this.lines.length-1,Math.floor((this._scrollY+this._viewH())/lh));
+    const tx0=b.x+gw+pad-this._scrollX, ty0=b.y+pad-this._scrollY;
+    ctx.fillStyle=colorToCSS(_rgba(_solid(t.normal.text),0.06)); ctx.fillRect(b.x+1,b.y+1,gw-1,b.height-2);
+    // texte + sélection + caret (clippés à la zone de texte)
+    ctx.save(); ctx.beginPath(); ctx.rect(b.x+gw,b.y+1,b.width-gw-2,b.height-2); ctx.clip();
+    ctx.font=fontToCSS(this._font); ctx.textBaseline='top';
+    if(this._hasSel()){ const {s,e}=this._ordered(); ctx.fillStyle=colorToCSS(t.selectionColor);
+      for(let ln=Math.max(first,s.ln);ln<=Math.min(last,e.ln);ln++){ const c0=ln===s.ln?s.col:0, c1=ln===e.ln?e.col:this._lineLen(ln)+1; ctx.fillRect(tx0+c0*cw,ty0+ln*lh,(c1-c0)*cw,lh); } }
+    if(this._tokDirty||this._blockStart.length!==this.lines.length)this._reflow();
+    const cc=this._codeColors(), objs=(this.completions&&this.completions.objects)||null;
+    for(let ln=first;ln<=last;ln++){ const y=ty0+ln*lh+2; const tks=_jsTokenize(this.lines[ln], this._blockStart[ln]||false).tokens;
+      for(const tk of tks){ let c=cc[tk.type]||cc.ident; if(tk.type==='ident'&&objs&&objs[tk.text])c=cc.api; ctx.fillStyle=c; ctx.fillText(tk.text, tx0+tk.col*cw, y); } }
+    if(this._focused&&this._caretVisible&&!this.readOnly){ const cx=tx0+this.caret.col*cw, cy=ty0+this.caret.ln*lh; ctx.strokeStyle=colorToCSS(t.caretColor); ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(cx,cy+2); ctx.lineTo(cx,cy+lh-1); ctx.stroke(); }
+    ctx.restore();
+    // gouttière (n° de ligne)
+    ctx.save(); ctx.beginPath(); ctx.rect(b.x,b.y+1,gw,b.height-2); ctx.clip();
+    ctx.font=fontToCSS(this._font); ctx.textBaseline='top'; ctx.textAlign='right'; ctx.fillStyle=subtle;
+    for(let ln=first;ln<=last;ln++) ctx.fillText(String(ln+1),b.x+gw-6,ty0+ln*lh+2);
+    ctx.restore(); ctx.textAlign='left';
+    // scrollbar verticale
+    const maxSY=this._maxScrollY(); if(maxSY>0){ const trackH=b.height-4, thumbH=Math.max(20,trackH*this._viewH()/(this.lines.length*lh)), thumbY=b.y+2+(this._scrollY/maxSY)*(trackH-thumbH); ctx.fillStyle=colorToCSS(_rgba(_solid(t.normal.text),this._sbDrag?0.4:0.22)); drawRoundRect(ctx,b.x+b.width-11,thumbY,7,thumbH,3); ctx.fill(); }
+    // popup IntelliSense (par-dessus, non clippé)
+    if(this._acOpen&&this._acItems.length){ const g=this._acGeom(), cc=this._codeColors();
+      if(this._acSel<this._acScroll)this._acScroll=this._acSel; if(this._acSel>=this._acScroll+g.rows)this._acScroll=this._acSel-g.rows+1; if(this._acScroll<0)this._acScroll=0;
+      const accent=_solid(getTheme().slider.fill.background), onAcc=(getTheme().messageDlg&&getTheme().messageDlg.onAccent)||hexToColor('#FFFFFF'), pop=getTheme().popup;
+      ctx.save(); if(pop&&pop.shadow)applyShadow(ctx,pop.shadow);
+      ctx.fillStyle=colorToCSS(t.normal.background); drawRoundRect(ctx,g.x,g.y,g.w,g.h,4); ctx.fill(); clearShadow(ctx);
+      ctx.strokeStyle=colorToCSS(t.normal.border.color); ctx.lineWidth=1; drawRoundRect(ctx,g.x+.5,g.y+.5,g.w-1,g.h-1,4); ctx.stroke();
+      ctx.beginPath(); ctx.rect(g.x,g.y,g.w,g.h); ctx.clip(); ctx.font=fontToCSS(this._font); ctx.textBaseline='middle'; ctx.textAlign='left';
+      for(let r=0;r<g.rows;r++){ const idx=this._acScroll+r; if(idx>=this._acItems.length)break; const it=this._acItems[idx], iy=g.y+2+r*g.itemH, seld=idx===this._acSel;
+        if(seld){ ctx.fillStyle=colorToCSS(accent); ctx.fillRect(g.x+1,iy,g.w-2,g.itemH); }
+        ctx.fillStyle=seld?colorToCSS(onAcc):(it.kind==='method'?cc.api:cc.keyword); ctx.fillText(it.kind==='method'?'ƒ':(it.kind==='keyword'?'K':'◆'), g.x+8, iy+g.itemH/2);
+        ctx.fillStyle=seld?colorToCSS(onAcc):colorToCSS(t.normal.text); ctx.fillText(it.name, g.x+24, iy+g.itemH/2);
+        if(it.sig){ const nx=g.x+24+ctx.measureText(it.name).width+8; ctx.fillStyle=seld?colorToCSS(_rgba(_solid(onAcc),0.85)):colorToCSS(_rgba(_solid(t.normal.text),0.45)); ctx.fillText(it.sig, nx, iy+g.itemH/2); }
+      }
+      ctx.restore(); }
+    ctx.restore();
+  }
+}
+
+// Schéma IntelliSense de l'API macro (injecté dans le CodeEditor de l'éditeur de macros)
+const MACRO_COMPLETIONS = {
+  objects: {
+    Sheet: [
+      {name:'select',kind:'method',sig:'(ref)'},{name:'goto',kind:'method',sig:'(ref)'},{name:'moveCursor',kind:'method',sig:'(dr,dc,extend)'},
+      {name:'selection',kind:'prop',sig:':{r1,c1,r2,c2,a1}'},{name:'activeCell',kind:'prop',sig:':{r,c,a1}'},
+      {name:'get',kind:'method',sig:'(ref)'},{name:'getText',kind:'method',sig:'(ref)'},{name:'getRaw',kind:'method',sig:'(ref)'},
+      {name:'set',kind:'method',sig:'(ref,val)'},{name:'setFormula',kind:'method',sig:'(ref,f)'},
+      {name:'getRange',kind:'method',sig:'(ref)'},{name:'setRange',kind:'method',sig:'(ref,matrix)'},{name:'clear',kind:'method',sig:'(ref)'},
+      {name:'bold',kind:'method',sig:'()'},{name:'italic',kind:'method',sig:'()'},{name:'underline',kind:'method',sig:'()'},
+      {name:'bg',kind:'method',sig:'(hex)'},{name:'color',kind:'method',sig:'(hex)'},{name:'numberFormat',kind:'method',sig:'(fmt)'},{name:'align',kind:'method',sig:'(a)'},
+      {name:'insertRow',kind:'method',sig:'(above)'},{name:'insertCol',kind:'method',sig:'(left)'},{name:'deleteRow',kind:'method',sig:'()'},{name:'deleteCol',kind:'method',sig:'()'},
+      {name:'insertImage',kind:'method',sig:'()'},{name:'insertChart',kind:'method',sig:'(kind)'},{name:'insertShape',kind:'method',sig:'(kind)'},{name:'insertWidget',kind:'method',sig:'(kind)'},
+      {name:'widget',kind:'method',sig:'(name)'},{name:'widgets',kind:'method',sig:'()'},
+      {name:'addSheet',kind:'method',sig:'(name)'},{name:'switchSheet',kind:'method',sig:'(idOrName)'},{name:'sheetName',kind:'prop',sig:':string'},{name:'sheetCount',kind:'prop',sig:':number'},
+      {name:'msgbox',kind:'method',sig:'(t)'},{name:'prompt',kind:'method',sig:'(t,def)'},{name:'toast',kind:'method',sig:'(t)'},{name:'log',kind:'method',sig:'(...args)'},
+      {name:'recalc',kind:'method',sig:'()'},{name:'rowCount',kind:'prop',sig:':number'},{name:'colCount',kind:'prop',sig:':number'},{name:'colName',kind:'method',sig:'(i)'},{name:'colIndex',kind:'method',sig:'(n)'},
+    ],
+    event: [
+      {name:'type',kind:'prop'},{name:'widget',kind:'prop'},{name:'kind',kind:'prop'},{name:'value',kind:'prop'},
+      {name:'checked',kind:'prop'},{name:'a1',kind:'prop'},{name:'r',kind:'prop'},{name:'c',kind:'prop'},
+    ],
+    widget: [
+      {name:'value',kind:'prop'},{name:'checked',kind:'prop'},{name:'text',kind:'prop'},{name:'name',kind:'prop'},{name:'kind',kind:'prop'},
+      {name:'setEnabled',kind:'method',sig:'(bool)'},{name:'click',kind:'method',sig:'()'},
+    ],
+  },
+  globals: [
+    {name:'Sheet',kind:'prop'},{name:'event',kind:'prop'},
+    {name:'const',kind:'keyword'},{name:'let',kind:'keyword'},{name:'var',kind:'keyword'},{name:'function',kind:'keyword'},
+    {name:'return',kind:'keyword'},{name:'if',kind:'keyword'},{name:'else',kind:'keyword'},{name:'for',kind:'keyword'},
+    {name:'while',kind:'keyword'},{name:'true',kind:'keyword'},{name:'false',kind:'keyword'},{name:'null',kind:'keyword'},
+  ],
+};
+
 class CheckBox extends BaseWidget {
   // _state: 'unchecked' | 'checked' | 'indeterminate'
   constructor(text, bounds) {
@@ -3366,7 +3609,7 @@ class ContextMenu extends BaseWidget {
     const i = this._rowAt(y);
     if (i === this._hover) return;
     this._hover = i; this.markDirty();
-    if (this._sub) { this._container.removeChild(this._sub); this._sub = null; }
+    if (this._sub) { this._sub._destroyTree(); this._sub = null; }
     const it = this.items[i];
     if (it && it.submenu && !it.disabled) {
       const sub = new ContextMenu(it.submenu, { parentMenu: this, onClose: this._onClose });
@@ -4776,7 +5019,10 @@ class WindowManager extends BaseWidget {
     if (this._activeWindow && this._activeWindow !== win) this._activeWindow.active = false;
     win.active = true; this._activeWindow = win;
     const i = this._windows.indexOf(win);
-    if (i >= 0 && i < this._windows.length-1) { this._windows.splice(i,1); this._windows.push(win); }
+    if (i >= 0) this._windows.splice(i,1);
+    // Les fenêtres topmost restent groupées en fin (toujours au-dessus, non bloquantes).
+    if (win.topmost) { this._windows.push(win); }
+    else { let ins=this._windows.length; while(ins>0 && this._windows[ins-1].topmost) ins--; this._windows.splice(ins,0,win); }
     this.markDirty();
   }
 
@@ -5033,15 +5279,16 @@ class WindowManager extends BaseWidget {
   }
 
   handleKey(type, key, code, ctrl, shift, alt) {
-    if (type === 'keydown' && key === 'Escape' && this.hasOverlay) { this.closeAllOverlays(); return; }
-    if (type === 'keydown' && key === 'Escape') { const m = this._topModal(); if (m && typeof m._onCancel === 'function') { m._onCancel(); return; } }
-    if (!this._focusedWidget) return;
+    if (type === 'keydown' && key === 'Escape' && this.hasOverlay) { this.closeAllOverlays(); return true; }
+    if (type === 'keydown' && key === 'Escape') { const m = this._topModal(); if (m && typeof m._onCancel === 'function') { m._onCancel(); return true; } }
+    if (!this._focusedWidget) return false;
     const ev = { type, target:this._focusedWidget, x:0, y:0,
       key, keyCode:code, ctrlKey:ctrl, shiftKey:shift, altKey:alt,
       stopPropagation() { this.stopped=true; },
       preventDefault()  { this.defaultPrevented=true; },
       stopped:false, defaultPrevented:false };
     this._focusedWidget.emit(ev);
+    return ev.defaultPrevented;   // le hôte (window keydown) doit bloquer le défaut navigateur
   }
 
   _mkEv(type, x, y, button, deltaY, shiftKey, deltaX) {
@@ -5442,9 +5689,9 @@ class GUIEngine {
         return;
       }
 
-      this._wm.handleKey('keydown',e.key,e.keyCode,e.ctrlKey,e.shiftKey,e.altKey);
+      const consumed = this._wm.handleKey('keydown',e.key,e.keyCode,e.ctrlKey,e.shiftKey,e.altKey);
       this._fullRedraw=true;
-      if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Tab'].includes(e.key))e.preventDefault();
+      if(consumed || ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Tab'].includes(e.key))e.preventDefault();
     };
     window.addEventListener('keydown',_kd);
     window.addEventListener('keyup',e=>this._wm.handleKey('keyup',e.key,e.keyCode,e.ctrlKey,e.shiftKey,e.altKey));
@@ -10020,6 +10267,12 @@ class SpreadsheetWidget extends BaseWidget {
     this.on('keydown',e=>this._onKey(e));
     this.on('scroll',e=>this._onScroll(e));
     this.on('wheel',e=>this._onScroll(e));
+    // ── macros ──
+    this.macros=[];                                         // [{name, code}]
+    this.wbEvents={onOpen:null,onSelectionChange:null,onCellChange:null}; // nom de macro ou null
+    this.runMode=false;                                     // false=Design, true=Exécution
+    this._wnameSeq={};                                      // compteur de noms de widgets par kind
+    this._macroDepth=0; this._macroTouched=false; this._macroLog=null; this._inWbEvent=false;
     this._syncFormula();
   }
   // ── feuilles (onglets) ──────────────────────────────────────────────────────
@@ -10059,7 +10312,7 @@ class SpreadsheetWidget extends BaseWidget {
   _reorderSheet(from,to){ if(from===to||to<0||to>=this.sheets.length)return; const a=this.sheets[this.active]; const [d]=this.sheets.splice(from,1); this.sheets.splice(to,0,d); this.active=this.sheets.indexOf(a); this._afterChange(); }
   _uniqueName(base){ const names=new Set(this.sheets.map(s=>s.name)); if(!names.has(base))return base; let n=2; while(names.has(base+' ('+n+')'))n++; return base+' ('+n+')'; }
   _cloneSheetData(d){ const cells=new Map(); for(const [k,c] of d.cells) cells.set(k,{raw:c.raw, style:JSON.parse(JSON.stringify(c.style||{}))});
-    const objects=(d.objects||[]).map(o=>{ const n={...o,_fx:null,_shCv:null}; if(o.type==='image'&&o.src){ const img=new Image(); img.src=o.src; n.img=img; } else if(o.type==='widget'){ n.widget=this._mkWidget(o.kind); if(n.widget instanceof Shape && o.widget instanceof Shape) n.widget.setStyle(o.widget.getStyle()); } else if(o.type==='chart'){ n.chart=JSON.parse(JSON.stringify(o.chart)); } return n; });
+    const objects=(d.objects||[]).map(o=>{ const n={...o,_fx:null,_shCv:null,_evtBound:false}; if(o.type==='image'&&o.src){ const img=new Image(); img.src=o.src; n.img=img; } else if(o.type==='widget'){ n.widget=this._mkWidget(o.kind); if(n.widget instanceof Shape && o.widget instanceof Shape) n.widget.setStyle(o.widget.getStyle()); n.macros={...(o.macros||{})}; this._attachWidgetEvents(n); } else if(o.type==='chart'){ n.chart=JSON.parse(JSON.stringify(o.chart)); } return n; });
     return { name:d.name, cells, merges:JSON.parse(JSON.stringify(d.merges||[])), colW:d.colW.slice(), rowH:d.rowH.slice(), nCols:d.nCols, nRows:d.nRows, cur:{r:0,c:0}, sel:{r1:0,c1:0,r2:0,c2:0}, scrollX:0, scrollY:0, objects, hiddenRows:new Set(d.hiddenRows), hiddenCols:new Set(d.hiddenCols), filters:d.filters?JSON.parse(JSON.stringify(d.filters)):null, undo:[], redo:[],
       hidden:false, color:d.color||null, protected:!!d.protected, freezeR:d.freezeR||0, freezeC:d.freezeC||0, split:d.split?{...d.split}:null, condFmts:d.condFmts?JSON.parse(JSON.stringify(d.condFmts)):[] }; }
   copySheet(i){ this._captureSheet(); _sheetClipboard={ data:this._cloneSheetData(this.sheets[i]), cut:false, src:null, ref:null }; }
@@ -10169,17 +10422,19 @@ class SpreadsheetWidget extends BaseWidget {
   // une barre par volet : 1 ou 2 verticales (haut/bas), 1 ou 2 horizontales (gauche/droite)
   _scrollbars(){ const b=this.bounds, gx=this._gx0(), gy=this._gy0(), bw=this._bodyW(), bh=this._bodyH();
     const vx=b.x+b.width-this.SB, hy=gy+bh, cY=this._axRows[this.nRows], cX=this._axCols[this.nCols];
+    const vTop=b.y+this.fbH, vh=this.headerH;   // barre V remonte le long de l'en-tête de colonnes (top = sous la barre de formule)
+    const hLeft=b.x, hw=this.headerW;            // barre H s'étend jusqu'au bord gauche, sous l'en-tête de lignes
     const mk=(dir,x,y,w,h,trackStart,trackLen,content,scroll,key)=>{ const view=trackLen, maxScroll=Math.max(0,content-view);
       const thumbLen=maxScroll>0?Math.max(24,trackLen*view/content):trackLen;
       const thumbOff=maxScroll>0?(scroll/maxScroll)*(trackLen-thumbLen):0;
       return {dir,x,y,w,h,trackStart,trackLen,thumbLen,thumbOff,maxScroll,scroll,key}; };
     const out=[], sy=this._splitY(), sx=this._splitX();
-    if(sy){ out.push(mk('v',vx,gy,this.SB,sy,gy,sy,cY,this.split.syT,'syT'));
+    if(sy){ out.push(mk('v',vx,vTop,this.SB,sy+vh,vTop,sy+vh,cY,this.split.syT,'syT'));
             out.push(mk('v',vx,gy+sy,this.SB,bh-sy,gy+sy,bh-sy,cY,this.scrollY,'scrollY')); }
-    else    out.push(mk('v',vx,gy+12,this.SB,bh-12,gy+12,bh-12,cY,this.scrollY,'scrollY')); // 12px réservés à la poignée
-    if(sx){ out.push(mk('h',gx,hy,sx,this.SB,gx,sx,cX,this.split.sxL,'sxL'));
+    else    out.push(mk('v',vx,vTop+12,this.SB,bh+vh-12,vTop+12,bh+vh-12,cY,this.scrollY,'scrollY')); // 12px réservés à la poignée
+    if(sx){ out.push(mk('h',hLeft,hy,sx+hw,this.SB,hLeft,sx+hw,cX,this.split.sxL,'sxL'));
             out.push(mk('h',gx+sx,hy,bw-sx,this.SB,gx+sx,bw-sx,cX,this.scrollX,'scrollX')); }
-    else    out.push(mk('h',gx,hy,bw-12,this.SB,gx,bw-12,cX,this.scrollX,'scrollX'));
+    else    out.push(mk('h',hLeft,hy,bw+hw-12,this.SB,hLeft,bw+hw-12,cX,this.scrollX,'scrollX'));
     return out; }
   _setScroll(key,v){ if(key==='scrollY')this.scrollY=v; else if(key==='scrollX')this.scrollX=v; else if(key==='syT'&&this.split)this.split.syT=v; else if(key==='sxL'&&this.split)this.split.sxL=v; }
   _firstRowAtScroll(sc){ for(let r=0;r<this.nRows;r++){ if(this.hiddenRows.has(r))continue; if(this._axRows[r+1]>sc)return r; } return 0; }
@@ -10286,8 +10541,8 @@ class SpreadsheetWidget extends BaseWidget {
   redo(){ if(!this._redo.length)return; this._undo.push(this._snapshot()); this._restore(this._redo.pop()); this._afterChange(); }
   // ── mutation helpers ───────────────────────────────────────────────────────
   _setRaw(r,c,raw){ const cell=this.getCell(r,c,true); cell.raw=raw; cell._disp=undefined; }
-  _setRawUndo(r,c,raw){ if(!this._guard())return; this._pushUndo(); this._setRaw(r,c,raw); this.recalc(); this._afterChange(); }
-  _afterChange(){ this._syncFormula(); if(this.onSelChange)this.onSelChange(); this.markDirty(); }
+  _setRawUndo(r,c,raw){ if(!this._guard())return; this._pushUndo(); this._setRaw(r,c,raw); this.recalc(); this._afterChange(); this._notifyCellChange(r,c); }
+  _afterChange(){ this._syncFormula(); if(this.onSelChange)this.onSelChange(); this._fireSelectionMacro(); this.markDirty(); }
   _normSel(){ const s=this.sel; return {r1:Math.min(s.r1,s.r2),c1:Math.min(s.c1,s.c2),r2:Math.max(s.r1,s.r2),c2:Math.max(s.c1,s.c2)}; }
   _forEachSel(cb){ const s=this._normSel(); for(let r=s.r1;r<=s.r2;r++)for(let c=s.c1;c<=s.c2;c++)cb(r,c); }
   _applyStyle(patch){ if(!this._guard())return; this._pushUndo(); this._forEachSel((r,c)=>{ const cell=this.getCell(r,c,true); Object.assign(cell.style,patch); cell._disp=undefined; }); this.recalc(); this._afterChange(); }
@@ -10453,8 +10708,12 @@ class SpreadsheetWidget extends BaseWidget {
   insertLink(){ Dialogs.prompt('Insérer un lien','URL :','https://').then(r=>{ if(!r||r.result!=='ok'||!r.value)return; let u=r.value.trim(); if(!/^[a-z]+:/i.test(u))u='https://'+u; this._pushUndo(); const cell=this.getCell(this.cur.r,this.cur.c,true); cell.style.link=u; if(!cell.raw)cell.raw=u; cell._disp=undefined; this.recalc(); this._afterChange(); const wm=_rootWM(this); if(wm)wm._setFocus(this); }); }
   _mkWidget(kind){ if(SHAPE_REG[kind])return makeShape(kind);
     if(kind==='Button')return new Button('Bouton',{x:0,y:0,width:90,height:28}); if(kind==='CheckBox')return new CheckBox('Case',{x:0,y:0,width:90,height:24}); if(kind==='Slider'){const w=new Slider({x:0,y:0,width:120,height:24}); w.value=50; return w;} if(kind==='ProgressBar'){const w=new ProgressBar({x:0,y:0,width:120,height:18}); w.value=60; return w;} return null; }
+  // nom unique de widget (Button1, CheckBox2…) pour le référencer dans les macros
+  _nextWidgetName(kind){ const base=String(kind).replace(/[^A-Za-z0-9]/g,'')||'Widget'; this._wnameSeq[base]=(this._wnameSeq[base]||0)+1; let n=base+this._wnameSeq[base]; while(this.objects.some(o=>o.name===n))n=base+(++this._wnameSeq[base]); return n; }
+  // pose (une fois) les écouteurs click/change qui déclenchent la macro liée
+  _attachWidgetEvents(o){ if(!o||!o.widget||o._evtBound)return; o._evtBound=true; const ss=this; o.widget.on('click',ev=>ss._fireWidgetMacro(o,'click',ev)); o.widget.on('change',ev=>ss._fireWidgetMacro(o,'change',ev)); }
   insertWidgetObj(kind){ const w=this._mkWidget(kind); if(!w)return;
-    const obj={type:'widget',r:this.cur.r,c:this.cur.c,dx:2,dy:2,w:w.bounds.width,h:w.bounds.height,widget:w,kind}; this.objects.push(obj); this._selObj=obj; this.markDirty(); }
+    const obj={type:'widget',r:this.cur.r,c:this.cur.c,dx:2,dy:2,w:w.bounds.width,h:w.bounds.height,widget:w,kind,name:this._nextWidgetName(kind),macros:{}}; this._attachWidgetEvents(obj); this.objects.push(obj); this._selObj=obj; this.markDirty(); }
   // ── formes ──────────────────────────────────────────────────────────────────
   insertShape(kind){ this.insertWidgetObj(kind); this._focusSelf(); }
   // notifie la barre d'outils contextuelle à chaque changement de sélection d'objet
@@ -10492,8 +10751,8 @@ class SpreadsheetWidget extends BaseWidget {
     return [ax+Math.cos(a)*d, ay+Math.sin(a)*d]; }
   _newDrawObj(kind,x,y){ const w=makeShape(kind); if(!w)return null;
     const r=this._rowAt(y), c=this._colAt(x); if(r<0||c<0)return null;
-    const o={type:'widget',kind,r,c,dx:x-this._colLeft(c),dy:y-this._rowTop(r),w:1,h:1,widget:w};
-    this.objects.push(o); this._selObj=o; return o; }
+    const o={type:'widget',kind,r,c,dx:x-this._colLeft(c),dy:y-this._rowTop(r),w:1,h:1,widget:w,name:this._nextWidgetName(kind),macros:{}};
+    this._attachWidgetEvents(o); this.objects.push(o); this._selObj=o; return o; }
   _startDraw(x,y){ const kind=this._drawArm, mode=this._drawModeOf(kind);
     if(mode==='poly'||mode==='poly45'){                       // chaîne de clics
       if(this._polyDraw){ this._polyAddPoint(x,y); return true; }
@@ -10789,6 +11048,157 @@ class SpreadsheetWidget extends BaseWidget {
   _syncFormula(){ if(!this._formula)return; const cell=this.cells.get(this._key(this.cur.r,this.cur.c)); this._formula.value=cell?cell.raw:''; this._nameBox.value=_colName(this.cur.c)+(this.cur.r+1); }
   _focusSelf(){ const wm=_rootWM(this); if(wm&&wm._setFocus)wm._setFocus(this); }
   insertFunction(name){ this._focusSelf(); this._startEdit('='+name+'('); }
+
+  // ═══ Macros ══════════════════════════════════════════════════════════════
+  // Réf : 'A1' -> {r,c} ; plage : 'A1:C3' -> {r1,c1,r2,c2}
+  _parseRef(ref){ const m=String(ref).trim().toUpperCase().match(/^\$?([A-Z]{1,3})\$?(\d+)$/); if(!m)throw new Error('Référence invalide : '+ref); return {r:parseInt(m[2],10)-1, c:_colIndex(m[1])}; }
+  _parseRange(ref){ const s=String(ref).trim().toUpperCase(); if(s.includes(':')){ const [a,b]=s.split(':'); const p1=this._parseRef(a),p2=this._parseRef(b); return {r1:Math.min(p1.r,p2.r),c1:Math.min(p1.c,p2.c),r2:Math.max(p1.r,p2.r),c2:Math.max(p1.c,p2.c)}; } const p=this._parseRef(s); return {r1:p.r,c1:p.c,r2:p.r,c2:p.c}; }
+  // ── CRUD macros ──
+  getMacro(name){ return this.macros.find(m=>m.name===name)||null; }
+  addMacro(name,code){ let n=name||'Macro'; let i=1; while(this.getMacro(n)){ n=(name||'Macro')+(++i); } const m={name:n,code:code||''}; this.macros.push(m); return m; }
+  renameMacro(oldName,newName){ const m=this.getMacro(oldName); if(!m||!newName||this.getMacro(newName))return false; for(const o of this.objects){ if(o.macros)for(const k in o.macros)if(o.macros[k]===oldName)o.macros[k]=newName; } for(const k in this.wbEvents)if(this.wbEvents[k]===oldName)this.wbEvents[k]=newName; m.name=newName; return true; }
+  deleteMacro(name){ const i=this.macros.findIndex(m=>m.name===name); if(i<0)return; this.macros.splice(i,1); for(const o of this.objects){ if(o.macros)for(const k in o.macros)if(o.macros[k]===name)delete o.macros[k]; } for(const k in this.wbEvents)if(this.wbEvents[k]===name)this.wbEvents[k]=null; }
+  // ── exécution ──
+  _macroTouch(){ if(!this._macroTouched){ this._macroTouched=true; this._pushUndo(); } }
+  _macroError(err){ const msg='Erreur macro : '+((err&&err.message)||err); if(this._macroLog)this._macroLog(msg,true); else if(typeof Dialogs!=='undefined')Dialogs.error(msg); try{console.error(err);}catch(_){} }
+  runMacro(nameOrCode, event){
+    const m=this.getMacro(nameOrCode); const code=m?m.code:nameOrCode;
+    if(code==null)return false;
+    if(this._macroDepth>=20){ this._macroError(new Error('Récursion de macro trop profonde')); return false; }
+    const top=this._macroDepth===0; if(top)this._macroTouched=false;
+    this._macroDepth++;
+    let ok=true;
+    try{ const fn=new Function('Sheet','event','"use strict";\n'+code); fn(this._macroApi(), event||{}); }
+    catch(err){ ok=false; this._macroError(err); }
+    finally{ this._macroDepth--; }
+    if(this._macroDepth===0){ this.recalc(); this._afterChange(); this.markDirty(); }
+    return ok;
+  }
+  // Objet API « Sheet » exposé aux macros
+  _macroApi(){ const ss=this;
+    const setCell=(ref,val,asF)=>{ const {r,c}=ss._parseRef(ref); ss._ensureCapacity(r,c); ss._macroTouch(); let raw; if(asF){ raw=String(val); if(!raw.startsWith('='))raw='='+raw; } else raw=(val==null?'':String(val)); ss._setRaw(r,c,raw); };
+    const wrap=(o)=>({ get name(){return o.name;}, get kind(){return o.kind;},
+      get value(){return o.widget?o.widget.value:undefined;}, set value(v){ if(o.widget){ o.widget.value=v; o.widget.markDirty&&o.widget.markDirty(); ss.markDirty(); } },
+      get checked(){return o.widget?o.widget.checked:undefined;}, set checked(v){ if(o.widget&&'checked' in o.widget){ o.widget.checked=v; ss.markDirty(); } },
+      get text(){return o.widget?o.widget.text:undefined;}, set text(v){ if(o.widget&&('text' in o.widget)){ o.widget.text=v; ss.markDirty(); } },
+      setEnabled(b){ if(o.widget){ o.widget.enabled=!!b; ss.markDirty(); } }, click(){ ss._fireWidgetMacro(o,'click',{type:'click',widget:o.name}); } });
+    const Sheet={
+      // ── sélection ──
+      select(ref){ const R=ss._parseRange(ref); ss._ensureCapacity(R.r2,R.c2); ss.sel={r1:R.r1,c1:R.c1,r2:R.r2,c2:R.c2}; ss.cur={r:R.r1,c:R.c1}; ss._afterChange(); return Sheet; },
+      goto(ref){ const {r,c}=ss._parseRef(ref); ss._setCur(r,c,false); return Sheet; },
+      moveCursor(dr,dc,extend){ ss._moveCur(dr|0,dc|0,!!extend); return Sheet; },
+      get selection(){ const s=ss._normSel(); return {r1:s.r1,c1:s.c1,r2:s.r2,c2:s.c2, a1:_colName(s.c1)+(s.r1+1)+':'+_colName(s.c2)+(s.r2+1)}; },
+      get activeCell(){ return {r:ss.cur.r,c:ss.cur.c, a1:_colName(ss.cur.c)+(ss.cur.r+1)}; },
+      // ── cellules ──
+      get(ref){ const {r,c}=ss._parseRef(ref); const n=ss.cellNumeric(r,c); return n!=null?n:ss.cellDisplay(r,c); },
+      getText(ref){ const {r,c}=ss._parseRef(ref); return ss.cellDisplay(r,c); },
+      getRaw(ref){ const {r,c}=ss._parseRef(ref); const cell=ss.getCell(r,c); return cell?cell.raw:''; },
+      set(ref,val){ setCell(ref,val,false); return Sheet; },
+      setFormula(ref,f){ setCell(ref,f,true); return Sheet; },
+      getRange(ref){ const R=ss._parseRange(ref); const out=[]; for(let r=R.r1;r<=R.r2;r++){ const row=[]; for(let c=R.c1;c<=R.c2;c++){ const n=ss.cellNumeric(r,c); row.push(n!=null?n:ss.cellDisplay(r,c)); } out.push(row); } return out; },
+      setRange(ref,matrix){ const R=ss._parseRange(ref); ss._macroTouch(); for(let r=R.r1;r<=R.r2;r++)for(let c=R.c1;c<=R.c2;c++){ const v=matrix&&matrix[r-R.r1]&&matrix[r-R.r1][c-R.c1]; if(v!==undefined){ ss._ensureCapacity(r,c); ss._setRaw(r,c, v==null?'':String(v)); } } return Sheet; },
+      clear(ref){ const R=ss._parseRange(ref); ss._macroTouch(); for(let r=R.r1;r<=R.r2;r++)for(let c=R.c1;c<=R.c2;c++){ const cell=ss.cells.get(ss._key(r,c)); if(cell){ cell.raw=''; cell._disp=undefined; } } return Sheet; },
+      // ── format (sur la sélection courante) ──
+      bold(){ ss._macroTouch(); ss.cmdBold(); return Sheet; },
+      italic(){ ss._macroTouch(); ss.cmdItalic(); return Sheet; },
+      underline(){ ss._macroTouch(); ss.cmdUnderline(); return Sheet; },
+      bg(hex){ ss._macroTouch(); ss.cmdBg(hex); return Sheet; },
+      color(hex){ ss._macroTouch(); ss.cmdColor(hex); return Sheet; },
+      numberFormat(fmt){ ss._macroTouch(); ss.cmdNumFmt(fmt); return Sheet; },
+      align(a){ ss._macroTouch(); ss.cmdAlign(a); return Sheet; },
+      // ── structure ──
+      insertRow(above){ ss._macroTouch(); ss.insertRow(above!==false); return Sheet; },
+      insertCol(left){ ss._macroTouch(); ss.insertCol(left!==false); return Sheet; },
+      deleteRow(){ ss._macroTouch(); ss.deleteRow(); return Sheet; },
+      deleteCol(){ ss._macroTouch(); ss.deleteCol(); return Sheet; },
+      // ── objets ──
+      insertImage(){ ss._macroTouch(); ss.insertImage(); return Sheet; },
+      insertChart(kind){ ss._macroTouch(); ss.insertChart(kind||'bar'); return Sheet; },
+      insertShape(kind){ ss._macroTouch(); ss.insertShape(kind); const o=ss._selObj; return o?wrap(o):null; },
+      insertWidget(kind){ ss._macroTouch(); ss.insertWidgetObj(kind); const o=ss._selObj; return o?wrap(o):null; },
+      // ── widgets ──
+      widget(name){ const o=ss.objects.find(o=>o.name===name&&o.type==='widget'); return o?wrap(o):null; },
+      widgets(){ return ss.objects.filter(o=>o.type==='widget'&&o.name).map(o=>o.name); },
+      // ── feuilles ──
+      addSheet(name){ ss._macroTouch(); ss.newSheet(); if(name)ss.sheets[ss.active].name=String(name); return Sheet; },
+      switchSheet(idOrName){ let i=idOrName; if(typeof idOrName==='string')i=ss.sheets.findIndex(s=>s.name===idOrName); if(i>=0)ss.switchSheet(i); return Sheet; },
+      get sheetName(){ return ss.sheets[ss.active].name; },
+      get sheetCount(){ return ss.sheets.length; },
+      // ── UI / divers ──
+      msgbox(t){ if(typeof Dialogs!=='undefined')Dialogs.alert(String(t)); return Sheet; },
+      prompt(t,def){ return (typeof Dialogs!=='undefined')?Dialogs.prompt('Macro',String(t),def==null?'':String(def)):Promise.resolve(null); },
+      toast(t){ if(typeof toasts!=='undefined'&&toasts.info)toasts.info(String(t)); else if(ss._macroLog)ss._macroLog(String(t)); return Sheet; },
+      log(){ const a=[].slice.call(arguments); if(ss._macroLog)ss._macroLog(a.map(x=>typeof x==='object'?JSON.stringify(x):String(x)).join(' ')); return Sheet; },
+      recalc(){ ss.recalc(); return Sheet; },
+      get rowCount(){ return ss.nRows; }, get colCount(){ return ss.nCols; },
+      colName(i){ return _colName(i); }, colIndex(n){ return _colIndex(n); },
+    };
+    return Sheet;
+  }
+  // ── déclencheurs ──
+  _fireWidgetMacro(o,type,ev){ if(!this.runMode||!o||!o.macros)return; const name=o.macros[type]; if(!name)return; this.runMacro(name,{type,widget:o.name,kind:o.kind,value:o.widget?o.widget.value:undefined,checked:o.widget?o.widget.checked:undefined}); }
+  _fireSelectionMacro(){ if(!this.runMode||this._inWbEvent)return; const key=this.cur.r+':'+this.cur.c+':'+this.sel.r1+':'+this.sel.c1+':'+this.sel.r2+':'+this.sel.c2; if(key===this._lastSelKey)return; this._lastSelKey=key; const name=this.wbEvents.onSelectionChange; if(!name)return; this._inWbEvent=true; try{ this.runMacro(name,{type:'selectionchange',a1:_colName(this.cur.c)+(this.cur.r+1)}); } finally{ this._inWbEvent=false; } }
+  _notifyCellChange(r,c){ if(!this.runMode||this._inWbEvent)return; const name=this.wbEvents.onCellChange; if(!name)return; this._inWbEvent=true; try{ this.runMacro(name,{type:'cellchange',r,c,a1:_colName(c)+(r+1)}); } finally{ this._inWbEvent=false; } }
+  runOnOpen(){ if(this.wbEvents.onOpen)this.runMacro(this.wbEvents.onOpen,{type:'open'}); }
+  // ── fenêtre Éditeur de macros ──
+  openMacroEditor(selectName){ const ss=this, wm=_rootWM(this); if(!wm)return;
+    if(this._macroWin&&this._macroWin.parent){ if(wm._activate)wm._activate(this._macroWin); if(this._macroSync)this._macroSync(selectName); return; }
+    const win=new GUIWindow('⚙️ Éditeur de macros', winBounds(680,460,90,70)); this._macroWin=win;
+    win.topmost=true;   // premier plan permanent, mais non bloquant (pas modal)
+    const ca=win.contentArea; ca._contentSize=()=>({w:0,h:0});
+    const list=new ListBox(ss.macros.map(m=>m.name), {x:0,y:0,width:170,height:100});
+    const bNew=new Button('＋ Nouveau',{x:0,y:0,width:80,height:24});
+    const bRen=new Button('Renommer',{x:0,y:0,width:80,height:24});
+    const bDel=new Button('Supprimer',{x:0,y:0,width:80,height:24});
+    const bRun=new Button('▶ Exécuter',{x:0,y:0,width:120,height:26});
+    const editor=new CodeEditor({x:0,y:0,width:100,height:100}); editor.completions=MACRO_COMPLETIONS;
+    const status=new Label('Prêt.',{x:0,y:0,width:100,height:20}); status.align='left'; status.padding={x:6,y:0}; status.color=null;
+    [list,bNew,bRen,bDel,bRun,editor,status].forEach(x=>ca.addChild(x));
+    let cur=null;
+    const save=()=>{ if(cur)cur.code=editor.value; };
+    const loadInto=(m)=>{ cur=m; editor.value=m?m.code:''; editor.readOnly=!m; editor.markDirty(); };
+    const syncList=(sel)=>{ save(); list.items=ss.macros.map(m=>m.name); let i=ss.macros.findIndex(m=>m.name===sel); if(i<0&&cur)i=ss.macros.indexOf(cur); if(i<0&&ss.macros.length)i=0; list.selectedIndex=i; list.markDirty(); loadInto(ss.macros[i]||null); };
+    ss._macroSync=syncList;
+    ss._macroLog=(msg,isErr)=>{ status.text=String(msg); status.color=isErr?'#D9453B':null; status.markDirty(); };
+    list.on('change',()=>{ save(); loadInto(ss.macros[list.selectedIndex]||null); });
+    editor.on('change',save);
+    bNew.on('click',()=>{ const m=ss.addMacro('Macro','// Nouvelle macro\n// Ex : Sheet.set("A1","coucou").select("A1:B2").bg("#ffff00")\n'); syncList(m.name); wm._setFocus(editor); });
+    bRen.on('click',()=>{ if(!cur)return; const old=cur.name; Dialogs.prompt('Renommer la macro','Nouveau nom :',old).then(r=>{ if(r&&r.result==='ok'&&r.value&&r.value.trim()){ if(ss.renameMacro(old,r.value.trim()))syncList(r.value.trim()); else Dialogs.alert('Nom déjà utilisé.'); } }); });
+    bDel.on('click',()=>{ if(!cur)return; const nm=cur.name; Dialogs.confirm('Supprimer la macro « '+nm+' » ?').then(r=>{ if(r&&r.result==='ok'){ ss.deleteMacro(nm); cur=null; syncList(); } }); });
+    bRun.on('click',()=>{ save(); if(!cur){ ss._macroLog('Aucune macro sélectionnée.',true); return; } ss._macroLog('Exécution de « '+cur.name+' »…'); if(ss.runMacro(cur.name,{type:'manual'}))ss._macroLog('« '+cur.name+' » exécutée.'); });
+    const layout=()=>{ const W=ca.bounds.width,H=ca.bounds.height,pad=8,lw=170,bh=24;
+      list.setBounds({x:pad,y:pad,width:lw,height:Math.max(60,H-pad*3-bh*2-6)});
+      let by=list.bounds.y+list.bounds.height+6; bNew.setBounds({x:pad,y:by,width:lw,height:bh});
+      by+=bh+4; const hw=(lw-6)/2; bRen.setBounds({x:pad,y:by,width:hw,height:bh}); bDel.setBounds({x:pad+hw+6,y:by,width:hw,height:bh});
+      const ex=pad+lw+pad; editor.setBounds({x:ex,y:pad,width:Math.max(120,W-ex-pad),height:Math.max(80,H-pad*2-34)});
+      bRun.setBounds({x:ex,y:H-pad-26,width:120,height:26}); status.setBounds({x:ex+128,y:H-pad-24,width:Math.max(40,W-ex-128-pad),height:22}); };
+    const orig=win._updateLayout.bind(win); win._updateLayout=function(){ orig(); layout(); };
+    const origClose=win._onClose.bind(win); win._onClose=function(){ save(); if(ss._macroWin===win){ ss._macroWin=null; ss._macroSync=null; ss._macroLog=null; } origClose(); };
+    win._updateLayout(); syncList(selectName); wm.addWindow(win); wm._setFocus(editor);
+  }
+  // ── dialogue des événements du classeur ──
+  openWbEventsDialog(){ const ss=this, wm=_rootWM(this); if(!wm)return;
+    const dw=new GUIWindow('🔗 Événements du classeur', winBounds(430,210,140,110)); const dc=dw.contentArea; dc._contentSize=()=>({w:0,h:0});
+    const names=['‹Aucune›'].concat(ss.macros.map(m=>m.name));
+    const rows=[['À l’ouverture (onOpen)','onOpen',14],['Changement de sélection','onSelectionChange',50],['Cellule modifiée','onCellChange',86]];
+    const dds={};
+    rows.forEach(function(row){ const lab=row[0],key=row[1],y=row[2]; dc.addChild(new Label(lab,{x:12,y:y+3,width:184,height:22})); const dd=new DropDown(names,{x:200,y,width:206,height:26}); const cur=ss.wbEvents[key]; dd.selectedIndex=Math.max(0,names.indexOf(cur)); dc.addChild(dd); dds[key]=dd; });
+    const bOk=new Button('OK',{x:226,y:140,width:86,height:28}), bNo=new Button('Fermer',{x:320,y:140,width:86,height:28});
+    dc.addChild(bOk); dc.addChild(bNo);
+    bOk.on('click',()=>{ rows.forEach(function(row){ const key=row[1], i=dds[key].selectedIndex; ss.wbEvents[key]=i>0?names[i]:null; }); wm.removeWindow(dw); wm._setFocus(ss); });
+    bNo.on('click',()=>{ wm.removeWindow(dw); wm._setFocus(ss); });
+    wm.addWindow(dw);
+  }
+  setRunMode(on){ on=!!on; if(this.runMode===on)return; this.runMode=on; this._selObj=null; this._objDrag=null; this._dragMode=null; this._runWidget=null; this.markDirty(); const wm=_rootWM(this); if(wm&&wm._setFocus)wm._setFocus(this); if(this.onRunModeChange)this.onRunModeChange(on); }
+  // sous-menu d'association macro↔événement pour un widget
+  _macroAssignMenu(obj){ const evs=[['click','Au clic'],['change','Au changement']];
+    const list=(cur,set)=>{ const items=[{label:'‹Aucune›',checked:!cur,action:()=>{ set(null); this._focusSelf(); }},{separator:true}];
+      for(const m of this.macros)items.push({label:m.name,checked:cur===m.name,action:()=>{ set(m.name); this._focusSelf(); }});
+      items.push({separator:true},{label:'‹Nouvelle macro…›',icon:'✨',action:()=>this._newMacroForBinding(set)});
+      return items; };
+    return evs.map(([ev,lab])=>({label:lab+(obj.macros&&obj.macros[ev]?' : '+obj.macros[ev]:''),
+      submenu:list(obj.macros&&obj.macros[ev], name=>{ if(!obj.macros)obj.macros={}; if(name)obj.macros[ev]=name; else delete obj.macros[ev]; }) })); }
+  _newMacroForBinding(set){ Dialogs.prompt('Nouvelle macro','Nom de la macro :','Macro').then(r=>{ if(r&&r.result==='ok'&&r.value&&r.value.trim()){ const m=this.addMacro(r.value.trim(),'// Macro '+r.value.trim()+'\n// Sheet.set("A1", "coucou")\n'); set(m.name); this.openMacroEditor(m.name); } this._focusSelf(); }); }
   _menuCopy(){ this._focusSelf(); try{ document.execCommand('copy'); }catch(_){ this._onCopy(); } }
   _menuCut(){ this._focusSelf(); try{ document.execCommand('cut'); }catch(_){ this._onCut(); } this._onCut(); }
   _menuPaste(){ this._focusSelf(); this._onPaste(typeof _sysClipboard!=='undefined'?_sysClipboard:''); }
@@ -10804,9 +11214,15 @@ class SpreadsheetWidget extends BaseWidget {
         {separator:true},
       ]:[];
       const shapeItems=this._shapeMenuItems(obj,wm,o.x+e.x,o.y+e.y);
+      const macroItems = (obj.type==='widget'&&!(obj.widget instanceof Shape))?[
+        {label:'Affecter une macro',icon:'⚡',submenu:this._macroAssignMenu(obj)},
+        {label:'Renommer le widget… ('+(obj.name||'?')+')',action:()=>{ Dialogs.prompt('Nom du widget','Identifiant (pour les macros) :',obj.name||'').then(r=>{ if(r&&r.result==='ok'&&r.value&&r.value.trim()&&!this.objects.some(o2=>o2!==obj&&o2.name===r.value.trim())){ obj.name=r.value.trim(); } this._focusSelf(); }); }},
+        {separator:true},
+      ]:[];
       _openMenu(wm, o.x+e.x, o.y+e.y, [
         ...chartItems,
         ...shapeItems,
+        ...macroItems,
         {label:'Supprimer '+(obj.type==='image'?"l'image":obj.type==='chart'?'le graphique':shapeItems.length?'la forme':'le widget'),icon:'🗑️',action:()=>{ this.deleteSelObj(); this._focusSelf(); }},
         {label:'Réinitialiser la rotation',disabled:!obj.rot,action:()=>{ obj.rot=0; this.markDirty(); this._focusSelf(); }},
       ]); return; }
@@ -10952,8 +11368,10 @@ class SpreadsheetWidget extends BaseWidget {
         if(inThumb){ this._sbDrag={dir:sb.dir,key:sb.key,startScroll:sb.scroll,startMouse:pos,trackLen:sb.trackLen,thumbLen:sb.thumbLen,maxScroll:sb.maxScroll}; }
         else if(sb.maxScroll>0){ const ratio=(pos-sb.trackStart-sb.thumbLen/2)/Math.max(1,sb.trackLen-sb.thumbLen); const ns=Math.max(0,Math.min(sb.maxScroll,ratio*sb.maxScroll)); this._setScroll(sb.key,ns); if(this.editing)this._positionEditor(); this.markDirty(); }
         return; } }
+    // ── mode Exécution : widgets vivants ; pas de sélection/déplacement d'objets ──
+    if(this.runMode){ const wo=this._widgetObjAt(x,y); if(wo){ this._focusSelf(); this._runWidget=wo; this._dispatchWidget(wo,'mousedown',x,y,e); return; } }
     // floating object : poignée (sélectionné) → resize/rotate ; corps → sélection + move
-    for(let i=this.objects.length-1;i>=0;i--){ const o=this.objects[i]; const h=this._objHandleAt(x,y,o); if(!h)continue;
+    if(!this.runMode)for(let i=this.objects.length-1;i>=0;i--){ const o=this.objects[i]; const h=this._objHandleAt(x,y,o); if(!h)continue;
       if(h.type==='body'||this._selObj===o)this._syncActiveBandTo(x,y);  // volet cliqué = volet actif (bornes de l'objet suivent ce volet)
       const ob=this._objBoundsAt(o,x,y);
       if(this._cropObj===o&&h.type==='resize'){ this._objDrag={o,mode:'crop',hh:h.h,sx:x,sy:y,ox:o.dx,oy:o.dy,ow:o.w,oh:o.h,rot:o.rot||0,crop:this.imgCrop(o)}; return; }
@@ -10978,6 +11396,7 @@ class SpreadsheetWidget extends BaseWidget {
     const r=this._rowAt(y),c=this._colAt(x); if(r>=0&&c>=0){ this._dragMode='sel'; if(this._painter&&this._copyStyle){ this._setCur(r,c,false); this.cmdPasteStyle(); return; } this._setCur(r,c,e.shiftKey); }
   }
   _onMove(e){ const x=e.x,y=e.y; this._lastX=x; this._lastY=y;
+    if(this._runWidget){ this._dispatchWidget(this._runWidget,'mousemove',x,y,e); this.cursor='default'; return; }
     if(this._chartPickDrag){ const r=this._rowAt(y),c=this._colAt(x); if(r>=0&&c>=0){ const d=this._chartPickDrag;
       this._chartPick.chart.range={r1:Math.min(d.anchorR,r),c1:Math.min(d.anchorC,c),r2:Math.max(d.anchorR,r),c2:Math.max(d.anchorC,c)}; this.markDirty(); }
       this.cursor='crosshair'; return; }
@@ -11033,12 +11452,18 @@ class SpreadsheetWidget extends BaseWidget {
       d.moved=true; const r=this._rowAt(y),c=this._colAt(x); if(r>=0&&c>=0){ o.r=r;o.c=c; o.dx=x-this._colLeft(c)-d.ox; o.dy=y-this._rowTop(r)-d.oy; this._clampObjToSheet(o); } this.markDirty(); return; }
     if(this._dragMode==='colsize'){ this.colW[this._dragCol]=Math.max(20,this._resizeOrig+(x-this._resizeStart)); this._rebuildAxes(); this.markDirty(); return; }
     if(this._dragMode==='rowsize'){ this.rowH[this._dragRow]=Math.max(12,this._resizeOrig+(y-this._resizeStart)); this._rebuildAxes(); this.markDirty(); return; }
-    if(this._dragMode==='sel'){ const r=this._rowAt(y),c=this._colAt(x); if(r>=0&&c>=0)this._setCur(r,c,true); return; }
+    if(this._dragMode==='sel'){ let r=this._rowAt(y),c=this._colAt(x);
+      // hors grille par le haut/gauche → cible la ligne/colonne précédente pour défiler (symétrique du bas/droite)
+      if(c<0&&x<this._gx0())c=Math.max(0,this._firstVisCol()-1);
+      if(r<0&&y<this._gy0())r=Math.max(0,this._firstVisRow()-1);
+      if(c<0)c=this.sel.c2; if(r<0)r=this.sel.r2;
+      if(r>=0&&c>=0)this._setCur(r,c,true); return; }
     if(this._dragMode==='colsel'){ const c=this._colAt(x); if(c>=0){ this.sel.c2=c; this.sel.r2=this.nRows-1; this._afterChange(); } return; }
     if(this._dragMode==='rowsel'){ const r=this._rowAt(y); if(r>=0){ this.sel.r2=r; this.sel.c2=this.nCols-1; this._afterChange(); } return; }
     if(this._dragMode==='fill'){ this._fillTo={r:this._rowAt(y),c:this._colAt(x)}; this.markDirty(); return; }
     // hover cursor — objects first
     let cur=null;
+    if(this.runMode){ this.cursor=this._widgetObjAt(x,y)?'pointer':'default'; return; }
     for(let i=this.objects.length-1;i>=0;i--){ const o=this.objects[i]; const h=this._objHandleAt(x,y,o); if(!h)continue;
       if(this._selObj===o&&h.type==='resize'){ const k=h.h; cur=(k==='nw'||k==='se')?'nwse-resize':(k==='ne'||k==='sw')?'nesw-resize':(k==='n'||k==='s')?'ns-resize':'ew-resize'; }
       else if(this._selObj===o&&h.type==='rotate'){ cur='grab'; }
@@ -11049,7 +11474,9 @@ class SpreadsheetWidget extends BaseWidget {
       else if(x<this._gx0()&&y>=this._gy0()){ if(this._rowEdgeAt(y)>=0)cur='row-resize'; } else { const s=this._normSel(); const hx=this._colLeft(s.c2)+this.colW[s.c2],hy=this._rowTop(s.r2)+this.rowH[s.r2]; if(Math.abs(x-hx)<6&&Math.abs(y-hy)<6)cur='crosshair'; else cur='cell'; } } } }
     if(cur!==this.cursor){ this.cursor=cur; }
   }
-  _onUp(e){ if(this._chartPickDrag){ this._chartPickDrag=null; this._endChartPick(true); this._focusSelf(); return; }
+  _onUp(e){
+    if(this._runWidget){ const o=this._runWidget, x=(e&&e.x!=null)?e.x:this._lastX, y=(e&&e.y!=null)?e.y:this._lastY; this._dispatchWidget(o,'mouseup',x,y,e); const b=this._objBoundsAt(o,x,y); if(x>=b.x&&x<b.x+b.width&&y>=b.y&&y<b.y+b.height)this._dispatchWidget(o,'click',x,y,e); this._runWidget=null; this._focusSelf(); return; }
+    if(this._chartPickDrag){ this._chartPickDrag=null; this._endChartPick(true); this._focusSelf(); return; }
     if(this._ptDrag){ this._ptDrag=null; this._focusSelf(); return; }
     if(this._polyDraw)return;                       // le polygone se termine au double-clic / Échap
     if(this._drawDrag){ this._finishDraw(); return; }
@@ -11155,6 +11582,9 @@ class SpreadsheetWidget extends BaseWidget {
     else if(text){ const rows=text.replace(/\r/g,'').split('\n'); if(rows.length&&rows[rows.length-1]==='')rows.pop(); rows.forEach((row,dr)=>{ row.split('\t').forEach((val,dc)=>{ const r=base.r+dr,c=base.c+dc; if(r<this.nRows&&c<this.nCols)this._setRaw(r,c,val); }); }); this.sel={r1:base.r,c1:base.c,r2:base.r+rows.length-1,c2:base.c+(rows[0]?rows[0].split('\t').length-1:0)}; }
     this.recalc(); this._afterChange(); }
   // ── floating object bounds + resize handles ────────────────────────────────
+  // ── routage vers widget embarqué (mode Exécution) ──
+  _widgetObjAt(x,y){ for(let i=this.objects.length-1;i>=0;i--){ const o=this.objects[i]; if(o.type!=='widget'||!o.widget||o.widget instanceof Shape)continue; const b=this._objBoundsAt(o,x,y); if(x>=b.x&&x<b.x+b.width&&y>=b.y&&y<b.y+b.height)return o; } return null; }
+  _dispatchWidget(o,type,x,y,src){ const w=o.widget; if(!w)return; const b=this._objBoundsAt(o,x,y); w.bounds={x:b.x,y:b.y,width:b.width,height:b.height}; const ev={type,target:w,x,y,button:(src&&src.button)||0,shiftKey:!!(src&&src.shiftKey),ctrlKey:!!(src&&src.ctrlKey),altKey:!!(src&&src.altKey),deltaY:src&&src.deltaY,stopPropagation(){this.stopped=true;},preventDefault(){this.defaultPrevented=true;},stopped:false,defaultPrevented:false}; try{ w.emit(ev); }catch(_){} this.markDirty(); }
   _objBounds(o){ return {x:this._colLeft(o.c)+o.dx, y:this._rowTop(o.r)+o.dy, width:o.w, height:o.h}; }
   // bornes de l'objet DANS un volet donné (bande colonne × bande ligne)
   _objBoundsIn(o,cb,rb){ return {x:cb.rx-cb.sx+this._axCols[o.c]+o.dx, y:rb.ry-rb.sy+this._axRows[o.r]+o.dy, width:o.w, height:o.h}; }
@@ -11222,7 +11652,7 @@ class SpreadsheetWidget extends BaseWidget {
     if(this.freezeC){ const x=gx+fw; ctx.beginPath(); ctx.moveTo(x,b.y+this.fbH); ctx.lineTo(x,gy+this._bodyH()); ctx.stroke(); }
     if(this.freezeR){ const y=gy+fh; ctx.beginPath(); ctx.moveTo(b.x,y); ctx.lineTo(gx+this._bodyW(),y); ctx.stroke(); }
     ctx.restore(); }
-  _vSplitGrip(){ return {x:this.bounds.x+this.bounds.width-this.SB, y:this._gy0(), w:this.SB, h:12}; }        // haut scrollbar verticale → scinde H
+  _vSplitGrip(){ return {x:this.bounds.x+this.bounds.width-this.SB, y:this.bounds.y+this.fbH, w:this.SB, h:12}; } // haut scrollbar verticale → scinde H
   _hSplitGrip(){ return {x:this._gx0()+this._bodyW()-12, y:this._gy0()+this._bodyH(), w:12, h:this.SB}; }     // droite scrollbar horizontale → scinde V
   // 'v' = ligne de fractionnement verticale (déplacement horizontal) ; 'h' = horizontale
   _splitHitAt(x,y){ const vg=this._vSplitGrip(), hg=this._hSplitGrip();
@@ -11653,6 +12083,13 @@ window.openCalcWindow = function(){
       { label:'Scinder au niveau de la sélection', icon:'⊞', action:()=>{ ss.splitAtSel(); focusSS(); } },
       { label:'Supprimer le fractionnement', action:()=>{ ss.removeSplit(); focusSS(); } },
     ]},
+    { label:'Macros', items:[
+      { label:'Éditeur de macros…', icon:'⚙️', action:()=>{ ss.openMacroEditor(); } },
+      { separator:true },
+      { label:'Mode Exécution', get checked(){ return ss.runMode; }, action:()=>{ ss.setRunMode(!ss.runMode); focusSS(); } },
+      { separator:true },
+      { label:'Événements du classeur…', icon:'🔗', action:()=>{ ss.openWbEventsDialog(); } },
+    ]},
     { label:'Paramètres', items:[
       { label:'En-têtes de colonnes', icon:'🔠', submenu:[
         { label:'Lettres (A, B, C)',  get checked(){ return !ss.colHeaderNumeric; }, action:()=>{ ss.colHeaderNumeric=false; ss.markDirty(); focusSS(); } },
@@ -11715,6 +12152,10 @@ window.openCalcWindow = function(){
   tb.addButton({ text:'A↓', tooltip:'Trier croissant', minWidth:28, onClick:()=>{ ss.sort(1); focusSS(); } });
   tb.addButton({ text:'Z↓', tooltip:'Trier décroissant', minWidth:28, onClick:()=>{ ss.sort(-1); focusSS(); } });
   tb.addButton({ icon:'🔻', tooltip:'Filtre', onClick:()=>{ ss.toggleFilter(); focusSS(); } });
+  tb.addSeparator();
+  const btnRun = tb.addButton({ text:'▶ Exécution', tooltip:'Basculer Design / Exécution (widgets vivants, macros actives)', minWidth:98, onClick:()=>{ ss.setRunMode(!ss.runMode); focusSS(); } });
+  ss.onRunModeChange = (on)=>{ btnRun.toggled=on; btnRun.text=on?'⏸ Design':'▶ Exécution'; tb.markDirty(); };
+  tb.addButton({ icon:'⚙️', tooltip:'Éditeur de macros', minWidth:28, onClick:()=>{ ss.openMacroEditor(); } });
   // largeur réelle d'abord, puis hauteur ajustée au nombre de rangées
   tb.setSize(ca.bounds.width, 34);
   w.setToolbar(tb, tb.fitHeight());
@@ -11972,6 +12413,7 @@ window.openCalcWindow = function(){
   w._updateLayout(); refreshTB(); statusUpdate();
   engine.windowManager.addWindow(w);
   wm._setFocus(ss);
+  ss.runOnOpen();
 };
 
 // ── Launch ─────────────────────────────────────────────────────────────────
