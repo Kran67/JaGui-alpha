@@ -9041,6 +9041,18 @@ class CodeEditor extends BaseWidget {
   _mmX(){ return this.bounds.x+this.bounds.width-this.sbW-this.minimapW; }
   _sbX(){ return this.bounds.x+this.bounds.width-this.sbW; }
   _lineLen(ln){ return (this.lines[ln]||'').length; }
+  // marqueur « ⋯ » d'une région repliée : renvoie la ligne repliée sous (x,y), sinon -1 (géométrie alignée sur render())
+  _foldMarkerAt(x,y){ if(!this.folder.folded.size)return -1;
+    if(x<this._textX0()||x>=this._textX0()+this._textW())return -1;
+    const b=this.bounds,cw=this._charW(),gw=this._gutterW(),lh=this._lh,pad=this._pad;
+    const tx0=b.x+gw+pad-this._scrollX, ty0=b.y+pad-this._scrollY;
+    const vis=this._visible(), viewH=this._viewH();
+    const first=Math.max(0,Math.floor(this._scrollY/lh)), last=Math.min(vis.length-1,Math.floor((this._scrollY+viewH)/lh));
+    _measureCtx.font=fontToCSS(this._font); const gwid=Math.max(cw,_measureCtx.measureText('⋯').width);
+    for(let d=first;d<=last;d++){ const ln=vis[d]; if(!this.folder.isFolded(ln))continue;
+      const gx=tx0+this.lines[ln].length*cw+4, gy=ty0+d*lh;
+      if(x>=gx-3&&x<=gx+gwid+3&&y>=gy&&y<gy+lh)return ln; }
+    return -1; }
   _clampPos(p){ p.ln=Math.max(0,Math.min(this.lines.length-1,p.ln)); p.col=Math.max(0,Math.min(this._lineLen(p.ln),p.col)); return p; }
   _clampAll(){ for(const c of this.carets){ this._clampPos(c.pos); this._clampPos(c.anchor); } }
   _primary(){ return this.carets[this.carets.length-1]; }
@@ -9164,13 +9176,15 @@ class CodeEditor extends BaseWidget {
     // gouttière : chevron de pliage ou sélection de ligne
     if(x<this._textX0()){ const p=this._posAt(this._textX0()+2,y); if(this._foldZone(x)&&this.folder.at(p.ln)){ this.folder.toggle(p.ln); this._collapseCaretsInFold(); this._foldDirty=false; this._visCache=null; this.markDirty(); return; }
       const endLn=Math.min(p.ln+1,this.lines.length-1), endCol=(endLn===p.ln)?this._lineLen(p.ln):0; const nc={anchor:{ln:p.ln,col:0},pos:{ln:endLn,col:endCol}}; if(e.altKey)this.carets.push(nc); else this.carets=[nc]; this._gutterDrag=true; this._dragCaret=this.carets[this.carets.length-1]; this._afterMove(); return; }
+    // clic sur le marqueur « ⋯ » d'une région repliée → déplier
+    const fm=this._foldMarkerAt(x,y); if(fm>=0){ e.stopPropagation&&e.stopPropagation(); this.folder.toggle(fm); this._visCache=null; this.markDirty(); return; }
     // zone texte
     const p=this._posAt(x,y);
     const nc={anchor:{...p},pos:{...p}}; if(e.altKey)this.carets.push(nc); else this.carets=[nc]; this._selecting=true; this._dragCaret=this.carets[this.carets.length-1]; this._afterMove(); }
   _onDblClick(e){ if(!this.enabled)return; if(e.x<this._textX0()||(this.showMinimap&&e.x>=this._mmX())||e.x>=this._sbX())return; const p=this._posAt(e.x,e.y); const w=this._wordAt(p.ln,p.col); this.carets=[{anchor:{ln:p.ln,col:w.a},pos:{ln:p.ln,col:w.b}}]; this._afterMove(); }
   _onMove(e){ this._mouse={x:e.x,y:e.y}; if(this._sbDrag){ this._sbScroll(e.y); return; } if(this._mmDrag){ this._mmScroll(e.y,false); return; } if(this._hsbDrag){ this._hsbScroll(e.x); return; }
     if(this._selecting||this._gutterDrag){ const b=this.bounds,t=42; this._autoV=e.y<b.y+t?-14:(e.y>b.y+this._viewH()-t?14:0); this._autoH=e.x<this._textX0()+t?-24:(e.x>this._textX0()+this._textW()-t?24:0); this._dragSel(e.x,e.y); } else { this._updateCursor(e.x,e.y); } }
-  _updateCursor(x,y){ const b=this.bounds; const overMM=this.showMinimap&&x>=this._mmX()&&x<this._sbX(); if(overMM!==this._mmHover){ this._mmHover=overMM; this.markDirty(); } let c='text'; if(x>=this._sbX())c='default'; else if(overMM)c='default'; else if(x<this._textX0())c='default'; else if(this._maxLineWidth()>this._textW()&&y>=b.y+b.height-this.hsbH-1)c='default'; if(this.cursor!==c)this.cursor=c; }
+  _updateCursor(x,y){ const b=this.bounds; const overMM=this.showMinimap&&x>=this._mmX()&&x<this._sbX(); if(overMM!==this._mmHover){ this._mmHover=overMM; this.markDirty(); } let c='text'; if(x>=this._sbX())c='default'; else if(overMM)c='default'; else if(x<this._textX0())c='default'; else if(this._maxLineWidth()>this._textW()&&y>=b.y+b.height-this.hsbH-1)c='default'; else if(this._foldMarkerAt(x,y)>=0)c='pointer'; if(this.cursor!==c)this.cursor=c; }
   _focusMe(){ const wm=_rootWM(this); if(wm&&wm._setFocus)wm._setFocus(this); }
   _openContextMenu(lx,ly){ const wm=_rootWM(this); if(!wm||!wm._widgetParentOrigin)return; const o=wm._widgetParentOrigin(this); const ax=o.x+lx, ay=o.y+ly;
     const items=[
