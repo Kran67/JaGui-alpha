@@ -9196,7 +9196,7 @@ class CodeEditor extends BaseWidget {
   _maxScrollY(){ const v=this._visible(); return Math.max(0,v.length*this._lh-this._viewH()); }
   _maxScrollX(){ return Math.max(0,this._maxLineWidth()-this._textW()+this._charW()*2); }
   _sbScroll(y){ const b=this.bounds,max=this._maxScrollY(); if(max<=0){this._scrollY=0;return;} const trackH=this._viewH(); const thumbH=Math.max(24,trackH*trackH/(this._visible().length*this._lh)); const rel=(y-b.y-this._pad-thumbH/2)/Math.max(1,trackH-thumbH); this._scrollY=Math.max(0,Math.min(max,rel*max)); this.markDirty(); }
-  _mmScroll(y,grab){ const b=this.bounds,lh=this._lh,areaH=this._viewH(); const mmLh=this._mmLh(); const vpH=Math.max(8,(areaH/lh)*mmLh); const vpY=b.y+1+(this._scrollY/lh)*mmLh; if(grab){ this._mmGrab=(y>=vpY&&y<=vpY+vpH)?(y-vpY):vpH/2; } const scrollLines=((y-this._mmGrab)-(b.y+1))/mmLh; this._scrollY=Math.max(0,Math.min(this._maxScrollY(),scrollLines*lh)); this.markDirty(); }
+  _mmScroll(y,grab){ const {b,sliderH,sliderTop,maxSliderTop,maxSY}=this._mmLayout(); if(grab){ const vpY=b.y+1+sliderTop; this._mmGrab=(y>=vpY&&y<=vpY+sliderH)?(y-vpY):sliderH/2; } const sTop=Math.max(0,Math.min(maxSliderTop,(y-this._mmGrab)-(b.y+1))); const r=maxSliderTop>0? sTop/maxSliderTop : 0; this._scrollY=Math.max(0,Math.min(maxSY, r*maxSY)); this.markDirty(); }
   _hsbScroll(x){ const b=this.bounds; const trackW=this._textW(); const rel=(x-this._textX0())/Math.max(1,trackW); this._scrollX=Math.max(0,Math.min(this._maxScrollX(),rel*this._maxLineWidth())); this.markDirty(); }
   _ensureVisible(){ const c=this._primary(); const vis=this._visible(); const d=this._dispOf(c.pos.ln); const cy=d*this._lh; if(cy<this._scrollY)this._scrollY=cy; else if(cy+this._lh>this._scrollY+this._viewH())this._scrollY=cy+this._lh-this._viewH(); const cw=this._charW(),cx=c.pos.col*cw; if(cx<this._scrollX)this._scrollX=Math.max(0,cx-cw*3); else if(cx>this._scrollX+this._textW()-cw*2)this._scrollX=cx-this._textW()+cw*3; this._scrollY=Math.max(0,Math.min(this._maxScrollY(),this._scrollY)); this._scrollX=Math.max(0,Math.min(this._maxScrollX(),this._scrollX)); }
   _emit(type){ const ev={type,target:this,x:0,y:0,stopPropagation(){this.stopped=true;},preventDefault(){this.defaultPrevented=true;},stopped:false,defaultPrevented:false}; this.emit(ev); }
@@ -9288,22 +9288,39 @@ class CodeEditor extends BaseWidget {
     ctx.restore();
   }
   _mmLh(){ const areaH=this._viewH(), visN=Math.max(1,this._visible().length); return Math.max(1,Math.min(3, areaH/visN)); }   // toute la doc tient dans la minimap
-  _drawMinimap(ctx,cc){ const b=this.bounds,t=getTheme().textBox,mmX=this._mmX(),mmW=this.minimapW,lh=this._lh,areaH=this._viewH(); const vis=this._visible(),visN=vis.length;
+  // Layout minimap façon VS Code (proportionnel) : source unique pour le rendu ET le hit-test.
+  _mmLayout(){ const b=this.bounds, lh=this._lh, areaH=this._viewH();
+    const visN=Math.max(1,this._visible().length), mmLh=this._mmLh(), maxSY=this._maxScrollY();
+    const sliderH=Math.max(8, Math.min(areaH, (areaH/lh)*mmLh));   // = lignes visibles * mmLh
+    const fitting=Math.max(1,Math.floor(areaH/mmLh));              // lignes qui tiennent dans la minimap
+    const contentH=visN*mmLh, ratio=maxSY>0? this._scrollY/maxSY : 0;
+    let startLine, maxSliderTop;
+    if(contentH<=areaH || fitting>=visN){                          // toute la doc tient : minimap ne défile pas
+      startLine=0; maxSliderTop=Math.max(0,(maxSY/lh)*mmLh);
+    } else {                                                        // doc plus haute : minimap défile avec le viewport
+      maxSliderTop=Math.max(0, areaH-sliderH);
+      const sTop=ratio*maxSliderTop;
+      startLine=Math.max(0, Math.min(visN-fitting, Math.floor((this._scrollY/lh) - sTop/mmLh)));
+    }
+    const sliderTop=Math.min(maxSliderTop, ratio*maxSliderTop);
+    return {b,lh,areaH,visN,mmLh,maxSY,sliderH,sliderTop,maxSliderTop,startLine,count:Math.min(fitting, visN-startLine)}; }
+  _drawMinimap(ctx,cc){ const t=getTheme().textBox,mmX=this._mmX(),mmW=this.minimapW; const vis=this._visible();
+    const {b,areaH,mmLh,startLine,count,sliderTop,sliderH}=this._mmLayout();
     ctx.save(); ctx.beginPath(); ctx.rect(mmX,b.y+1,mmW,areaH); ctx.clip(); ctx.fillStyle=colorToCSS(_rgba(this._fg(),0.03)); ctx.fillRect(mmX,b.y+1,mmW,areaH);
-    const mmLh=this._mmLh(), cwm=1.0; const L=LANGS[this.lang]||LANGS.text; if(this._tokDirty)this._reflow();
+    const cwm=1.0; const LG=LANGS[this.lang]||LANGS.text; if(this._tokDirty)this._reflow();
     // sélection (par curseur) — dessinée sous le texte
     ctx.fillStyle=colorToCSS(_rgba(_solid(t.selectionColor),0.7));
     for(const c of this.carets){ if(!this._hasSel(c))continue; const {s,e}=this._ord(c);
-      for(let d=0;d<visN;d++){ const ln=vis[d]; if(ln<s.ln||ln>e.ln)continue; const y=b.y+1+d*mmLh; if(y>b.y+areaH)break; const c0=ln===s.ln?s.col:0, c1=ln===e.ln?e.col:this._lineLen(ln); ctx.fillRect(mmX+2+c0*cwm,y,Math.max(1,(c1-c0)*cwm),Math.max(1,mmLh)); } }
+      for(let i=0;i<count;i++){ const d=startLine+i; const ln=vis[d]; if(ln<s.ln||ln>e.ln)continue; const y=b.y+1+i*mmLh; const c0=ln===s.ln?s.col:0, c1=ln===e.ln?e.col:this._lineLen(ln); ctx.fillRect(mmX+2+c0*cwm,y,Math.max(1,(c1-c0)*cwm),Math.max(1,mmLh)); } }
     // texte (tokens)
-    for(let d=0;d<visN;d++){ const y=b.y+1+d*mmLh; if(y>b.y+areaH)break; const ln=vis[d]; const line=this.lines[ln]; let tks; try{ tks=L.tokenize(line,this._startState[ln]||{}).tokens; }catch(_){ tks=[]; }
+    for(let i=0;i<count;i++){ const d=startLine+i; const y=b.y+1+i*mmLh; const ln=vis[d]; const line=this.lines[ln]; let tks; try{ tks=LG.tokenize(line,this._startState[ln]||{}).tokens; }catch(_){ tks=[]; }
       for(const tk of tks){ ctx.fillStyle = tk.scope ? (ThemeManager.scopeColor(tk.scope)||_scopeToCc(tk.scope,cc)) : (cc[tk.type]||cc.ident); ctx.globalAlpha=(tk.type==='comment'||(tk.scope&&tk.scope.indexOf('comment')===0))?0.5:1; const x=mmX+2+tk.col*cwm; const w=tk.text.replace(/\s/g,'').length*cwm; if(w>0)ctx.fillRect(x,y,Math.min(w,mmW-4),Math.max(1,mmLh-0.5)); } }
     ctx.globalAlpha=1;
-    // zone du viewport visible (fond semi-transparent, + net au survol/drag)
-    const vpY=b.y+1+(this._scrollY/lh)*mmLh, vpH=Math.max(8,(areaH/lh)*mmLh);
+    // zone du viewport visible (fond semi-transparent, + net au survol/drag) — toujours dans les bornes de la minimap
+    const vpY=b.y+1+sliderTop, vpH=sliderH;
     const bg=_solid(t.normal.background), lum=0.299*bg.r+0.587*bg.g+0.114*bg.b, base=lum<128?'255,255,255':'0,0,0';
-    ctx.fillStyle='rgba('+base+','+((this._mmDrag||this._mmHover)?0.18:0.09)+')'; ctx.fillRect(mmX,vpY,mmW,Math.min(vpH,areaH));
-    ctx.strokeStyle='rgba('+base+',0.25)'; ctx.strokeRect(mmX+.5,vpY+.5,mmW-1,Math.min(vpH,areaH)-1);
+    ctx.fillStyle='rgba('+base+','+((this._mmDrag||this._mmHover)?0.18:0.09)+')'; ctx.fillRect(mmX,vpY,mmW,vpH);
+    ctx.strokeStyle='rgba('+base+',0.25)'; ctx.strokeRect(mmX+.5,vpY+.5,mmW-1,vpH-1);
     ctx.restore(); }
   _acEnsureVisible(){ const rows=Math.min(9,this._acItems.length); if(this._acSel<this._acScroll)this._acScroll=this._acSel; else if(this._acSel>=this._acScroll+rows)this._acScroll=this._acSel-rows+1; if(this._acScroll<0)this._acScroll=0; }
   _drawAC(ctx,cc){ const g=this._acGeom(),t=getTheme().textBox; this._acScroll=Math.max(0,Math.min(this._acScroll,Math.max(0,this._acItems.length-g.rows)));
