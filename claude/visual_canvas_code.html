@@ -9107,7 +9107,7 @@ class CodeEditor extends BaseWidget {
   _onCut(){ const t=this._onCopy(); if(!this.readOnly){ if(this.carets.some(c=>this._hasSel(c))){ this._snap(null); this._delSelAll(); this._afterEdit(); } } return t; }
   _onPaste(text){ if(text==null)return; this._snap(null); const parts=String(text).replace(/\r\n?/g,'\n').split('\n'); if(this.carets.length>1&&parts.length===this.carets.length){ this._replaceRanges(this.carets.map(c=>this._ord(c)),parts); } else { this._replaceRanges(this.carets.map(c=>this._ord(c)),this.carets.map(()=>text.replace(/\r\n?/g,'\n'))); } this._afterEdit(); }
   // ── navigation mots ──
-  _isWord(ch){ return !!ch&&/[\w$]/.test(ch); }
+  _isWord(ch){ return !!ch&&/[\p{L}\p{N}_$]/u.test(ch); }
   _wordLeft(ln,col){ if(col===0)return ln>0?{ln:ln-1,col:this._lineLen(ln-1)}:{ln,col:0}; const s=this.lines[ln]; let c=col; while(c>0&&!this._isWord(s[c-1]))c--; while(c>0&&this._isWord(s[c-1]))c--; return {ln,col:c}; }
   _wordRight(ln,col){ const s=this.lines[ln],n=s.length; if(col>=n)return ln<this.lines.length-1?{ln:ln+1,col:0}:{ln,col:n}; let c=col; while(c<n&&!this._isWord(s[c]))c++; while(c<n&&this._isWord(s[c]))c++; return {ln,col:c}; }
   _wordAt(ln,col){ const s=this.lines[ln]||''; let a=col,b=col; while(a>0&&this._isWord(s[a-1]))a--; while(b<s.length&&this._isWord(s[b]))b++; return {a,b,text:s.slice(a,b)}; }
@@ -9293,6 +9293,8 @@ class CodeEditor extends BaseWidget {
     ctx.textAlign='left'; ctx.restore();
     // ─ scrollbar verticale ─
     const maxSY=this._maxScrollY(); if(maxSY>0){ const trackH=viewH,thumbH=Math.max(24,trackH*trackH/(visN*lh)),thumbY=b.y+pad+(this._scrollY/maxSY)*(trackH-thumbH); ctx.fillStyle=colorToCSS(_rgba(this._fg(),this._sbDrag?0.4:0.22)); drawRoundRect(ctx,this._sbX()+2,thumbY,sbW-4,thumbH,3); ctx.fill(); }
+    // ─ overview ruler (occurrences en rectangles + curseurs en traits, façon VS Code) par-dessus le rail ─
+    this._drawOverviewRuler(ctx);
     // ─ scrollbar horizontale ─
     if(hsbOn){ const trackW=textW,totalW=this._maxLineWidth(),thumbW=Math.max(30,trackW*trackW/totalW),thumbX=textX0+(this._scrollX/this._maxScrollX())*(trackW-thumbW); ctx.fillStyle=colorToCSS(_rgba(this._fg(),this._hsbDrag?0.4:0.22)); drawRoundRect(ctx,thumbX,b.y+b.height-this.hsbH,thumbW,this.hsbH-3,3); ctx.fill(); }
     // ─ minimap ─
@@ -9301,6 +9303,22 @@ class CodeEditor extends BaseWidget {
     if(this._acOpen&&this._acItems.length)this._drawAC(ctx,cc);
     ctx.restore();
   }
+  // terme surligné (sélection mono-ligne ou mot sous le curseur) — partagé texte + overview ruler
+  _occTerm(){ if(!this.highlightOccurrences)return ''; const pc=this._primary(); if(this._hasSel(pc)){ const s=this._selText(pc); return (!s.includes('\n')&&s.trim())?s:''; } const w=this._wordAt(pc.pos.ln,pc.pos.col); return w.text.length>=2?w.text:''; }
+  // overview ruler dans la barre de défilement verticale : occurrences = rectangles, curseurs = traits (façon VS Code)
+  _drawOverviewRuler(ctx){ const b=this.bounds, pad=this._pad, viewH=this._viewH();
+    const vis=this._visible(), visN=Math.max(1,vis.length);
+    const trackX=this._sbX()+1, trackW=this.sbW-2, trackY0=b.y+pad, trackH=viewH;
+    const mh=Math.max(2, Math.min(4, trackH/visN));
+    const yOfDisp=d=>Math.max(trackY0, Math.min(trackY0+trackH-mh, trackY0+(d/visN)*trackH));
+    const yOfLine=ln=>{ let d=this._l2d[ln]; if(d<0)d=this._dispOf(ln); return yOfDisp(d); };
+    const findActive=this._find&&this._find.matches&&this._find.matches.length;
+    if(findActive){ for(let i=0;i<this._find.matches.length;i++){ const mt=this._find.matches[i], active=i===this._find.idx;
+        ctx.fillStyle= active?'rgba(255,150,0,0.95)':'rgba(255,200,0,0.7)'; ctx.fillRect(trackX, yOfLine(mt.ln), trackW, active?Math.max(3,mh):mh); } }
+    else { const term=this._occTerm(); if(term){ ctx.fillStyle=colorToCSS(_rgba(this._fg(),0.28));
+        for(let d=0;d<visN;d++){ const ln=vis[d]; if((this.lines[ln]||'').indexOf(term)>=0) ctx.fillRect(trackX, yOfDisp(d), trackW, mh); } } }
+    // curseurs = traits horizontaux (par-dessus)
+    ctx.fillStyle=this._caretCss(); for(const c of this.carets){ const y=Math.round(yOfLine(c.pos.ln)); ctx.fillRect(trackX-1, y, trackW+2, 2); } }
   _mmLh(){ const areaH=this._viewH(), visN=Math.max(1,this._visible().length); return Math.max(1,Math.min(3, areaH/visN)); }   // toute la doc tient dans la minimap
   // Layout minimap façon VS Code (proportionnel) : source unique pour le rendu ET le hit-test.
   _mmLayout(){ const b=this.bounds, lh=this._lh, areaH=this._viewH();
@@ -9636,6 +9654,10 @@ window.openCodeWindow = function(){
   const bRepl=new Button('Remplacer',{x:0,y:0,width:90,height:24}), bAll=new Button('Tout',{x:0,y:0,width:64,height:24});
   const bClose=new Button('✕',{x:0,y:0,width:26,height:24});
   const findCount=new Label('',{x:0,y:0,width:80,height:24}); findCount.align='left'; findCount.color=null;
+  findInp.tooltip='Rechercher'; replInp.tooltip='Remplacer par';
+  bPrev.tooltip='Résultat précédent (Maj+Entrée)'; bNext.tooltip='Résultat suivant (Entrée)';
+  bCase.tooltip='Respecter la casse'; bRe.tooltip='Expression régulière';
+  bRepl.tooltip='Remplacer (Entrée)'; bAll.tooltip='Tout remplacer'; bClose.tooltip='Fermer (Échap)';
   [findInp,replInp,bPrev,bNext,bCase,bRe,findCount,bRepl,bAll,bClose].forEach(w=>findPanel.addChild(w));
   findPanel.visible=false; ca.addChild(findPanel);
 
@@ -9732,21 +9754,40 @@ window.openCodeWindow = function(){
    .concat([...ExtHost.commands].map(([id,c])=>({label:c.title, hint:'ext', run:()=>ExtHost.runCommand(id,editor)})))); }
 
   // ── recherche / remplacement ──
-  function updateFind(){ editor.setFind({q:findInp.value, repl:replInp.value, caseSens:fCase, regex:fRe}); const f=editor._find; findCount.text=(f&&f.matches.length)?((f.idx+1)+' / '+f.matches.length):(findInp.value?'Aucun résultat':''); findCount.markDirty(); editor.markDirty(); }
-  function showFind(replace){ findVisible=true; findReplace=!!replace; win._updateLayout(); const c=editor._primary(); if(editor._hasSel(c)){ const s=editor._selText(c); if(!s.includes('\n'))findInp.value=s; } updateFind(); wm._setFocus(replace?replInp:findInp); }
+  // rebuildFind : la requête/les options ont changé → reconstruit les correspondances (idx repart à 0).
+  function rebuildFind(){ editor.setFind({q:findInp.value, repl:replInp.value, caseSens:fCase, regex:fRe}); refreshCount(); }
+  // refreshCount : met à jour le libellé « k / N » SANS reconstruire (préserve idx pour la navigation).
+  function refreshCount(){ const f=editor._find; findCount.text=(f&&f.matches.length)?((f.idx+1)+' / '+f.matches.length):(findInp.value?'Aucun résultat':''); findCount.markDirty(); editor.markDirty(); }
+  function showFind(replace){ findVisible=true; findReplace=!!replace; win._updateLayout(); const c=editor._primary(); if(editor._hasSel(c)){ const s=editor._selText(c); if(!s.includes('\n'))findInp.value=s; } rebuildFind(); wm._setFocus(replace?replInp:findInp); }
   function hideFind(){ findVisible=false; editor.setFind(null); win._updateLayout(); editor.markDirty(); wm._setFocus(editor); }
-  findInp.on('change',updateFind);
-  findInp.on('keydown',e=>{ if(e.key==='Enter'){ editor.findNext(e.shiftKey?-1:1); updateFind(); } else if(e.key==='Escape'){ hideFind(); } });
-  replInp.on('keydown',e=>{ if(e.key==='Enter'){ editor.replaceCurrent(); updateFind(); } else if(e.key==='Escape'){ hideFind(); } });
-  bPrev.on('click',()=>{editor.findNext(-1);updateFind();}); bNext.on('click',()=>{editor.findNext(1);updateFind();});
-  bRepl.on('click',()=>{editor.replaceCurrent();updateFind();}); bAll.on('click',()=>{editor.replaceAll();updateFind();});
-  bCase.on('click',()=>{fCase=!fCase;bCase.toggled=fCase;bCase.markDirty();updateFind();}); bRe.on('click',()=>{fRe=!fRe;bRe.toggled=fRe;bRe.markDirty();updateFind();});
-  bClose.on('click',hideFind);
+  // actions partagées (clic + clavier). replaceCurrent/replaceAll relisent replInp au dernier moment.
+  const actPrev =()=>{ editor.findNext(-1); refreshCount(); };
+  const actNext =()=>{ editor.findNext(1);  refreshCount(); };
+  const actRepl =()=>{ if(editor._find)editor._find.repl=replInp.value; editor.replaceCurrent(); refreshCount(); };
+  const actAll  =()=>{ if(editor._find)editor._find.repl=replInp.value; editor.replaceAll();     refreshCount(); };
+  const actCase =()=>{ fCase=!fCase; bCase.toggled=fCase; bCase.markDirty(); rebuildFind(); };
+  const actRe   =()=>{ fRe=!fRe;   bRe.toggled=fRe;   bRe.markDirty();   rebuildFind(); };
+  // ordre de tabulation dans le panneau (dépend du mode recherche seule / remplacement)
+  const findTabOrder=()=>findReplace?[findInp,replInp,bPrev,bNext,bCase,bRe,bRepl,bAll,bClose]:[findInp,bPrev,bNext,bCase,bRe,bClose];
+  function findFocusSibling(cur,dir){ const o=findTabOrder(); let i=o.indexOf(cur); if(i<0)i=0; i=(i+dir+o.length)%o.length; wm._setFocus(o[i]); editor.markDirty(); }
+  // champs
+  findInp.on('change',rebuildFind);
+  findInp.on('keydown',e=>{ if(e.key==='Enter'){ editor.findNext(e.shiftKey?-1:1); refreshCount(); e.preventDefault&&e.preventDefault(); } else if(e.key==='Escape'){ hideFind(); } });
+  replInp.on('change',()=>{ if(editor._find)editor._find.repl=replInp.value; });
+  replInp.on('keydown',e=>{ if(e.key==='Enter'){ actRepl(); e.preventDefault&&e.preventDefault(); } else if(e.key==='Escape'){ hideFind(); } });
+  // boutons (clic)
+  bPrev.on('click',actPrev); bNext.on('click',actNext); bRepl.on('click',actRepl); bAll.on('click',actAll);
+  bCase.on('click',actCase); bRe.on('click',actRe); bClose.on('click',hideFind);
+  // navigation clavier Tab / Maj+Tab + activation Entrée/Espace sur tout le panneau
+  const findActs=new Map([[bPrev,actPrev],[bNext,actNext],[bCase,actCase],[bRe,actRe],[bRepl,actRepl],[bAll,actAll],[bClose,hideFind]]);
+  for(const w of [findInp,replInp,bPrev,bNext,bCase,bRe,bRepl,bAll,bClose]){ w.tabIndex=0;
+    w.on('keydown',e=>{ if(e.key==='Tab'){ findFocusSibling(w, e.shiftKey?-1:1); e.preventDefault&&e.preventDefault(); e.stopPropagation&&e.stopPropagation(); return; }
+      const act=findActs.get(w); if(act&&(e.key==='Enter'||e.key===' ')){ act(); e.preventDefault&&e.preventDefault(); e.stopPropagation&&e.stopPropagation(); } }); }
 
   // ── liaisons d'événements ──
-  editor.on('change',()=>{ const f=files[active]; f.value=editor.value; if(!f.dirty){f.dirty=true;refreshTabs();} if(editor._find)updateFind(); });
+  editor.on('change',()=>{ const f=files[active]; f.value=editor.value; if(!f.dirty){f.dirty=true;refreshTabs();} if(editor._find)refreshCount(); });
   editor.onCaret=sync;
-  editor.onFind=showFind; editor.onPalette=openPalette; editor.onSave=saveFile; editor.onGoto=gotoLine; editor.onFindNext=(d)=>{editor.findNext(d);updateFind();};
+  editor.onFind=showFind; editor.onPalette=openPalette; editor.onSave=saveFile; editor.onGoto=gotoLine; editor.onFindNext=(d)=>{editor.findNext(d);refreshCount();};
   tabs.on('select',e=>loadFile(e.index)); tabs.on('close',e=>closeTab(e.index)); tabs.on('new',()=>newFile());
   tree.on('change',e=>{ if(e.node&&e.node.file!=null)loadFile(e.node.file); });
   splitter.on('resize',e=>{ explorerW=Math.max(130,Math.min(ca.bounds.width-280, e.position)); win._updateLayout(); });
