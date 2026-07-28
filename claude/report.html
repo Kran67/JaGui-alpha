@@ -78,6 +78,7 @@
   <button class="tb-btn" onclick="openReportDesignerWindow()">📄 <span class="tb-label">Nouveau rapport</span></button>
   <button class="tb-btn" onclick="openReportViewerWindow()">👁 <span class="tb-label">Aperçu</span></button>
   <button class="tb-btn" onclick="openCalcWindow()">📊 <span class="tb-label">Nouveau classeur</span></button>
+  <button class="tb-btn" onclick="openBarcodeWindow()">▮ <span class="tb-label">Codes-barres</span></button>
   <button class="tb-btn" id="debugHitBtn" onclick="toggleDebugHit()" title="Afficher les zones de hit-test">🎯 <span class="tb-label">HitTest</span></button>
 </div>
 <div id="canvasContainer">
@@ -14044,10 +14045,17 @@ function rptInterp(text,scope){ if(text==null)return ''; return String(text).rep
 //  MODÈLE  (JSON sérialisable — format save/load + entrée de l'API)
 // ────────────────────────────────────────────────────────────────────────────
 let _rptSeq=0;
+// `rot` = rotation en DEGRÉS (sens horaire), commune à tous les types d'éléments.
+// `printWhen` = expression booléenne conditionnant l'impression ; `canGrow` = hauteur auto ;
+// `suppressDup` = masquer une valeur identique à la précédente ; `link` = expression d'URL.
 function rptItem(type,o={}){ return Object.assign({ id:'it'+(++_rptSeq), type, x:20,y:8,w:160,h:22, rot:0,
   text:'', expr:'', bg:'', color:'#000000', font:'Segoe UI', size:12, bold:false, italic:false, underline:false,
-  align:'left', valign:'middle', border:'', borderColor:'#000000', borderWidth:1 }, o); }
-function rptBand(type,o={}){ return Object.assign({ type, repeat:type==='detail'?true:undefined, height:type==='detail'?26:(type==='pageHeader'||type==='pageFooter'?40:56), visible:true, items:[] }, o); }
+  align:'left', valign:'middle', border:'', borderColor:'#000000', borderWidth:1,
+  printWhen:'', canGrow:false, suppressDup:false, link:'', condExpr:'', condColor:'', condBg:'', condBold:false }, o); }
+// `orientation` : '' = hérite du rapport, sinon force un saut de page vers cette orientation.
+// `startNewPage`/`newPageAfter` : sauts de page manuels ; `keepTogether` : ne pas couper la bande.
+function rptBand(type,o={}){ return Object.assign({ type, repeat:type==='detail'?true:undefined, height:type==='detail'?26:(type==='pageHeader'||type==='pageFooter'?40:56), visible:true,
+  orientation:'', startNewPage:false, newPageAfter:false, keepTogether:false, printWhen:'', items:[] }, o); }
 function rptDefaultReport(){
   const r={
     name:'Ventes par région', page:{ format:'A4', orientation:'portrait', margins:{top:12,right:12,bottom:12,left:12} },
@@ -14059,7 +14067,8 @@ function rptDefaultReport(){
   const bh=rptBand('reportHeader',{height:212});
   bh.items.push(rptItem('text',{x:0,y:6,w:400,h:30, expr:'Titre', size:22, bold:true, color:'#1a3b6e'}));
   bh.items.push(rptItem('text',{x:0,y:36,w:400,h:14, text:'Édité le {FORMATDATE(Today,"dd/MM/yyyy")}', size:9, color:'#666666'}));
-  bh.items.push(rptItem('shape',{x:420,y:0,w:48,h:48, shapeKind:'star5', bg:'#ffd76e', borderColor:'#c98a00', borderWidth:1.2}));
+  bh.items.push(rptItem('shape',{x:420,y:0,w:48,h:48, shapeKind:'star5', bg:'#ffd76e', borderColor:'#c98a00', borderWidth:1.2, rot:15}));
+  bh.items.push(rptItem('barcode',{x:540,y:0,w:64,h:64, barcodeType:'QR', text:'https://example.com/ventes', barcodeText:false}));
   bh.items.push(rptItem('richtext',{x:0,y:58,w:230,h:145, blocks:_rptDemoRich()}));
   bh.items.push(rptItem('chart',{x:246,y:58,w:274,h:145, chartType:'Histogram', labelField:'Region', valueFields:['Qte'],
     chartTitle:'Quantités par région', legend:false, grid:true, valueLabels:true, aggregate:true}));
@@ -14078,7 +14087,7 @@ function rptDefaultReport(){
     {header:'Qté', expr:'Qte', width:80, align:'right'},
     {header:'P.U.', expr:'PU', width:110, align:'right', format:'n2'},
     {header:'Montant', expr:'Qte*PU', width:120, align:'right', format:'n2'},
-  ], repeat:true, headerOnEachPage:true, rowHeight:22, headerBg:'#1a3b6e', headerColor:'#ffffff', showFooter:true,
+  ], repeat:true, headerOnEachPage:true, rowHeight:22, fullWidth:true, headerBg:'#1a3b6e', headerColor:'#ffffff', showFooter:true,
      footer:[ {text:'Total'}, {}, {}, {expr:'SUM(Qte*PU)', format:'n2'} ] }));
   const pf=rptBand('pageFooter',{height:22});
   pf.items.push(rptItem('pageInfo',{x:360,y:4,w:160,h:14, text:'Page {PageNumber} / {TotalPages}', size:10, align:'right', color:'#666666'}));
@@ -14102,10 +14111,14 @@ function _rptSampleData(){ return [
   {Region:'Sud', Produit:'Bananes', Qte:20, PU:0.35}, {Region:'Sud', Produit:'Kiwis', Qte:9, PU:0.60},
   {Region:'Est', Produit:'Cerises', Qte:5, PU:2.20},
 ]; }
-function rptPagePx(report){ const f=PAGE_FORMATS[report.page.format]||PAGE_FORMATS.A4; let w=f[0],h=f[1];
-  if(report.page.orientation==='landscape'){ const t=w; w=h; h=t; } return { w:w*RPT_MM, h:h*RPT_MM }; }
-function rptInnerRect(report){ const pg=rptPagePx(report); const m=report.page.margins;
+// Taille de page pour une orientation donnée (défaut : celle du rapport).
+// `orient` explicite = orientation propre à une bande (saut de page automatique).
+function rptPagePxFor(report,orient){ const f=PAGE_FORMATS[report.page.format]||PAGE_FORMATS.A4; let w=f[0],h=f[1];
+  if((orient||report.page.orientation)==='landscape'){ const t=w; w=h; h=t; } return { w:w*RPT_MM, h:h*RPT_MM }; }
+function rptInnerRectFor(report,orient){ const pg=rptPagePxFor(report,orient); const m=report.page.margins;
   return { x:m.left*RPT_MM, y:m.top*RPT_MM, w:pg.w-(m.left+m.right)*RPT_MM, h:pg.h-(m.top+m.bottom)*RPT_MM, pageW:pg.w, pageH:pg.h }; }
+function rptPagePx(report){ return rptPagePxFor(report,report.page.orientation); }
+function rptInnerRect(report){ return rptInnerRectFor(report,report.page.orientation); }
 function rptData(report){ const dsName=report.dataSource||'main'; const ds=report.dataSources&&report.dataSources[dsName];
   if(!ds)return []; if(ds.type==='json')return Array.isArray(ds.data)?ds.data:(ds.data?[ds.data]:[]);
   if(ds.type==='spreadsheet'&&typeof ds.rows==='function')return ds.rows(); return Array.isArray(ds.data)?ds.data:[]; }
@@ -14118,7 +14131,6 @@ function rptFields(report){ const d=rptData(report); const set=[]; if(d[0])for(c
 // ────────────────────────────────────────────────────────────────────────────
 class ReportEngine {
   static layout(report){
-    const inner=rptInnerRect(report);
     const data=rptData(report);
     const byType={}; for(const b of report.bands){ if(b.visible!==false)(byType[b.type]||(byType[b.type]=[])).push(b); }
     const first=t=>(byType[t]&&byType[t][0])||null;
@@ -14126,73 +14138,170 @@ class ReportEngine {
     const phH=pageHeader?pageHeader.height:0, pfH=pageFooter?pageFooter.height:0;
     const scopeBase={ report, params:report.parameters||{}, data, aggData:data, vars:{page:1,total:1} };
     scopeBase.calc=_rptCalcProxy(report,scopeBase);
-    const pages=[]; let page=null, cursorY=0; const pageInfoRefs=[];
+    const pages=[], bookmarks=[]; let page=null, cursorY=0;
+    // ── orientation courante : une bande peut la changer (⇒ saut de page) ──
+    let curOrient=report.page.orientation||'portrait';
+    let inner=rptInnerRectFor(report,curOrient);
+    // ── colonnes « journal » : la zone imprimable est découpée en N colonnes ──
+    const nCols=Math.max(1,(report.page.columns|0)||1), colGap=report.page.columnGap==null?18:report.page.columnGap;
+    let colIdx=0;
+    const colW=()=>(inner.w-colGap*(nCols-1))/nCols;
+    const colX=()=>inner.x+colIdx*(colW()+colGap);
     const contentTop=()=>inner.y+phH, contentBottom=()=>inner.y+inner.h-pfH;
-    const startPage=()=>{ page={ w:inner.pageW, h:inner.pageH, elements:[] }; pages.push(page);
-      if(pageHeader) emitBand(pageHeader, inner.y, scopeBase);
+    const _dupLast={};                 // suppressDup : dernière valeur imprimée par élément
+    const bandOn=(b,scope)=>!!b && b.visible!==false && (!b.printWhen || _rptBool(rptEvalExpr(b.printWhen,scope)));
+    // filigrane : dessiné en premier (donc sous le contenu), tourné et translucide
+    function emitWatermark(){ const wm=report.watermark; if(!wm||(!wm.text&&!wm.image))return;
+      const pw=inner.pageW, ph=inner.pageH, rot=wm.rot==null?-30:+wm.rot, op=wm.opacity==null?0.12:+wm.opacity;
+      const items=[];
+      if(wm.image){ const w=wm.w||pw*0.6, h=wm.h||ph*0.4; items.push({kind:'image',x:(pw-w)/2,y:(ph-h)/2,w,h,src:wm.image,fit:'contain'}); }
+      if(wm.text){ const sz=wm.size||64; items.push({kind:'text',x:0,y:ph/2-sz,w:pw,h:sz*2,text:rptInterp(wm.text,scopeBase),
+        size:sz,bold:true,color:wm.color||'#888888',align:'center',valign:'middle'}); }
+      page.elements.push({kind:'group',rot,cx:pw/2,cy:ph/2,opacity:op,items}); }
+    const startPage=(orient)=>{ if(orient)curOrient=orient; inner=rptInnerRectFor(report,curOrient); colIdx=0;
+      page={ w:inner.pageW, h:inner.pageH, orient:curOrient, elements:[] }; pages.push(page);
+      emitWatermark();
+      if(bandOn(pageHeader,scopeBase)) emitBand(pageHeader, inner.y, scopeBase, inner.x);
+      page.__base=page.elements.length;
       cursorY=contentTop(); };
-    const finishPage=()=>{ if(pageFooter&&page) emitBand(pageFooter, contentBottom(), scopeBase); };
-    // rend les items d'une bande à une ordonnée donnée
-    function emitBand(band, topY, scope){
-      for(const it of band.items){ emitItem(it, inner.x+it.x, topY+it.y, scope); }
+    const finishPage=()=>{ if(page&&bandOn(pageFooter,scopeBase)) emitBand(pageFooter, contentBottom(), scopeBase, inner.x); };
+    const pageEmpty=()=>!page||page.elements.length<=(page.__base||0);
+    // rend les items d'une bande à une ordonnée donnée (xo : origine X forcée)
+    function emitBand(band, topY, scope, xo){ const bx=(xo==null?colX():xo);
+      for(const it of band.items){ emitItem(it, bx+it.x, topY+it.y, scope); }
     }
+    // hauteur réelle d'une bande : `canGrow` peut l'agrandir
+    function bandH(band,scope){ let h=band.height;
+      for(const it of band.items){ if(!it.canGrow||it.visible===false)continue;
+        if(it.printWhen&&!_rptBool(rptEvalExpr(it.printWhen,scope)))continue;
+        const w=it.fullWidth?Math.max(4,colW()-(it.x||0)):it.w;
+        const ih=Math.max(it.h,_rptTextGrowH({...it,w},scope)); if(it.y+ih>h)h=it.y+ih; }
+      return h; }
     function fmtCell(v,fmt){ if(fmt&&fmt[0]==='n'){ return _rptFmtNum(_rptNum(v),parseInt(fmt.slice(1))||0); } if(fmt==='cur'){ return _rptFmtNum(_rptNum(v),2)+' €'; } if(fmt&&fmt.startsWith('d')){ return _rptFmtDate(v,'dd/MM/yyyy'); } return _rptStr(v); }
     function emitItem(it, ax, ay, scope){
-      const st={ bg:it.bg, color:it.color, font:it.font, size:it.size, bold:it.bold, italic:it.italic, underline:it.underline, align:it.align, valign:it.valign };
+      if(it.visible===false)return;
+      if(it.printWhen && !_rptBool(rptEvalExpr(it.printWhen,scope)))return;
+      const out=[]; const push=e=>out.push(e);
+      // format conditionnel : l'expression vraie surcharge couleur / fond / gras
+      let color=it.color, bg=it.bg, bold=it.bold;
+      if(it.condExpr && _rptBool(rptEvalExpr(it.condExpr,scope))){ if(it.condColor)color=it.condColor; if(it.condBg)bg=it.condBg; if(it.condBold)bold=true; }
+      const st={ bg, color, font:it.font, size:it.size, bold, italic:it.italic, underline:it.underline, align:it.align, valign:it.valign };
+      // `fullWidth` : l'élément occupe toute la largeur imprimable de la bande (texte, ligne, tableau…)
+      const W = it.fullWidth ? Math.max(4, colW()-(it.x||0)) : it.w;
+      let h=it.h;
+      if(it.canGrow&&(it.type==='text'||it.type==='pageInfo'))h=Math.max(it.h,_rptTextGrowH({...it,w:W},scope));
       // pour une forme, `bg` = remplissage de la forme elle-même (pas un rectangle de fond)
-      if(it.bg && it.type!=='shape') page.elements.push({kind:'rect', x:ax,y:ay,w:it.w,h:it.h, fill:it.bg});
-      if(it.border){ pushBorder(ax,ay,it.w,it.h,it.border,it.borderColor,it.borderWidth); }
+      if(bg && it.type!=='shape') push({kind:'rect', x:ax,y:ay,w:W,h, fill:bg});
+      if(it.border){ pushBorder(push,ax,ay,W,h,it.border,it.borderColor,it.borderWidth); }
       switch(it.type){
         case 'text': case 'pageInfo': {
-          const raw = it.expr ? _rptStr(rptEvalExpr(it.expr,scope)) : rptInterp(it.text,scope);
-          const el={kind:'text', x:ax,y:ay,w:it.w,h:it.h, text:raw, ...st};
+          let raw = it.expr ? _rptStr(rptEvalExpr(it.expr,scope)) : rptInterp(it.text,scope);
+          if(it.suppressDup){ const k=it.id||('@'+it.x+','+it.y); if(_dupLast[k]===raw)raw=''; else _dupLast[k]=raw; }
+          const el={kind:'text', x:ax,y:ay,w:W,h, text:raw, ...st};
           if(it.type==='pageInfo'){ el.__isPageInfo=true; el.__tpl=it.text; }
-          page.elements.push(el);
+          push(el);
           break; }
-        case 'line': page.elements.push({kind:'line', x1:ax,y1:ay,x2:ax+it.w,y2:ay+it.h, color:it.borderColor||'#000', width:it.borderWidth||1}); break;
-        case 'richtext': page.elements.push({kind:'richtext', x:ax,y:ay,w:it.w,h:it.h, blocks:it.blocks||null}); break;
-        case 'image': if(it.src) page.elements.push({kind:'image', x:ax,y:ay,w:it.w,h:it.h, src:it.src, fit:it.fit||'contain'}); break;
-        case 'shape': page.elements.push({kind:'shape', x:ax,y:ay,w:it.w,h:it.h, shape:it.shape||'rect', shapeKind:it.shapeKind||it.shape||'rect',
-          fill:it.bg||'', stroke:it.borderColor||'#000', sw:it.borderWidth||1, dash:it.dash, rot:it.rot||0,
-          text:rptInterp(it.text,scope), textColor:it.color}); break;
+        case 'line': push({kind:'line', x1:ax,y1:ay,x2:ax+W,y2:ay+it.h, color:it.borderColor||'#000', width:it.borderWidth||1}); break;
+        case 'richtext': push({kind:'richtext', x:ax,y:ay,w:W,h, blocks:it.blocks||null}); break;
+        case 'image': if(it.src) push({kind:'image', x:ax,y:ay,w:W,h, src:it.src, fit:it.fit||'contain'}); break;
+        case 'barcode': { const val=it.expr?_rptStr(rptEvalExpr(it.expr,scope)):rptInterp(it.text,scope);
+          for(const e of rptBarcodePrims(it,val,ax,ay,W,h))push(e); break; }
+        case 'shape': push({kind:'shape', x:ax,y:ay,w:W,h, shape:it.shape||'rect', shapeKind:it.shapeKind||it.shape||'rect',
+          fill:bg||'', stroke:it.borderColor||'#000', sw:it.borderWidth||1, dash:it.dash,
+          text:rptInterp(it.text,scope), textColor:color}); break;
         case 'chart': { const cd=_rptChartData(it,report,scope.chartRows||null);
-          page.elements.push({kind:'chart', x:ax,y:ay,w:it.w,h:it.h, chartType:it.chartType||'Column',
+          push({kind:'chart', x:ax,y:ay,w:W,h, chartType:it.chartType||'Column',
             labelField:it.labelField, valueField:it.valueField, data:cd.rows, labels:cd.labels, series:cd.series,
-            title:rptInterp(it.chartTitle,scope), legend:it.legend, grid:it.grid, valueLabels:it.valueLabels, bg:it.bg});
+            title:rptInterp(it.chartTitle,scope), legend:it.legend, grid:it.grid, valueLabels:it.valueLabels, bg:bg});
           break; }
         default: break;
       }
+      if(it.link){ const uri=rptInterp(it.link,scope)||''; if(uri)push({kind:'link',x:ax,y:ay,w:W,h,uri}); }
+      // rotation (degrés, sens horaire) : les primitives sont regroupées et tournées d'un bloc
+      const rot=+it.rot||0;
+      if(rot) page.elements.push({kind:'group', rot, cx:ax+W/2, cy:ay+h/2, items:out});
+      else for(const e of out)page.elements.push(e);
     }
-    function pushBorder(x,y,w,h,mode,color,bw){ const L=(x1,y1,x2,y2)=>page.elements.push({kind:'line',x1,y1,x2,y2,color:color||'#000',width:bw||1});
+    function pushBorder(push,x,y,w,h,mode,color,bw){ const L=(x1,y1,x2,y2)=>push({kind:'line',x1,y1,x2,y2,color:color||'#000',width:bw||1});
       if(mode==='all'||mode==='box'){ L(x,y,x+w,y); L(x+w,y,x+w,y+h); L(x+w,y+h,x,y+h); L(x,y+h,x,y); } }
     // ── table (répéteur multipage, réutilisable par groupe) ──
     let tblRepeatHeader=null;          // redessine l'en-tête du tableau après un saut de page
-    function tableHeader(it){ const cols=it.columns||[], rowH=it.rowHeight||22, x0=inner.x+it.x; let cx=x0;
-      for(const c of cols){ if(it.headerBg)page.elements.push({kind:'rect',x:cx,y:cursorY,w:c.width,h:rowH,fill:it.headerBg});
-        page.elements.push({kind:'text',x:cx+4,y:cursorY,w:c.width-8,h:rowH,text:c.header||'',bold:true,color:it.headerColor||'#000',align:c.align||'left',valign:'middle',size:it.size||11});
-        page.elements.push({kind:'line',x1:cx,y1:cursorY+rowH,x2:cx+c.width,y2:cursorY+rowH,color:'#999',width:1}); cx+=c.width; }
-      cursorY+=rowH; }
-    function tableRow(it,row,i){ const cols=it.columns||[], rowH=it.rowHeight||22, x0=inner.x+it.x;
-      const sc={...scopeBase, row, index:i}; let cx=x0;
-      if(i%2===1 && it.rowAltBg)page.elements.push({kind:'rect',x:x0,y:cursorY,w:cols.reduce((s,c)=>s+c.width,0),h:rowH,fill:it.rowAltBg});
-      for(const c of cols){ const v=c.expr?rptEvalExpr(c.expr,sc):(c.text||'');
-        page.elements.push({kind:'text',x:cx+4,y:cursorY,w:c.width-8,h:rowH,text:fmtCell(v,c.format),align:c.align||'left',valign:'middle',color:c.color||'#000',size:it.size||11});
-        cx+=c.width; }
-      cursorY+=rowH; }
-    function tableFooter(it,rows){ const cols=it.columns||[], rowH=it.rowHeight||22, x0=inner.x+it.x;
-      const sc={...scopeBase, aggData:rows||data}; let cx=x0;
-      for(let ci=0;ci<cols.length;ci++){ const fc=(it.footer||[])[ci]||{}; const v=fc.expr?rptEvalExpr(fc.expr,sc):(fc.text||'');
-        page.elements.push({kind:'rect',x:cx,y:cursorY,w:cols[ci].width,h:rowH,fill:it.footerBg||'#e8eef7'});
-        page.elements.push({kind:'text',x:cx+4,y:cursorY,w:cols[ci].width-8,h:rowH,text:fmtCell(v,fc.format),bold:true,align:cols[ci].align||'left',valign:'middle',size:it.size||11});
-        cx+=cols[ci].width; }
-      cursorY+=rowH; }
-    // saut de page si `need` ne tient plus, en réimprimant l'en-tête du tableau si demandé
+    // largeurs effectives des colonnes : `fullWidth` étire le tableau sur toute la
+    // largeur imprimable de la bande (proportionnellement aux largeurs saisies).
+    function tblW(it){ const cols=it.columns||[]; const raw=cols.map(c=>c.width||0);
+      if(!it.fullWidth)return raw;
+      const sum=raw.reduce((a,b)=>a+b,0)||1, avail=Math.max(20,colW()-(it.x||0));
+      return raw.map(w=>w*avail/sum); }
+    // ── fusion de cellules ──
+    // `it.headerMerges` / `it.footerMerges` = [{c, cs, text}] : fusion horizontale.
+    // `col.mergeDup` = fusion verticale des valeurs identiques consécutives.
+    let tblPrev={};                    // dernière valeur imprimée par colonne (fusion verticale)
+    const mergeMap=list=>{ const m={}; for(const x of (list||[])){ const c=x.c|0, cs=Math.max(1,x.cs|0);
+      m[c]={cs, text:x.text}; } return m; };
+    // parcourt les colonnes en respectant les fusions horizontales
+    function eachCell(it,W,merges,cb){ const cols=it.columns||[], m=mergeMap(merges);
+      let i=0, cx=colX()+it.x;
+      while(i<cols.length){ const sp=m[i]; const cs=sp?Math.min(sp.cs,cols.length-i):1;
+        let cw=0; for(let k=0;k<cs;k++)cw+=W[i+k];
+        cb(i,cs,cx,cw,sp); cx+=cw; i+=cs; } }
+    function tableHeader(it){ const W=tblW(it), rowH=it.rowHeight||22, cols=it.columns||[];
+      const y0=cursorY; let xEnd=colX()+it.x;
+      tblPrev={};                      // l'en-tête réimprimé = nouveau bloc visuel
+      eachCell(it,W,it.headerMerges,(i,cs,cx,cw,sp)=>{
+        const c=cols[i]; const label=(sp&&sp.text!=null)?sp.text:(c.header||'');
+        if(it.headerBg)page.elements.push({kind:'rect',x:cx,y:y0,w:cw,h:rowH,fill:it.headerBg});
+        page.elements.push({kind:'text',x:cx+4,y:y0,w:cw-8,h:rowH,text:label,bold:true,color:it.headerColor||'#000',
+          align:(sp&&cs>1)?'center':(c.align||'left'),valign:'middle',size:it.size||11});
+        page.elements.push({kind:'line',x1:cx,y1:y0+rowH,x2:cx+cw,y2:y0+rowH,color:'#999',width:1});
+        xEnd=cx+cw; });
+      cursorY=y0+rowH; }
+    function tableRow(it,row,i,nextRow){ const cols=it.columns||[], W=tblW(it), rowH=it.rowHeight||22, x0=colX()+it.x;
+      const sc={...scopeBase, row, index:i}; const y0=cursorY; let cx=x0;
+      if(i%2===1 && it.rowAltBg)page.elements.push({kind:'rect',x:x0,y:y0,w:W.reduce((s,w)=>s+w,0),h:rowH,fill:it.rowAltBg});
+      const cellText=(c,r,idx)=>fmtCell(c.expr?rptEvalExpr(c.expr,{...scopeBase,row:r,index:idx}):(c.text||''),c.format);
+      for(let ci=0;ci<cols.length;ci++){ const c=cols[ci], cw=W[ci];
+        const txt=cellText(c,row,i);
+        const dup=!!(c.mergeDup && tblPrev[ci]===txt);     // même valeur qu'au-dessus → cellule fusionnée
+        let col=c.color||'#000', bold=false;
+        if(c.condExpr&&_rptBool(rptEvalExpr(c.condExpr,sc))){ if(c.condColor)col=c.condColor; if(c.condBg)page.elements.push({kind:'rect',x:cx,y:y0,w:cw,h:rowH,fill:c.condBg}); if(c.condBold)bold=true; }
+        if(!dup)page.elements.push({kind:'text',x:cx+4,y:y0,w:cw-8,h:rowH,text:txt,align:c.align||'left',
+          valign:c.mergeDup?'top':'middle',color:col,bold,size:it.size||11});
+        tblPrev[ci]=txt;
+        cx+=cw; }
+      // filets : un segment par colonne, sauté quand la cellule suivante est fusionnée avec celle-ci
+      if(it.gridLines!==false){ let lx=x0;
+        for(let ci=0;ci<cols.length;ci++){ const c=cols[ci], cw=W[ci];
+          const skip=!!(c.mergeDup && nextRow && cellText(c,nextRow,i+1)===cellText(c,row,i));
+          if(!skip)page.elements.push({kind:'line',x1:lx,y1:y0+rowH,x2:lx+cw,y2:y0+rowH,color:it.gridColor||'#dddddd',width:0.5});
+          lx+=cw; } }
+      cursorY=y0+rowH; }
+    function tableFooter(it,rows){ const cols=it.columns||[], W=tblW(it), rowH=it.rowHeight||22;
+      const sc={...scopeBase, aggData:rows||data}; const y0=cursorY;
+      eachCell(it,W,it.footerMerges,(i,cs,cx,cw,sp)=>{
+        const fc=(it.footer||[])[i]||{}; const v=fc.expr?rptEvalExpr(fc.expr,sc):((sp&&sp.text!=null)?sp.text:(fc.text||''));
+        page.elements.push({kind:'rect',x:cx,y:y0,w:cw,h:rowH,fill:it.footerBg||'#e8eef7'});
+        page.elements.push({kind:'text',x:cx+4,y:y0,w:cw-8,h:rowH,text:fmtCell(v,fc.format),bold:true,
+          align:cols[i].align||'left',valign:'middle',size:it.size||11}); });
+      cursorY=y0+rowH; }
+    // saut de colonne puis de page si `need` ne tient plus ; en-tête de tableau réimprimé
+    const newPage=(orient)=>{ finishPage(); startPage(orient); if(tblRepeatHeader)tableHeader(tblRepeatHeader); };
     function ensure(need){ if(cursorY+need<=contentBottom())return false;
-      finishPage(); startPage(); if(tblRepeatHeader)tableHeader(tblRepeatHeader); return true; }
+      if(colIdx<nCols-1){ colIdx++; cursorY=contentTop(); if(tblRepeatHeader)tableHeader(tblRepeatHeader); return true; }
+      newPage(); return true; }
+    // saut de page / changement d'orientation demandés par une bande
+    function bandBreakBefore(band){ const o=band.orientation||'';
+      if(o && o!==curOrient){ newPage(o); return true; }
+      if(band.startNewPage && !pageEmpty()){ newPage(); return true; }
+      return false; }
+    function bandBreakAfter(band){ if(band.newPageAfter && !pageEmpty())newPage(); }
+    // émet une bande simple (non répétée) en gérant sauts avant/après et hauteur auto
+    function runBand(band,scope){ if(!bandOn(band,scope))return 0;
+      bandBreakBefore(band); const h=bandH(band,scope);
+      ensure(h); emitBand(band,cursorY,scope); cursorY+=h; bandBreakAfter(band); return h; }
 
     // ── déroulé principal ──
     startPage();
-    const rh=first('reportHeader'); if(rh){ ensure(rh.height); emitBand(rh,cursorY,scopeBase); cursorY+=rh.height; }
+    const rh=first('reportHeader'); if(rh)runBand(rh,scopeBase);
     const detail=first('detail');
     // table dans une bande détail ?
     let tableItem=null;
@@ -14203,10 +14312,14 @@ class ReportEngine {
     const ghs=byType['groupHeader']||[], gfs=byType['groupFooter']||[];
     const levels=ghs.map((b,i)=>({header:b, footer:gfs[i]||null, by:b.groupBy||''})).filter(l=>l.by);
     let rows=data;
-    if(levels.length && report.sortByGroup!==false){
-      rows=data.slice().sort((a,b)=>{ for(const l of levels){
-        const ka=_rptStr(rptEvalExpr(l.by,{...scopeBase,row:a})), kb=_rptStr(rptEvalExpr(l.by,{...scopeBase,row:b}));
-        if(ka<kb)return -1; if(ka>kb)return 1; } return 0; }); }
+    // filtre de lignes (expression booléenne) puis tri : critères explicites, sinon clés de groupe
+    if(report.filter){ rows=rows.filter((r,i)=>_rptBool(rptEvalExpr(report.filter,{...scopeBase,row:r,index:i}))); }
+    const _cmp=(a,b)=>{ if(typeof a==='number'&&typeof b==='number')return a-b; const sa=_rptStr(a),sb=_rptStr(b); return sa<sb?-1:sa>sb?1:0; };
+    const sorts=(report.sortBy&&report.sortBy.length)?report.sortBy
+      :((levels.length&&report.sortByGroup!==false)?levels.map(l=>({expr:l.by,dir:'asc'})):null);
+    if(sorts&&sorts.length){ rows=rows.slice().sort((a,b)=>{ for(const s of sorts){
+      const d=_cmp(rptEvalExpr(s.expr,{...scopeBase,row:a}),rptEvalExpr(s.expr,{...scopeBase,row:b}));
+      if(d)return s.dir==='desc'?-d:d; } return 0; }); }
     // clés cumulées par niveau + regroupement des lignes
     const lvKeys=levels.map((l,li)=>rows.map((r,i)=>{ let s=''; for(let k=0;k<=li;k++)s+=''+_rptStr(rptEvalExpr(levels[k].by,{...scopeBase,row:r,index:i})); return s; }));
     const lvGroups=levels.map((l,li)=>{ const m=new Map(); lvKeys[li].forEach((k,i)=>{ if(!m.has(k))m.set(k,[]); m.get(k).push(rows[i]); }); return m; });
@@ -14216,13 +14329,18 @@ class ReportEngine {
       group:{key:lvLabel[li][i], level:li+1, rows:rws, count:rws.length}});
     const closeGroups=from=>{ for(let li=levels.length-1;li>=from;li--){ const l=levels[li]; if(curKey[li]==null)continue;
         if(l.footer){ const rws=lvGroups[li].get(curKey[li])||[]; const lastIdx=rows.indexOf(rws[rws.length-1]);
-          ensure(l.footer.height); emitBand(l.footer,cursorY,grpScope(li,lastIdx<0?0:lastIdx,rws)); cursorY+=l.footer.height; }
+          runBand(l.footer,grpScope(li,lastIdx<0?0:lastIdx,rws)); }
         curKey[li]=null; } };
     const openGroups=(from,i)=>{ for(let li=from;li<levels.length;li++){ const k=lvKeys[li][i]; curKey[li]=k;
-        const l=levels[li], rws=lvGroups[li].get(k)||[];
-        if(l.header){ if(l.header.startNewPage&&pages.length&&page.elements.length){ finishPage(); startPage(); if(tblRepeatHeader)tableHeader(tblRepeatHeader); }
-          ensure(l.header.height); emitBand(l.header,cursorY,grpScope(li,i,rws)); cursorY+=l.header.height;
-          if(tableItem&&l.header.repeatTableHeader!==false&&tblRepeatHeader)tableHeader(tableItem); } } };
+        const l=levels[li], rws=lvGroups[li].get(k)||[]; const sc=grpScope(li,i,rws);
+        if(l.header&&bandOn(l.header,sc)){ bandBreakBefore(l.header);
+          const hh=bandH(l.header,sc);
+          // keepTogether : ne pas laisser un en-tête de groupe orphelin en bas de page
+          ensure(hh + (l.header.keepTogether ? (tableItem?(tableItem.rowHeight||22):(detail?detail.height:0)) : 0));
+          emitBand(l.header,cursorY,sc); cursorY+=hh;
+          if(report.bookmarks!==false)bookmarks.push({title:_rptStr(lvLabel[li][i]),page:pages.length-1,level:li+1});
+          if(tableItem&&l.header.repeatTableHeader!==false&&tblRepeatHeader)tableHeader(tableItem);
+          bandBreakAfter(l.header); } } };
 
     if(tableItem){
       // les autres éléments de la bande du tableau (titre, texte riche, image…) sont émis une fois,
@@ -14230,34 +14348,741 @@ class ReportEngine {
       const tBand=report.bands.find(b=>b.items&&b.items.includes(tableItem));
       const extras=tBand?tBand.items.filter(i=>i!==tableItem):[];
       if(extras.length){ let maxBot=0;
-        for(const ex of extras){ ensure(ex.y+ex.h); emitItem(ex, inner.x+ex.x, cursorY+ex.y, scopeBase); maxBot=Math.max(maxBot,ex.y+ex.h); }
+        for(const ex of extras){ ensure(ex.y+ex.h); emitItem(ex, colX()+ex.x, cursorY+ex.y, scopeBase); maxBot=Math.max(maxBot,ex.y+ex.h); }
         cursorY+=maxBot+4; }
       ensure((tableItem.rowHeight||22)*2); if(!levels.length)tableHeader(tableItem);
       if(tableItem.headerOnEachPage)tblRepeatHeader=tableItem; }
 
     // bande Détail non répétée (repeat:false) → émise une seule fois (rapport d'une page)
     const detailOnce = !!(detail && detail.repeat===false && !tableItem);
-    if(detailOnce){ ensure(detail.height); emitBand(detail,cursorY,{...scopeBase,row:rows[0]||{},index:0}); cursorY+=detail.height; }
+    if(detailOnce)runBand(detail,{...scopeBase,row:rows[0]||{},index:0});
     for(let i=0;i<rows.length && !detailOnce;i++){
       if(levels.length){ let diff=levels.length;   // 1er niveau dont la clé change
         for(let li=0;li<levels.length;li++){ if(curKey[li]!==lvKeys[li][i]){ diff=li; break; } }
         if(diff<levels.length){ closeGroups(diff); openGroups(diff,i); } }
-      if(tableItem){ ensure(tableItem.rowHeight||22); tableRow(tableItem,rows[i],i); }
-      else if(detail&&detail.repeat!==false){ ensure(detail.height); emitBand(detail,cursorY,{...scopeBase,row:rows[i],index:i}); cursorY+=detail.height; }
+      if(tableItem){ ensure(tableItem.rowHeight||22); tableRow(tableItem,rows[i],i,rows[i+1]); }
+      else if(detail&&detail.repeat!==false)runBand(detail,{...scopeBase,row:rows[i],index:i});
     }
     closeGroups(0);
     if(tableItem&&tableItem.showFooter&&tableItem.footer){ ensure(tableItem.rowHeight||22); tableFooter(tableItem,rows); }
     tblRepeatHeader=null;
 
-    const rf=first('reportFooter'); if(rf){ ensure(rf.height); emitBand(rf,cursorY,scopeBase); cursorY+=rf.height; }
-    finishPage();
-    // 2e passe : numéros de page (page/total corrects, désormais connus)
+    const rf=first('reportFooter'); if(rf)runBand(rf,scopeBase);
+    // un « saut après » en fin de rapport laisserait une page vide en trop
+    if(pages.length>1&&pageEmpty()){ pages.pop(); page=pages[pages.length-1]; }
+    else finishPage();
+    // 2e passe : numéros de page (page/total corrects, désormais connus) — les
+    // primitives peuvent être imbriquées dans un groupe de rotation.
     const total=pages.length;
-    for(let pi=0;pi<pages.length;pi++){ const sc={...scopeBase, vars:{page:pi+1,total}}; for(const el of pages[pi].elements){ if(el.__isPageInfo){ el.text=rptInterp(el.__tpl,sc); } } }
-    return { pages, total };
+    const fixPI=(els,sc)=>{ for(const el of els){ if(el.kind==='group'){ fixPI(el.items,sc); continue; } if(el.__isPageInfo)el.text=rptInterp(el.__tpl,sc); } };
+    for(let pi=0;pi<pages.length;pi++){ fixPI(pages[pi].elements,{...scopeBase, vars:{page:pi+1,total}}); delete pages[pi].__base; }
+    return { pages, total, bookmarks };
   }
 }
 function _rptCalcProxy(report,scope){ const o={}; if(report.calculatedFields)for(const c of report.calculatedFields){ Object.defineProperty(o,c.name,{ enumerable:true, get(){ return rptEvalExpr(c.expr,{...scope,calc:undefined}); } }); } return o; }
+// hauteur nécessaire à un texte replié sur la largeur de l'élément (option « hauteur auto »)
+function _rptTextGrowH(it,scope){ const raw=it.expr?_rptStr(rptEvalExpr(it.expr,scope)):rptInterp(it.text,scope);
+  const m=_rptMeasureCtx; m.font=_rptFontCSS(it); const lines=_rptWrap(m,raw,it.w);
+  return Math.ceil(lines.length*(it.size||12)*1.28)+2; }
+
+// ────────────────────────────────────────────────────────────────────────────
+//  CODES-BARRES  → primitives `rect` (donc vectoriels dans le PDF, pas d'image)
+//  Symbologies : Code 128 (auto B/C), Code 39, EAN-13, QR Code.
+// ────────────────────────────────────────────────────────────────────────────
+// Familles proposées dans l'UI (le rendu est le même pour toutes : des rectangles).
+const RPT_BARCODE_TYPES=['Code128','EAN128','SSCC18','Code39','Code39Ext','Code93','Code93Ext','Code11',
+  'Codabar','MSI','Std2of5','Inter2of5','Matrix2of5','ITF14','Identcode','Leitcode',
+  'EAN13','EAN8','UPCA','UPCE0','UPCE1','UPCSup2','UPCSup5','Pharmacode','PostNet',
+  'QR','QRGS1','EPCQR','DataMatrix','DataMatrixGS1','Aztec'];
+const RPT_BARCODE_LABEL={ Code128:'Code 128', EAN128:'EAN 128 / GS1-128', SSCC18:'SSCC-18',
+  Code39:'Code 39', Code39Ext:'Code 39 étendu', Code93:'Code 93', Code93Ext:'Code 93 étendu',
+  Code11:'Code 11', Codabar:'Codabar', MSI:'Code MSI', Std2of5:'Industrial 2 of 5',
+  Inter2of5:'Interleaved 2 of 5', Matrix2of5:'Matrix 2 of 5', ITF14:'ITF 14',
+  Identcode:'Deutsche Post Identcode', Leitcode:'Deutsche Post Leitcode',
+  EAN13:'EAN 13', EAN8:'EAN 8', UPCA:'UPC A', UPCE0:'UPC E0', UPCE1:'UPC E1',
+  UPCSup2:'UPC Supplemental 2', UPCSup5:'UPC Supplemental 5', Pharmacode:'Pharmacode',
+  PostNet:'PostNet', QR:'QR Code', QRGS1:'QR Code GS1', EPCQR:'EPC QR Code',
+  DataMatrix:'Data Matrix', DataMatrixGS1:'Data Matrix GS1', Aztec:'Aztec Code' };
+// symbologies matricielles (rendu carré, pas de texte lisible sous le code)
+const RPT_BARCODE_2D=['QR','QRGS1','EPCQR','DataMatrix','DataMatrixGS1','Aztec'];
+const _C128=('212222,222122,222221,121223,121322,131222,122213,122312,132212,221213,'+
+'221312,231212,112232,122132,122231,113222,123122,123221,223211,221132,'+
+'221231,213212,223112,312131,311222,321122,321221,312212,322112,322211,'+
+'212123,212321,232121,111323,131123,131321,112313,132113,132311,211313,'+
+'231113,231311,112133,112331,132131,113123,113321,133121,313121,211331,'+
+'231131,213113,213311,213131,311123,311321,331121,312113,312311,332111,'+
+'314111,221411,431111,111224,111422,121124,121421,141122,141221,112214,'+
+'112412,122114,122411,142112,142211,241211,221114,413111,241112,134111,'+
+'111242,121142,121241,114212,124112,124211,411212,421112,421211,212141,'+
+'214121,412121,111143,111341,131141,114113,114311,411113,411311,113141,'+
+'114131,311141,411131,211412,211214,211232,2331112').split(',');
+const _C39={'0':'nnnwwnwnn','1':'wnnwnnnnw','2':'nnwwnnnnw','3':'wnwwnnnnn','4':'nnnwwnnnw','5':'wnnwwnnnn','6':'nnwwwnnnn','7':'nnnwnnwnw','8':'wnnwnnwnn','9':'nnwwnnwnn',
+'A':'wnnnnwnnw','B':'nnwnnwnnw','C':'wnwnnwnnn','D':'nnnnwwnnw','E':'wnnnwwnnn','F':'nnwnwwnnn','G':'nnnnnwwnw','H':'wnnnnwwnn','I':'nnwnnwwnn','J':'nnnnwwwnn',
+'K':'wnnnnnnww','L':'nnwnnnnww','M':'wnwnnnnwn','N':'nnnnwnnww','O':'wnnnwnnwn','P':'nnwnwnnwn','Q':'nnnnnnwww','R':'wnnnnnwwn','S':'nnwnnnwwn','T':'nnnnwnwwn',
+'U':'wwnnnnnnw','V':'nwwnnnnnw','W':'wwwnnnnnn','X':'nwnnwnnnw','Y':'wwnnwnnnn','Z':'nwwnwnnnn','-':'nwnnnnwnw','.':'wwnnnnwnn',' ':'nwwnnnwnn',
+'$':'nwnwnwnnn','/':'nwnwnnnwn','+':'nwnnnwnwn','%':'nnnwnwnwn','*':'nwnnwnwnn'};
+const _EANL=['0001101','0011001','0010011','0111101','0100011','0110001','0101111','0111011','0110111','0001011'];
+const _EANG=['0100111','0110011','0011011','0100001','0011101','0111001','0000101','0010001','0001001','0010111'];
+const _EANR=['1110010','1100110','1101100','1000010','1011100','1001110','1010000','1000100','1001000','1110100'];
+const _EANP=['LLLLLL','LLGLGG','LLGGLG','LLGGGL','LGLLGG','LGGLLG','LGGGLL','LGLGLG','LGLGGL','LGGLGL'];
+// ── tables complémentaires (sources : zxing pour Code 93 / Codabar, zint pour les 2 of 5) ──
+const _BC_C93A='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-. $/+%abcd*';
+const _BC_C93=[0x114,0x148,0x144,0x142,0x128,0x124,0x122,0x150,0x112,0x10A,
+  0x1A8,0x1A4,0x1A2,0x194,0x192,0x18A,0x168,0x164,0x162,0x134,
+  0x11A,0x158,0x14C,0x146,0x12C,0x116,0x1B4,0x1B2,0x1AC,0x1A6,
+  0x196,0x19A,0x16C,0x166,0x136,0x13A,0x12E,0x1D4,0x1D2,0x1CA,
+  0x16E,0x176,0x1AE,0x126,0x1DA,0x1D6,0x132,0x15E];
+const _BC_CBA='0123456789-$:/.+ABCD';
+const _BC_CB=[0x003,0x006,0x009,0x060,0x012,0x042,0x021,0x024,0x030,0x048,
+  0x00c,0x018,0x045,0x051,0x054,0x015,0x01A,0x029,0x00B,0x00E];
+const _BC_C11={'0':'00001','1':'10001','2':'01001','3':'11000','4':'00101','5':'10100','6':'01100','7':'00011','8':'10010','9':'10000','-':'00100'};
+// 2 of 5 : largeurs des 5 barres d'un chiffre (les espaces sont étroits, sauf en interleaved)
+const _BC_25=[[1,1,3,3,1],[3,1,1,1,3],[1,3,1,1,3],[3,3,1,1,1],[1,1,3,1,3],[3,1,3,1,1],[1,3,3,1,1],[1,1,1,3,3],[3,1,1,3,1],[1,3,1,3,1]];
+// Matrix 2 of 5 : 6 éléments par chiffre (barre, espace, barre, espace, barre, espace)
+const _BC_25M=[[1,1,3,3,1,1],[3,1,1,1,3,1],[1,3,1,1,3,1],[3,3,1,1,1,1],[1,1,3,1,3,1],[3,1,3,1,1,1],[1,3,3,1,1,1],[1,1,1,3,3,1],[3,1,1,3,1,1],[1,3,1,3,1,1]];
+const _BC_POSTNET=['11000','00011','00101','00110','01001','01010','01100','10001','10010','10100'];
+const _BC_UPCE_PAR=['EEEOOO','EEOEOO','EEOOEO','EEOOOE','EOEEOO','EOOEEO','EOOOEE','EOEOEO','EOEOOE','EOOEOE'];
+const _BC_SUP5_PAR=['EEOOO','EOEOO','EOOEO','EOOOE','OEEOO','OOEEO','OOOEE','OEOEO','OEOOE','OOEOE'];
+// ASCII 0-127 → séquence Code 39 étendu (les shifts $ % / + sont substitués pour le Code 93)
+const _BC_EXT=(()=>{ const t=[], U='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  t[0]='%U';
+  for(let i=1;i<=26;i++)t[i]='$'+U[i-1];
+  'ABCDE'.split('').forEach((c,k)=>t[27+k]='%'+c);
+  t[32]=' ';
+  'ABCDEFGHIJKLMNO'.split('').forEach((c,k)=>t[33+k]='/'+c);
+  t[45]='-'; t[46]='.';
+  for(let i=48;i<=57;i++)t[i]=String(i-48);
+  t[58]='/Z';
+  'FGHIJ'.split('').forEach((c,k)=>t[59+k]='%'+c);
+  t[64]='%V';
+  for(let i=65;i<=90;i++)t[i]=U[i-65];
+  'KLMNO'.split('').forEach((c,k)=>t[91+k]='%'+c);
+  t[96]='%W';
+  for(let i=97;i<=122;i++)t[i]='+'+U[i-97];
+  'PQRST'.split('').forEach((c,k)=>t[123+k]='%'+c);
+  return t; })();
+// largeurs d'éléments (barre, espace, barre, …) → chaîne de modules
+function _bcW2Bits(w){ let s=''; for(let i=0;i<w.length;i++)s+=(i%2?'0':'1').repeat(Math.max(0,w[i]|0)); return s; }
+function _bcNum(v,keepDash){ return String(v==null?'':v).replace(keepDash?/[^0-9\-]/g:/\D/g,''); }
+function _bcMod10w31(d){ let s=0; for(let i=d.length-1,k=0;i>=0;i--,k++)s+=(+d[i])*(k%2===0?3:1); return String((10-s%10)%10); }
+function _bcExtSeq(txt,shift){ let o=''; for(const ch of String(txt)){ const c=ch.charCodeAt(0);
+    const e=(c<128?_BC_EXT[c]:null); if(e==null)continue;             // hors ASCII : ignoré
+    o+=(shift&&e.length===2)?((shift[e[0]]||e[0])+e[1]):e; } return o; }
+
+// ── encodeurs : renvoient {bits} (ou {heights}) + text lisible ──────────────
+// Code 128 : suite de largeurs de modules (barre, espace, barre, …). `fnc1` = GS1-128.
+function _c128Widths(txt,fnc1){
+  const s=String(txt); const codes=[]; let i=0, set=null;
+  const digitsAt=k=>{ let n=0; while(k+n<s.length&&s[k+n]>='0'&&s[k+n]<='9')n++; return n; };
+  const start=c=>{ codes.push(c===   'C'?105:104); set=c; };
+  while(i<s.length){
+    const dn=digitsAt(i);
+    const useC = (i===0 ? dn>=4 : dn>=6) || (dn>=2 && i+dn>=s.length && dn%2===0);
+    if(useC && dn>=2){ if(set!=='C'){ if(set===null){ start('C'); if(fnc1)codes.push(102); } else codes.push(99); set='C'; }
+      const n=dn-(dn%2); for(let k=0;k<n;k+=2)codes.push(parseInt(s.substr(i+k,2),10)); i+=n; continue; }
+    if(set!=='B'){ if(set===null){ start('B'); if(fnc1)codes.push(102); } else codes.push(100); set='B'; }
+    const c=s.charCodeAt(i); codes.push((c>=32&&c<127)?c-32:0); i++;
+  }
+  if(!codes.length){ start('B'); if(fnc1)codes.push(102); }
+  let sum=codes[0]; for(let k=1;k<codes.length;k++)sum+=codes[k]*k;
+  codes.push(sum%103); codes.push(106);
+  const w=[]; for(const c of codes)for(const ch of _C128[c])w.push(+ch);
+  return w;
+}
+function _c39Widths(txt){ const s='*'+String(txt).toUpperCase().replace(/[^0-9A-Z\-. $/+%]/g,'')+'*'; const w=[];
+  for(let i=0;i<s.length;i++){ const p=_C39[s[i]]||_C39['*']; for(const c of p)w.push(c==='w'?3:1); if(i<s.length-1)w.push(1); }
+  return w; }
+// EAN/UPC : 101 + gauche + 01010 + droite + 101 ; `tall` = gardes descendant sous le texte
+function _bcEanCheck(d){ let s=0; for(let i=d.length-1,k=0;i>=0;i--,k++)s+=(+d[i])*(k%2===0?3:1); return String((10-s%10)%10); }
+function _bcEAN13(v){ let s=_bcNum(v).slice(0,12).padStart(12,'0'); s+=_bcEanCheck(s);
+  const par=_EANP[+s[0]]; let bits='101';
+  for(let i=1;i<=6;i++)bits+=(par[i-1]==='L'?_EANL:_EANG)[+s[i]];
+  bits+='01010'; for(let i=7;i<=12;i++)bits+=_EANR[+s[i]];
+  return {bits:bits+'101', text:s, tall:[[0,3],[45,50],[92,95]]}; }
+function _bcUPCA(v){ let s=_bcNum(v).slice(0,11).padStart(11,'0'); s+=_bcEanCheck(s);
+  let bits='101'; for(let i=0;i<6;i++)bits+=_EANL[+s[i]];
+  bits+='01010'; for(let i=6;i<12;i++)bits+=_EANR[+s[i]];
+  return {bits:bits+'101', text:s, tall:[[0,3],[45,50],[92,95]]}; }
+function _bcEAN8(v){ let s=_bcNum(v).slice(0,7).padStart(7,'0'); s+=_bcEanCheck(s);
+  let bits='101'; for(let i=0;i<4;i++)bits+=_EANL[+s[i]];
+  bits+='01010'; for(let i=4;i<8;i++)bits+=_EANR[+s[i]];
+  return {bits:bits+'101', text:s, tall:[[0,3],[31,36],[64,67]]}; }
+// UPC-E : 6 chiffres compressés ; la clé se calcule sur l'UPC-A équivalent
+function _bcUPCEtoA(sys,six){ const l=six[5];
+  if('012'.includes(l))return sys+six.slice(0,2)+l+'0000'+six.slice(2,5);
+  if(l==='3')return sys+six.slice(0,3)+'00000'+six.slice(3,5);
+  if(l==='4')return sys+six.slice(0,4)+'00000'+six[4];
+  return sys+six.slice(0,5)+'0000'+l; }
+function _bcUPCE(v,sys){ const six=_bcNum(v).slice(0,6).padStart(6,'0');
+  const chk=+_bcEanCheck(_bcUPCEtoA(sys,six));
+  let par=_BC_UPCE_PAR[chk];
+  if(sys==='1')par=par.replace(/[EO]/g,c=>c==='E'?'O':'E');
+  let bits='101';
+  for(let i=0;i<6;i++)bits+=(par[i]==='O'?_EANL:_EANG)[+six[i]];
+  bits+='010101';
+  return {bits, text:sys+six+chk, tall:[[0,3],[45,51]]}; }
+function _bcSup(v,n){ const d=_bcNum(v).slice(0,n).padStart(n,'0');
+  let par;
+  if(n===2)par=['OO','OE','EO','EE'][(+d)%4];
+  else { let s=0; for(let i=0;i<5;i++)s+=(+d[i])*(i%2?9:3); par=_BC_SUP5_PAR[s%10]; }
+  let bits='01011';
+  for(let i=0;i<n;i++){ if(i)bits+='01'; bits+=(par[i]==='O'?_EANL:_EANG)[+d[i]]; }
+  return {bits, text:d, textTop:true}; }
+function _bcCode93(v,ext){ let s=ext?_bcExtSeq(v,{'$':'a','%':'b','/':'c','+':'d'})
+                                   :String(v).toUpperCase().replace(/[^0-9A-Z\-. $/+%]/g,'');
+  const vals=[...s].map(c=>_BC_C93A.indexOf(c)).filter(i=>i>=0);
+  const ck=max=>{ let sum=0,k=1; for(let i=vals.length-1;i>=0;i--){ sum+=k*vals[i]; if(++k>max)k=1; } return sum%47; };
+  vals.push(ck(20)); vals.push(ck(15));
+  const pat=i=>_BC_C93[i].toString(2).padStart(9,'0');
+  let bits=pat(47); for(const x of vals)bits+=pat(x); bits+=pat(47)+'1';
+  return {bits, text:String(v)}; }
+function _bcCodabar(v){ let s=String(v).toUpperCase().replace(/[^0-9\-$:/.+ABCD]/g,'');
+  if(!/^[A-D]/.test(s))s='A'+s; if(!/[A-D]$/.test(s))s+='B';
+  const w=[];
+  for(let i=0;i<s.length;i++){ const idx=_BC_CBA.indexOf(s[i]); if(idx<0)continue;
+    for(const c of _BC_CB[idx].toString(2).padStart(7,'0'))w.push(c==='1'?3:1);
+    if(i<s.length-1)w.push(1); }
+  return {bits:_bcW2Bits(w), text:s}; }
+function _bcCode11(v){ const d=_bcNum(v,true);
+  const val=c=>c==='-'?10:+c;
+  const chr=n=>n===10?'-':String(n);
+  const chk=(str,max)=>{ let s=0,k=1; for(let i=str.length-1;i>=0;i--){ s+=k*val(str[i]); if(++k>max)k=1; } return s%11; };
+  let full=d+chr(chk(d,10));                      // clé C
+  if(d.length>=10)full+=chr(chk(full,9));         // clé K au-delà de 10 chiffres
+  const w=[]; const put=p=>{ for(const c of p)w.push(c==='1'?3:1); w.push(1); };
+  put('00110'); for(const c of full)put(_BC_C11[c]||_BC_C11['0']); put('00110'); w.pop();
+  return {bits:_bcW2Bits(w), text:d}; }
+// MSI : clé mod 10 — les rangs impairs (depuis la droite) sont doublés puis
+// réduits chiffre à chiffre (équivaut à doubler le nombre et sommer ses chiffres)
+function _bcMSI(v){ let d=_bcNum(v)||'0'; let s=0;
+  for(let i=d.length-1,k=0;i>=0;i--,k++){ let x=+d[i]; if(k%2===0){ x*=2; if(x>9)x-=9; } s+=x; }
+  d+=String((10-s%10)%10);
+  let bits='110';
+  for(const c of d)for(const b of (+c).toString(2).padStart(4,'0'))bits+=(b==='1'?'110':'100');
+  return {bits:bits+'1001', text:d}; }
+function _bcStd25(v){ const d=_bcNum(v); let w=[3,1,3,1,1,1];
+  for(const c of d){ const p=_BC_25[+c]; for(let i=0;i<5;i++){ w.push(p[i]); w.push(1); } }
+  w=w.concat([3,1,1,1,3]);
+  return {bits:_bcW2Bits(w), text:d}; }
+function _bcInter25(v,opt){ let d=_bcNum(v);
+  if(opt&&opt.check)d+=_bcMod10w31(d);
+  if(d.length%2)d='0'+d;
+  let w=[1,1,1,1];
+  for(let i=0;i<d.length;i+=2){ const a=_BC_25[+d[i]], b=_BC_25[+d[i+1]];
+    for(let k=0;k<5;k++){ w.push(a[k]); w.push(b[k]); } }
+  w=w.concat([3,1,1]);
+  return {bits:_bcW2Bits(w), text:d, bearer:!!(opt&&opt.bearer)}; }
+function _bcMatrix25(v){ const d=_bcNum(v); let w=[4,1,1,1,1,1];
+  for(const c of d)w=w.concat(_BC_25M[+c]);
+  w=w.concat([4,1,1,1,1]);
+  return {bits:_bcW2Bits(w), text:d}; }
+// Deutsche Post : Interleaved 2 of 5 + clé pondérée 4/9
+function _bcDP(v,len){ let d=_bcNum(v).slice(0,len).padStart(len,'0');
+  let s=0; for(let i=0;i<d.length;i++)s+=(+d[i])*(i%2===0?4:9);
+  d+=String((10-s%10)%10);
+  const sym=_bcInter25(d); sym.text=d; return sym; }
+function _bcPharma(v){ let n=parseInt(_bcNum(v),10); if(!n||n<3)n=3; if(n>131070)n=131070;
+  const val=n, bars=[];
+  while(n>0){ if(n%2===0){ bars.unshift(3); n=(n-2)/2; } else { bars.unshift(1); n=(n-1)/2; } }
+  const w=[]; bars.forEach((b,i)=>{ if(i)w.push(2); w.push(b); });
+  return {bits:_bcW2Bits(w), text:String(val)}; }
+function _bcPostnet(v){ let d=_bcNum(v).slice(0,11);
+  let s=0; for(const c of d)s+=+c; d+=String((10-s%10)%10);
+  const h=[1]; for(const c of d)for(const x of _BC_POSTNET[+c])h.push(x==='1'?1:0);
+  h.push(1);
+  return {heights:h, text:d}; }
+// registre : nom → encodeur (it = l'élément, pour les options)
+const RPT_BC={
+  Code128:  v=>({bits:_bcW2Bits(_c128Widths(v)), text:String(v)}),
+  EAN128:   v=>({bits:_bcW2Bits(_c128Widths(String(v).replace(/[()]/g,''),true)), text:String(v)}),
+  SSCC18:   v=>{ let d=_bcNum(v).slice(0,17).padStart(17,'0'); d+=_bcMod10w31(d);
+                 return {bits:_bcW2Bits(_c128Widths('00'+d,true)), text:'(00) '+d}; },
+  Code39:   v=>({bits:_bcW2Bits(_c39Widths(v)), text:String(v).toUpperCase()}),
+  Code39Ext:v=>({bits:_bcW2Bits(_c39Widths(_bcExtSeq(v))), text:String(v)}),
+  Code93:   v=>_bcCode93(v,false),
+  Code93Ext:v=>_bcCode93(v,true),
+  Code11:   v=>_bcCode11(v),
+  Codabar:  v=>_bcCodabar(v),
+  MSI:      v=>_bcMSI(v),
+  Std2of5:  v=>_bcStd25(v),
+  Inter2of5:v=>_bcInter25(v),
+  Matrix2of5:v=>_bcMatrix25(v),
+  ITF14:    v=>{ let d=_bcNum(v).slice(0,13).padStart(13,'0'); d+=_bcMod10w31(d);
+                 const s=_bcInter25(d); s.text=d; s.bearer=true; return s; },
+  Identcode:v=>_bcDP(v,11),
+  Leitcode: v=>_bcDP(v,13),
+  EAN13:    v=>_bcEAN13(v),
+  EAN8:     v=>_bcEAN8(v),
+  UPCA:     v=>_bcUPCA(v),
+  UPCE0:    v=>_bcUPCE(v,'0'),
+  UPCE1:    v=>_bcUPCE(v,'1'),
+  UPCSup2:  v=>_bcSup(v,2),
+  UPCSup5:  v=>_bcSup(v,5),
+  Pharmacode:v=>_bcPharma(v),
+  PostNet:  v=>_bcPostnet(v),
+};
+// Charge utile EPC QR (virement SEPA) — 12 lignes normalisées.
+function _bcEPCPayload(it,value){ const s=String(value==null?'':value);
+  if(s.indexOf('\n')>=0)return s;                       // charge utile déjà complète
+  const e=(it&&it.epc)||{};
+  const lines=['BCD','002','1','SCT', e.bic||'', e.name||s, e.iban||'',
+    e.amount?('EUR'+Number(e.amount).toFixed(2)):'', e.purpose||'', e.ref||'', e.info||''];
+  while(lines.length&&lines[lines.length-1]==='')lines.pop();
+  return lines.join('\n'); }
+// symbologies matricielles → matrice de 0/1 (null si `type` n'est pas 2D)
+function _bcMatrix(type,value,it){
+  it=it||{};
+  switch(type){
+    case 'QR':      return _bcReq(rptQRMatrix(String(value==null?'':value),it.qrEcc||'M'));
+    case 'QRGS1':   return _bcReq(rptQRMatrix(String(value==null?'':value).replace(/[()]/g,''),it.qrEcc||'M',{fnc1:true}));
+    case 'EPCQR':   return _bcReq(rptQRMatrix(_bcEPCPayload(it,value),'M'));
+    case 'DataMatrix':    return rptDataMatrix(value,{shape:it.dmShape});
+    case 'DataMatrixGS1': return rptDataMatrix(value,{shape:it.dmShape,gs1:true});
+    case 'Aztec':         return rptAztec(value,{ecc:it.aztecEcc});
+    default: return null;
+  } }
+function _bcReq(m){ if(!m)throw new Error('texte trop long pour ce symbole'); return m; }
+
+// primitives d'un code-barres, ajustées au rectangle (x,y,w,h).
+// Un seul rendu pour toutes les symbologies : des rectangles → vectoriel dans le PDF.
+function rptBarcodePrims(it,value,x,y,w,h){
+  const out=[]; const type=it.barcodeType||'Code128'; const fg=it.color||'#000000';
+  try{
+    // ── symbologies 2D : une matrice de modules, éventuellement non carrée ──
+    const mx=_bcMatrix(type,value,it);
+    if(mx){
+      const rows=mx.length, cols=mx[0].length;
+      const q=(it.qrQuiet==null?2:it.qrQuiet);
+      const s=Math.min(w/(cols+2*q), h/(rows+2*q));
+      const tw=s*(cols+2*q), thh=s*(rows+2*q);
+      const ox=x+(w-tw)/2, oy=y+(h-thh)/2;
+      if(it.barcodeBg!==false)out.push({kind:'rect',x:ox,y:oy,w:tw,h:thh,fill:it.barcodeBg||'#ffffff'});
+      for(let r=0;r<rows;r++){ let c=0; while(c<cols){ if(mx[r][c]){ let c2=c; while(c2<cols&&mx[r][c2])c2++;
+        out.push({kind:'rect',x:ox+(q+c)*s,y:oy+(q+r)*s,w:(c2-c)*s,h:s,fill:fg}); c=c2; } else c++; } }
+      return out;
+    }
+    const enc=RPT_BC[type]; if(!enc)throw new Error('symbologie inconnue : '+type);
+    const sym=enc(String(value==null?'':value),it);
+    const showTxt=it.barcodeText!==false && sym.text!=null && sym.text!=='';
+    const th=showTxt?Math.min(14,Math.max(7,it.size||10)):0;
+    const top=(showTxt&&sym.textTop)?th+2:0;                     // suppléments UPC : texte au-dessus
+    const bh=Math.max(4,h-top-(showTxt&&!sym.textTop?th+2:0));
+    const by=y+top;
+    if(sym.heights){                                             // hauteur modulée (PostNet)
+      const n=sym.heights.length, pitch=w/Math.max(1,n*2-1);
+      sym.heights.forEach((hh,i)=>{ const barH=hh?bh:bh*0.45;
+        out.push({kind:'rect',x:x+i*pitch*2,y:by+bh-barH,w:pitch,h:barH,fill:fg}); });
+    } else {
+      const bits=sym.bits||'', mw=w/Math.max(1,bits.length);
+      // gardes EAN/UPC : elles descendent sous la ligne de texte, les autres barres s'arrêtent avant
+      const shorten=(showTxt&&sym.tall&&!sym.textTop)?0.90:1;
+      const isTall=i=>{ if(!sym.tall)return true; for(const t of sym.tall)if(i>=t[0]&&i<t[1])return true; return false; };
+      for(let i=0;i<bits.length;i++){ if(bits[i]!=='1')continue;
+        let j=i; while(j<bits.length&&bits[j]==='1')j++;
+        out.push({kind:'rect',x:x+i*mw,y:by,w:(j-i)*mw,h:bh*(isTall(i)?1:shorten),fill:fg});
+        i=j-1; }
+    }
+    if(sym.bearer){ const t=Math.max(1.5,bh*0.07);                // ITF-14 : cadre porteur
+      out.push({kind:'rect',x,y:by,w,h:t,fill:fg});
+      out.push({kind:'rect',x,y:by+bh-t,w,h:t,fill:fg}); }
+    if(showTxt)out.push({kind:'text',x,y:sym.textTop?y:by+bh+1,w,h:th,text:sym.text,
+      align:'center',valign:'top',size:th-1,color:fg});
+  }catch(e){ out.push({kind:'text',x,y,w,h,text:'code-barres : '+e.message,size:9,color:'#c33',align:'center',valign:'middle'}); }
+  return out;
+}
+// ── Data Matrix ECC200 (ISO/IEC 16022) ──────────────────────────────────────
+// [larg. symbole, haut. symbole, larg. région, haut. région, régions X, régions Y,
+//  codets de données, codets de correction, blocs]  — symbole = rx*(rw+2) × ry*(rh+2)
+const _DM_SIZES=[
+  [10,10,  8, 8,1,1,   3,  5,1], [12,12, 10,10,1,1,   5,  7,1], [14,14, 12,12,1,1,   8, 10,1],
+  [16,16, 14,14,1,1,  12, 12,1], [18,18, 16,16,1,1,  18, 14,1], [20,20, 18,18,1,1,  22, 18,1],
+  [22,22, 20,20,1,1,  30, 20,1], [24,24, 22,22,1,1,  36, 24,1], [26,26, 24,24,1,1,  44, 28,1],
+  [32,32, 14,14,2,2,  62, 36,1], [36,36, 16,16,2,2,  86, 42,1], [40,40, 18,18,2,2, 114, 48,1],
+  [44,44, 20,20,2,2, 144, 56,1], [48,48, 22,22,2,2, 174, 68,1], [52,52, 24,24,2,2, 204, 84,2],
+  [64,64, 14,14,4,4, 280,112,2], [72,72, 16,16,4,4, 368,144,4], [80,80, 18,18,4,4, 456,192,4],
+  [88,88, 20,20,4,4, 576,224,4], [96,96, 22,22,4,4, 696,272,4], [104,104,24,24,4,4,816,336,6],
+  // rectangulaires
+  [18, 8, 16, 6,1,1,   5,  7,1], [32, 8, 14, 6,2,1,  10, 11,1], [26,12, 24,10,1,1,  16, 14,1],
+  [36,12, 16,10,2,1,  22, 18,1], [36,16, 16,14,2,1,  32, 24,1], [48,16, 22,14,2,1,  49, 28,1]
+];
+// GF(256) du Data Matrix : polynôme 0x12D, racines α¹..αⁿ (≠ QR : 0x11D et α⁰..)
+const _DM_EXP=new Array(512), _DM_LOG=new Array(256);
+(function(){ let x=1; for(let i=0;i<255;i++){ _DM_EXP[i]=x; _DM_LOG[x]=i; x<<=1; if(x&0x100)x^=0x12d; }
+  for(let i=255;i<512;i++)_DM_EXP[i]=_DM_EXP[i-255]; })();
+function _dmMul(a,b){ return (a===0||b===0)?0:_DM_EXP[_DM_LOG[a]+_DM_LOG[b]]; }
+function _dmGen(n){ let p=[1]; for(let i=1;i<=n;i++){ const np=new Array(p.length+1).fill(0);
+    for(let j=0;j<p.length;j++){ np[j]^=p[j]; np[j+1]^=_dmMul(p[j],_DM_EXP[i]); } p=np; } return p; }
+function _dmEC(data,n){ const res=data.concat(new Array(n).fill(0)), g=_dmGen(n);
+  for(let i=0;i<data.length;i++){ const f=res[i]; if(!f)continue;
+    for(let j=0;j<g.length;j++)res[i+j]^=_dmMul(g[j],f); }
+  return res.slice(data.length); }
+// Jeu ASCII : paires de chiffres → 130+valeur, ASCII → code+1, octet haut → 235 puis (v-127).
+// On travaille sur les OCTETS UTF-8 : l'échappement 235 ne couvre que 128-255, un caractère
+// hors Latin-1 (— , €…) produirait sinon un codet invalide (bug vu et corrigé).
+function _dmEncodeAscii(s,gs1){ const cw=[]; if(gs1)cw.push(232);
+  const b=Array.from(new TextEncoder().encode(String(s)));
+  let i=0;
+  while(i<b.length){ const c=b[i];
+    if(gs1&&c===29){ cw.push(232); i++; continue; }              // séparateur GS → FNC1
+    if(c>=48&&c<=57&&i+1<b.length){ const c2=b[i+1];
+      if(c2>=48&&c2<=57){ cw.push((c-48)*10+(c2-48)+130); i+=2; continue; } }
+    if(c<128)cw.push(c+1); else { cw.push(235); cw.push(c-127); }
+    i++; }
+  return cw; }
+// remplissage : 129 puis valeurs « randomisées » dépendant de la position
+function _dmPad(cw,cap){ if(cw.length<cap){ cw.push(129);
+    while(cw.length<cap){ const R=((149*(cw.length+1))%253)+1; let v=129+R; if(v>254)v-=254; cw.push(v); } }
+  return cw; }
+// placement ECC200 (annexe F de la norme) dans la matrice de mapping NR×NC
+function _dmPlace(cw,NR,NC){
+  const arr=new Array(NR*NC).fill(-1);
+  const mod=(row,col,ch,bit)=>{
+    if(row<0){ row+=NR; col+=4-((NR+4)%8); }
+    if(col<0){ col+=NC; row+=4-((NC+4)%8); }
+    arr[row*NC+col]=(cw[ch]>>(8-bit))&1; };
+  const utah=(row,col,ch)=>{ mod(row-2,col-2,ch,1); mod(row-2,col-1,ch,2); mod(row-1,col-2,ch,3);
+    mod(row-1,col-1,ch,4); mod(row-1,col,ch,5); mod(row,col-2,ch,6); mod(row,col-1,ch,7); mod(row,col,ch,8); };
+  const c1=ch=>{ mod(NR-1,0,ch,1); mod(NR-1,1,ch,2); mod(NR-1,2,ch,3); mod(0,NC-2,ch,4); mod(0,NC-1,ch,5);
+    mod(1,NC-1,ch,6); mod(2,NC-1,ch,7); mod(3,NC-1,ch,8); };
+  const c2=ch=>{ mod(NR-3,0,ch,1); mod(NR-2,0,ch,2); mod(NR-1,0,ch,3); mod(0,NC-4,ch,4); mod(0,NC-3,ch,5);
+    mod(0,NC-2,ch,6); mod(0,NC-1,ch,7); mod(1,NC-1,ch,8); };
+  const c3=ch=>{ mod(NR-3,0,ch,1); mod(NR-2,0,ch,2); mod(NR-1,0,ch,3); mod(0,NC-2,ch,4); mod(0,NC-1,ch,5);
+    mod(1,NC-1,ch,6); mod(2,NC-1,ch,7); mod(3,NC-1,ch,8); };
+  const c4=ch=>{ mod(NR-1,0,ch,1); mod(NR-1,NC-1,ch,2); mod(0,NC-3,ch,3); mod(0,NC-2,ch,4); mod(0,NC-1,ch,5);
+    mod(1,NC-3,ch,6); mod(1,NC-2,ch,7); mod(1,NC-1,ch,8); };
+  let row=4,col=0,ch=0;
+  do{
+    if(row===NR&&col===0)c1(ch++);
+    if(row===NR-2&&col===0&&(NC%4))c2(ch++);
+    if(row===NR-2&&col===0&&(NC%8)===4)c3(ch++);
+    if(row===NR+4&&col===2&&(NC%8)===0)c4(ch++);
+    do{ if(row<NR&&col>=0&&arr[row*NC+col]<0)utah(row,col,ch++); row-=2; col+=2; }while(row>=0&&col<NC);
+    row+=1; col+=3;
+    do{ if(row>=0&&col<NC&&arr[row*NC+col]<0)utah(row,col,ch++); row+=2; col-=2; }while(row<NR&&col>=0);
+    row+=3; col+=1;
+  }while(row<NR||col<NC);
+  if(arr[(NR-1)*NC+NC-1]<0){ arr[(NR-1)*NC+NC-1]=1; arr[(NR-2)*NC+NC-2]=1; }
+  return arr; }
+// matrice complète : motif de détection en L + piste d'horloge autour de chaque région
+function rptDataMatrix(text,opts){
+  opts=opts||{};
+  let cw=_dmEncodeAscii(String(text==null?'':text),!!opts.gs1);
+  const rect=opts.shape==='rect';
+  const size=_DM_SIZES.filter(s=>rect?(s[0]!==s[1]):(s[0]===s[1])).find(s=>s[6]>=cw.length);
+  if(!size)throw new Error('texte trop long pour un Data Matrix');
+  const sw=size[0], sh=size[1], rw=size[2], rh=size[3], rx=size[4], ry=size[5];
+  const dataCap=size[6], ecCount=size[7], nb=size[8];
+  cw=_dmPad(cw,dataCap);
+  const ecPer=ecCount/nb, ecAll=new Array(ecCount).fill(0);
+  for(let b=0;b<nb;b++){ const blk=[]; for(let d=b;d<dataCap;d+=nb)blk.push(cw[d]);
+    const e=_dmEC(blk,ecPer);
+    for(let k=0;k<ecPer;k++)ecAll[b+k*nb]=e[k]; }
+  const all=cw.concat(ecAll);
+  const NC=rw*rx, NR=rh*ry;
+  const arr=_dmPlace(all,NR,NC);
+  const m=[]; for(let r=0;r<sh;r++)m.push(new Array(sw).fill(0));
+  for(let gy=0;gy<ry;gy++)for(let gx=0;gx<rx;gx++){
+    const ox=gx*(rw+2), oy=gy*(rh+2);
+    for(let i=0;i<rh+2;i++)m[oy+i][ox]=1;                       // L : colonne gauche pleine
+    for(let i=0;i<rw+2;i++)m[oy+rh+1][ox+i]=1;                  // L : ligne du bas pleine
+    for(let i=0;i<=rw;i+=2)m[oy][ox+i]=1;                       // horloge du haut
+    for(let i=0;i<=rh;i+=2)m[oy+rh+1-i][ox+rw+1]=1;             // horloge de droite
+    for(let r=0;r<rh;r++)for(let c=0;c<rw;c++)
+      m[oy+1+r][ox+1+c]=arr[(gy*rh+r)*NC+(gx*rw+c)]===1?1:0;
+  }
+  return m; }
+
+// ── Aztec Code (ISO/IEC 24778) ──────────────────────────────────────────────
+// Corps de Galois paramétrables : la taille de mot dépend du nombre de couches.
+function _azGF(prim,size){ const exp=new Array(size*2), log=new Array(size);
+  let x=1; for(let i=0;i<size-1;i++){ exp[i]=x; log[x]=i; x<<=1; if(x&size)x^=prim; }
+  for(let i=size-1;i<size*2;i++)exp[i]=exp[i-(size-1)];
+  return { exp, log, size,
+    mul(a,b){ return (a===0||b===0)?0:exp[log[a]+log[b]]; } }; }
+const _AZ_GF={ 4:_azGF(0x13,16), 6:_azGF(0x43,64), 8:_azGF(0x12d,256), 10:_azGF(0x409,1024), 12:_azGF(0x1069,4096) };
+// Reed-Solomon systématique, racines α¹..αⁿ
+function _azRS(gf,data,n){ let p=[1];
+  for(let i=1;i<=n;i++){ const np=new Array(p.length+1).fill(0);
+    for(let j=0;j<p.length;j++){ np[j]^=p[j]; np[j+1]^=gf.mul(p[j],gf.exp[i]); } p=np; }
+  const res=data.concat(new Array(n).fill(0));
+  for(let i=0;i<data.length;i++){ const f=res[i]; if(!f)continue;
+    for(let j=0;j<p.length;j++)res[i+j]^=gf.mul(p[j],f); }
+  return res.slice(data.length); }
+const _AZ_WORD=[4,6,6,8,8,8,8,8,8,10,10,10,10,10,10,10,10,10,10,10,10,10,10,12,12,12,12,12,12,12,12,12,12];
+const _azTotalBits=(layers,compact)=>((compact?88:112)+16*layers)*layers;
+// bourrage : aucun mot ne doit être tout à 0 ni tout à 1
+function _azStuff(bits,ws){ const out=[]; const n=bits.length, mask=(1<<ws)-2;
+  for(let i=0;i<n;i+=ws){ let word=0;
+    for(let j=0;j<ws;j++)if(i+j>=n||bits[i+j])word|=1<<(ws-1-j);
+    if((word&mask)===mask){ _azPut(out,word&mask,ws); i--; }
+    else if((word&mask)===0){ _azPut(out,word|1,ws); i--; }
+    else _azPut(out,word,ws); }
+  return out; }
+function _azPut(arr,val,len){ for(let i=len-1;i>=0;i--)arr.push((val>>i)&1); }
+// complète en mots puis ajoute les mots de contrôle
+function _azCheckWords(bits,totalBits,ws,gf){
+  const msgWords=Math.floor(bits.length/ws), totalWords=Math.floor(totalBits/ws);
+  const words=[]; for(let i=0;i<msgWords;i++){ let v=0; for(let j=0;j<ws;j++)v=(v<<1)|bits[i*ws+j]; words.push(v); }
+  const ec=_azRS(gf,words,totalWords-msgWords);
+  const out=[]; _azPut(out,0,totalBits%ws);
+  for(const w of words)_azPut(out,w,ws);
+  for(const w of ec)_azPut(out,w,ws);
+  return out; }
+function _azMode(compact,layers,words){
+  const b=[];
+  if(compact){ _azPut(b,layers-1,2); _azPut(b,words-1,6); return _azCheckWords(b,28,4,_AZ_GF[4]); }
+  _azPut(b,layers-1,5); _azPut(b,words-1,11); return _azCheckWords(b,40,4,_AZ_GF[4]); }
+// renvoie une matrice carrée 0/1
+function rptAztec(text,opts){
+  opts=opts||{};
+  const ecc=Math.max(5,Math.min(95, opts.ecc==null?23:+opts.ecc));   // % de correction
+  const bytes=Array.from(new TextEncoder().encode(String(text==null?'':text)));
+  // encodage haut niveau simplifié : bascule Binary Shift depuis le mode Upper
+  const bits=[]; _azPut(bits,31,5);
+  if(bytes.length<=31)_azPut(bits,bytes.length,5);
+  else { _azPut(bits,0,5); _azPut(bits,bytes.length-31,11); }
+  for(const b of bytes)_azPut(bits,b,8);
+  const eccBits=Math.floor(bits.length*ecc/100)+11;
+  const total=bits.length+eccBits;
+  let compact=true, layers=0, tbl=0, ws=0, stuffed=null;
+  for(let i=0;;i++){
+    if(i>32)throw new Error('texte trop long pour un Aztec');
+    compact=i<=3; layers=compact?i+1:i;
+    tbl=_azTotalBits(layers,compact);
+    if(total>tbl)continue;
+    if(ws!==_AZ_WORD[layers]){ ws=_AZ_WORD[layers]; stuffed=_azStuff(bits,ws); }
+    const usable=tbl-(tbl%ws);
+    if(compact&&stuffed.length>ws*64)continue;
+    if(stuffed.length+eccBits<=usable)break;
+  }
+  const gf=_AZ_GF[ws];
+  const msg=_azCheckWords(stuffed,tbl,ws,gf);
+  const mode=_azMode(compact,layers,Math.floor(stuffed.length/ws));
+  const base=(compact?11:14)+layers*4;
+  const map=new Array(base);
+  let size;
+  if(compact){ size=base; for(let i=0;i<base;i++)map[i]=i; }
+  else { size=base+1+2*Math.floor((Math.floor(base/2)-1)/15);
+    const oc=Math.floor(base/2), ce=Math.floor(size/2);
+    for(let i=0;i<oc;i++){ const off=i+Math.floor(i/15); map[oc-i-1]=ce-off-1; map[oc+i]=ce+off+1; } }
+  const m=[]; for(let i=0;i<size;i++)m.push(new Array(size).fill(0));
+  const set=(r,c)=>{ m[r][c]=1; };
+  // remplissage en spirale, 4 côtés par couche
+  let rowOffset=0;
+  for(let i=0;i<layers;i++){
+    const rowSize=(layers-i)*4+(compact?9:12);
+    for(let j=0;j<rowSize;j++){ const co=j*2;
+      for(let k=0;k<2;k++){
+        if(msg[rowOffset+co+k])            set(map[i*2+k],           map[i*2+j]);
+        if(msg[rowOffset+rowSize*2+co+k])  set(map[i*2+j],           map[base-1-i*2-k]);
+        if(msg[rowOffset+rowSize*4+co+k])  set(map[base-1-i*2-k],    map[base-1-i*2-j]);
+        if(msg[rowOffset+rowSize*6+co+k])  set(map[base-1-i*2-j],    map[i*2+k]);
+      } }
+    rowOffset+=rowSize*8;
+  }
+  // message de mode autour de la cible
+  const ce=Math.floor(size/2);
+  if(compact){ for(let i=0;i<7;i++){ const o=ce-3+i;
+      if(mode[i])set(o,ce-5); if(mode[i+7])set(ce+5,o); if(mode[20-i])set(o,ce+5); if(mode[27-i])set(ce-5,o); } }
+  else { for(let i=0;i<10;i++){ const o=ce-5+i+Math.floor(i/5);
+      if(mode[i])set(o,ce-7); if(mode[i+10])set(ce+7,o); if(mode[29-i])set(o,ce+7); if(mode[39-i])set(ce-7,o); } }
+  // cible centrale + repères d'orientation
+  const bulls=(c,sz)=>{ for(let i=0;i<sz;i+=2)for(let j=c-i;j<=c+i;j++){ set(j,c-i); set(j,c+i); set(c-i,j); set(c+i,j); }
+    set(c-sz,c-sz); set(c-sz+1,c-sz); set(c-sz,c-sz+1);
+    set(c+sz,c-sz); set(c+sz,c-sz+1); set(c+sz,c+sz-1); };
+  if(compact)bulls(ce,5);
+  else { bulls(ce,7);
+    for(let i=0,j=0;i<Math.floor(base/2)-1;i+=15,j+=16){
+      for(let k=ce&1;k<size;k+=2){ set(ce-j,k); set(ce+j,k); set(k,ce-j); set(k,ce+j); } } }
+  return m; }
+
+// ── Widget code-barres réutilisable (framework Canvas GUI) ──────────────────
+// Rend le code dans ses bounds via les mêmes primitives que le rapport.
+class BarcodeWidget extends BaseWidget {
+  constructor(bounds,opts={}){
+    super('barcode_'+(++_idCounter),bounds);
+    this.type=opts.type||'Code128';
+    this.value=opts.value!=null?opts.value:'123456789012';
+    this.showText=opts.showText!==false;
+    this.color=opts.color||'#000000';
+    this.background=opts.background===undefined?'#ffffff':opts.background;
+    this.quiet=opts.quiet==null?8:opts.quiet;      // marge blanche, en px
+    this.qrEcc=opts.qrEcc||'M';
+    this.fontSize=opts.fontSize||10;
+    this.border=opts.border||null;
+    this.cursor='default'; this.tabIndex=-1;
+  }
+  setValue(v){ this.value=v; this.markDirty(); this._emit&&this._emit('change'); return this; }
+  setType(t){ this.type=t; this.markDirty(); this._emit&&this._emit('change'); return this; }
+  // primitives absolues (réutilisables pour un export PDF)
+  prims(){ const b=this.bounds, q=this.quiet;
+    return rptBarcodePrims({barcodeType:this.type, barcodeText:this.showText, color:this.color,
+        size:this.fontSize, qrEcc:this.qrEcc, barcodeBg:this.background||'#ffffff'},
+      this.value, b.x+q, b.y+q, Math.max(8,b.width-2*q), Math.max(8,b.height-2*q)); }
+  render(ctx){ const b=this.bounds; ctx.save();
+    ctx.beginPath(); ctx.rect(b.x,b.y,b.width,b.height); ctx.clip();
+    if(this.background){ ctx.fillStyle=this.background; ctx.fillRect(b.x,b.y,b.width,b.height); }
+    try{ _rptDrawEls(ctx,this.prims()); }
+    catch(e){ ctx.fillStyle='#c33'; ctx.font='11px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(String(e.message).slice(0,40),b.x+b.width/2,b.y+b.height/2); ctx.textAlign='left'; }
+    if(this.border){ ctx.strokeStyle=this.border; ctx.lineWidth=1; ctx.strokeRect(b.x+.5,b.y+.5,b.width-1,b.height-1); }
+    ctx.restore(); }
+}
+window.BarcodeWidget=BarcodeWidget;
+// Galerie : un aperçu par symbologie + éditeur de valeur
+window.openBarcodeWindow=function(){
+  const wm=engine.windowManager;
+  const w=new GUIWindow('▮ Codes-barres', winBounds(760,560,90,60));
+  const ca=w.contentArea; ca._contentSize=()=>({w:0,h:0});
+  const SAMPLE={ Code128:'ABC-1234', EAN128:'0101234567890128', Code39:'CODE39', Code39Ext:'Code39 ext!',
+    Code93:'TEST93', Code93Ext:'Test93 ext!', Std2of5:'1234567', Inter2of5:'123456', Matrix2of5:'123456',
+    EAN13:'978020137962', EAN8:'9638507', UPCA:'03600029145', UPCE0:'042100', UPCE1:'042100',
+    UPCSup2:'12', UPCSup5:'52495', ITF14:'1540014128876', Identcode:'56347311172', Leitcode:'2112345678901',
+    SSCC18:'34012345111111111', Pharmacode:'1234', PostNet:'12345678901', Codabar:'40156',
+    Code11:'1234567890', MSI:'1234567', QR:'https://example.com', QRGS1:'(01)09501101530003',
+    EPCQR:'BCD\n002\n1\nSCT\nBPOTBEB1\nRed Cross\nBE72000000001616\nEUR12.50',
+    DataMatrix:'Data Matrix 123', DataMatrixGS1:'(01)09501101530003(17)260731',
+    Aztec:'Aztec Code — 2026' };
+  const dd=new DropDown(RPT_BARCODE_TYPES.map(t=>RPT_BARCODE_LABEL[t]||t),{x:10,y:10,width:220,height:26});
+  dd.selectedIndex=0;
+  const tb2=new TextBox({x:240,y:10,width:300,height:26}); tb2.placeholder='valeur à encoder';
+  const cbTxt=new CheckBox('Texte lisible',{x:552,y:12,width:130,height:22}); cbTxt.checked=true;
+  const bc=new BarcodeWidget({x:10,y:48,width:700,height:150},{type:'Code128',value:'CODE-128',border:'#c8ccd4'});
+  const lab=new Label('',{x:10,y:204,width:700,height:20});
+  [dd,tb2,cbTxt,bc,lab].forEach(c=>ca.addChild(c));
+  // planche contact : toutes les symbologies en miniature
+  const grid=[]; const mk=()=>{ for(const t of RPT_BARCODE_TYPES){
+      const g=new BarcodeWidget({x:0,y:0,width:160,height:56},{type:t,value:SAMPLE[t]||'12345678',
+        showText:false,quiet:4,border:'#e0e3e9'});
+      const l=new Label(RPT_BARCODE_LABEL[t]||t,{x:0,y:0,width:160,height:16});
+      grid.push([g,l]); ca.addChild(g); ca.addChild(l); } };
+  mk();
+  const sync=()=>{ const t=RPT_BARCODE_TYPES[dd.selectedIndex]||'Code128';
+    bc.type=t; bc.showText=cbTxt.checked;
+    if(!tb2.value||tb2.__auto){ tb2.value=SAMPLE[t]||'12345678'; tb2.__auto=true; tb2.markDirty(); }
+    bc.value=tb2.value;
+    lab.text=(RPT_BARCODE_LABEL[t]||t)+' — valeur encodée : '+bc.value; lab.markDirty();
+    bc.markDirty(); ca.markDirty(); };
+  dd.on('change',sync);
+  tb2.on('change',()=>{ tb2.__auto=false; sync(); }); tb2.on('submit',()=>{ tb2.__auto=false; sync(); });
+  cbTxt.on('change',sync);
+  const orig=w._updateLayout.bind(w); w._updateLayout=function(){ orig();
+    const W=ca.bounds.width;
+    dd.bounds.width=220; tb2.bounds.width=Math.max(120,W-320); cbTxt.bounds.x=W-140;
+    tb2.bounds.x=240; bc.bounds.width=W-20; lab.bounds.width=W-20;
+    const cols=Math.max(1,Math.floor((W-20)/170));
+    grid.forEach(([g,l],i)=>{ const r=Math.floor(i/cols), c=i%cols;
+      g.bounds.x=10+c*170; g.bounds.y=230+r*80; g.bounds.width=160;
+      l.bounds.x=10+c*170; l.bounds.y=230+r*80+58; });
+    ca._contentSize=()=>({w:0,h:230+Math.ceil(grid.length/cols)*80+10});
+    ca.markDirty(); };
+  w._updateLayout(); tb2.__auto=true; sync();
+  wm.addWindow(w); wm._setFocus(tb2); return w;
+};
+
+// ── QR Code (mode octet, versions 1 à 10, niveaux L/M/Q/H) ──────────────────
+// [n° codes de correction par bloc, blocs G1, données G1, blocs G2, données G2]
+const _QR_EC={
+ 1:{L:[7,1,19,0,0],M:[10,1,16,0,0],Q:[13,1,13,0,0],H:[17,1,9,0,0]},
+ 2:{L:[10,1,34,0,0],M:[16,1,28,0,0],Q:[22,1,22,0,0],H:[28,1,16,0,0]},
+ 3:{L:[15,1,55,0,0],M:[26,1,44,0,0],Q:[18,2,17,0,0],H:[22,2,13,0,0]},
+ 4:{L:[20,1,80,0,0],M:[18,2,32,0,0],Q:[26,2,24,0,0],H:[16,4,9,0,0]},
+ 5:{L:[26,1,108,0,0],M:[24,2,43,0,0],Q:[18,2,15,2,16],H:[22,2,11,2,12]},
+ 6:{L:[18,2,68,0,0],M:[16,4,27,0,0],Q:[24,4,19,0,0],H:[28,4,15,0,0]},
+ 7:{L:[20,2,78,0,0],M:[18,4,31,0,0],Q:[18,2,14,4,15],H:[26,4,13,1,14]},
+ 8:{L:[24,2,97,0,0],M:[22,2,38,2,39],Q:[22,4,18,2,19],H:[26,4,14,2,15]},
+ 9:{L:[30,2,116,0,0],M:[22,3,36,2,37],Q:[20,4,16,4,17],H:[24,4,12,4,13]},
+ 10:{L:[18,2,68,2,69],M:[26,4,43,1,44],Q:[24,6,19,2,20],H:[28,6,15,2,16]}};
+const _QR_ALIGN={1:[],2:[6,18],3:[6,22],4:[6,26],5:[6,30],6:[6,34],7:[6,22,38],8:[6,24,42],9:[6,26,46],10:[6,28,50]};
+const _QR_VER={7:'000111110010010100',8:'001000010110111100',9:'001001101010011001',10:'001010010011010011'};
+const _QR_FMT={
+ L:['111011111000100','111001011110011','111110110101010','111100010011101','110011000101111','110001100011000','110110001000001','110100101110110'],
+ M:['101010000010010','101000100100101','101111001111100','101101101001011','100010111111001','100000011001110','100111110010111','100101010100000'],
+ Q:['011010101011111','011000001101000','011111100110001','011101000000110','010010010110100','010000110000011','010111011011010','010101111101101'],
+ H:['001011010001001','001001110111110','001110011100111','001100111010000','000011101100010','000001001010101','000110100001100','000100000111011']};
+const _QR_EXP=new Array(512), _QR_LOG=new Array(256);
+(function(){ let x=1; for(let i=0;i<255;i++){ _QR_EXP[i]=x; _QR_LOG[x]=i; x<<=1; if(x&0x100)x^=0x11d; }
+  for(let i=255;i<512;i++)_QR_EXP[i]=_QR_EXP[i-255]; })();
+function _qrMul(a,b){ return (a===0||b===0)?0:_QR_EXP[_QR_LOG[a]+_QR_LOG[b]]; }
+function _qrGenPoly(n){ let p=[1]; for(let i=0;i<n;i++){ const np=new Array(p.length+1).fill(0);
+    for(let j=0;j<p.length;j++){ np[j]^=p[j]; np[j+1]^=_qrMul(p[j],_QR_EXP[i]); } p=np; } return p; }
+function _qrEC(data,n){ const res=data.concat(new Array(n).fill(0)), g=_qrGenPoly(n);
+  for(let i=0;i<data.length;i++){ const f=res[i]; if(!f)continue;
+    for(let j=0;j<g.length;j++)res[i+j]^=_qrMul(g[j],f); }
+  return res.slice(data.length); }
+const _QR_MASK=[ (r,c)=>(r+c)%2===0, (r,c)=>r%2===0, (r,c)=>c%3===0, (r,c)=>(r+c)%3===0,
+  (r,c)=>(Math.floor(r/2)+Math.floor(c/3))%2===0, (r,c)=>((r*c)%2+(r*c)%3)===0,
+  (r,c)=>(((r*c)%2+(r*c)%3)%2)===0, (r,c)=>(((r+c)%2+(r*c)%3)%2)===0 ];
+function _qrPenalty(m,n){ let p=0;
+  const run=(get)=>{ for(let a=0;a<n;a++){ let k=1; for(let b=1;b<n;b++){ if(get(a,b)===get(a,b-1))k++; else { if(k>=5)p+=3+(k-5); k=1; } } if(k>=5)p+=3+(k-5); } };
+  run((a,b)=>m[a][b]); run((a,b)=>m[b][a]);
+  for(let r=0;r<n-1;r++)for(let c=0;c<n-1;c++){ const v=m[r][c]; if(v===m[r][c+1]&&v===m[r+1][c]&&v===m[r+1][c+1])p+=3; }
+  const p1=[1,0,1,1,1,0,1,0,0,0,0], p2=[0,0,0,0,1,0,1,1,1,0,1];
+  const chk=get=>{ for(let a=0;a<n;a++)for(let b=0;b<=n-11;b++){ let x1=true,x2=true;
+      for(let k=0;k<11;k++){ const v=get(a,b+k); if(v!==p1[k])x1=false; if(v!==p2[k])x2=false; }
+      if(x1)p+=40; if(x2)p+=40; } };
+  chk((a,b)=>m[a][b]); chk((a,b)=>m[b][a]);
+  let dark=0; for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(m[r][c])dark++;
+  p+=Math.floor(Math.abs(dark*100/(n*n)-50)/5)*10;
+  return p; }
+// renvoie une matrice n×n de 0/1, ou null si le texte dépasse la version 10.
+// opts.fnc1 = indicateur FNC1 en 1re position (QR GS1).
+function rptQRMatrix(text,ecl,opts){
+  opts=opts||{};
+  ecl=({L:'L',M:'M',Q:'Q',H:'H'})[String(ecl||'M').toUpperCase()]||'M';
+  const bytes=Array.from(new TextEncoder().encode(String(text)));
+  const pre=opts.fnc1?4:0;                       // 4 bits d'indicateur FNC1 supplémentaires
+  let ver=0, ec=null;
+  for(let v=1;v<=10;v++){ const e=_QR_EC[v][ecl]; const cap=e[1]*e[2]+e[3]*e[4];
+    if(Math.ceil((pre+4+(v<10?8:16)+bytes.length*8)/8)<=cap){ ver=v; ec=e; break; } }
+  if(!ver)return null;
+  const totalData=ec[1]*ec[2]+ec[3]*ec[4];
+  const bits=[], put=(val,len)=>{ for(let i=len-1;i>=0;i--)bits.push((val>>i)&1); };
+  if(opts.fnc1)put(5,4);                         // 0101 = FNC1 en 1re position
+  put(4,4); put(bytes.length, ver<10?8:16); for(const b of bytes)put(b,8);
+  for(let i=0;i<4&&bits.length<totalData*8;i++)bits.push(0);
+  while(bits.length%8)bits.push(0);
+  const dcw=[]; for(let i=0;i<bits.length;i+=8){ let v=0; for(let j=0;j<8;j++)v=(v<<1)|bits[i+j]; dcw.push(v); }
+  for(let i=0;dcw.length<totalData;i++)dcw.push(i%2?0x11:0xEC);
+  const blocks=[], ecb=[]; let off=0;
+  for(let b=0;b<ec[1];b++){ const d=dcw.slice(off,off+ec[2]); off+=ec[2]; blocks.push(d); ecb.push(_qrEC(d,ec[0])); }
+  for(let b=0;b<ec[3];b++){ const d=dcw.slice(off,off+ec[4]); off+=ec[4]; blocks.push(d); ecb.push(_qrEC(d,ec[0])); }
+  const final=[]; const maxD=Math.max(ec[2],ec[4]||0);
+  for(let i=0;i<maxD;i++)for(const b of blocks)if(i<b.length)final.push(b[i]);
+  for(let i=0;i<ec[0];i++)for(const e of ecb)final.push(e[i]);
+  const n=17+4*ver;
+  const m=[], fn=[]; for(let r=0;r<n;r++){ m.push(new Array(n).fill(0)); fn.push(new Array(n).fill(0)); }
+  const setF=(r,c,v)=>{ if(r<0||c<0||r>=n||c>=n)return; m[r][c]=v?1:0; fn[r][c]=1; };
+  const finder=(r0,c0)=>{ for(let r=-1;r<=7;r++)for(let c=-1;c<=7;c++){
+    const on=(r>=0&&r<=6&&(c===0||c===6))||(c>=0&&c<=6&&(r===0||r===6))||(r>=2&&r<=4&&c>=2&&c<=4);
+    setF(r0+r,c0+c,on); } };
+  finder(0,0); finder(0,n-7); finder(n-7,0);
+  for(let i=8;i<n-8;i++){ setF(6,i,i%2===0); setF(i,6,i%2===0); }
+  for(const r of _QR_ALIGN[ver])for(const c of _QR_ALIGN[ver]){
+    if((r<=8&&c<=8)||(r<=8&&c>=n-9)||(r>=n-9&&c<=8))continue;
+    for(let dr=-2;dr<=2;dr++)for(let dc=-2;dc<=2;dc++)setF(r+dr,c+dc,Math.max(Math.abs(dr),Math.abs(dc))!==1); }
+  for(let i=0;i<9;i++){ if(i!==6){ setF(8,i,0); setF(i,8,0); } }
+  for(let i=0;i<8;i++){ setF(8,n-1-i,0); setF(n-1-i,8,0); }
+  setF(n-8,8,1);
+  if(ver>=7){ const vb=_QR_VER[ver];
+    for(let i=0;i<18;i++){ const bit=vb[17-i]==='1'; const r=Math.floor(i/3), c=i%3; setF(r,n-11+c,bit); setF(n-11+c,r,bit); } }
+  let dir=-1, row=n-1, bi=0; const tot=final.length*8;
+  for(let col=n-1;col>0;col-=2){ if(col===6)col--;
+    for(;;){ for(let k=0;k<2;k++){ const c=col-k;
+        if(!fn[row][c]){ let v=0; if(bi<tot){ v=(final[bi>>3]>>(7-(bi&7)))&1; bi++; } m[row][c]=v; } }
+      row+=dir; if(row<0||row>=n){ row-=dir; dir=-dir; break; } } }
+  let best=null, bestP=Infinity;
+  for(let mk=0;mk<8;mk++){
+    const cand=m.map(r=>r.slice());
+    for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(!fn[r][c]&&_QR_MASK[mk](r,c))cand[r][c]^=1;
+    const f=_QR_FMT[ecl][mk];
+    for(let i=0;i<15;i++){ const b=f[14-i]==='1'?1:0;
+      if(i<6)cand[i][8]=b; else if(i<8)cand[i+1][8]=b; else cand[n-15+i][8]=b;
+      if(i<8)cand[8][n-1-i]=b; else if(i<9)cand[8][15-i]=b; else cand[8][14-i]=b; }
+    cand[n-8][8]=1;
+    const p=_qrPenalty(cand,n); if(p<bestP){ bestP=p; best=cand; } }
+  return best;
+}
 // Données d'un graphique : catégories (labelField) + 1..n séries (valueField ou valueFields[]).
 // Chaque série accepte un champ OU une expression ; agrégation optionnelle par catégorie.
 function _rptChartData(it,report,rows){
@@ -14322,6 +15147,65 @@ function _rptRasterRich(el){ try{ const s=2;
   const cv=document.createElement('canvas'); cv.width=Math.max(2,el.w*s); cv.height=Math.max(2,el.h*s);
   const cx=cv.getContext('2d'); cx.fillStyle='#fff'; cx.fillRect(0,0,cv.width,cv.height); cx.scale(s,s);
   rptDrawRich(cx,{...el,x:0,y:0}); return _dataURLtoJpeg(cv.toDataURL('image/jpeg',0.94),cv.width,cv.height); }catch(e){ return null; } }
+// ── Texte riche → primitives vectorielles (texte réel dans le PDF) ──────────
+// Réutilise la mise en page de RichTextBox puis convertit chaque segment en
+// primitive `text` / `rect` / `line` / `image`, au lieu de rastériser la boîte.
+function rptRichPrims(el){
+  const rb=rptRichBox(); const out=[];
+  try{
+    rb.blocks = el.blocks && el.blocks.length ? el.blocks : rb.blocks;
+    rb._ver=(rb._ver||0)+1; rb._layoutCache=null; rb._scrollY=0; rb.paged=false;
+    rb.setBounds({x:0,y:0,width:Math.max(8,el.w),height:Math.max(8,el.h)});
+    const t=getTheme().textBox;
+    const px=((t.padding&&t.padding.x!=null)?t.padding.x:4)+2, py=((t.padding&&t.padding.y!=null)?t.padding.y:3)+2;
+    const cw=Math.max(20,el.w-2-px*2);
+    const L=rb._layout(cw);
+    const OX=el.x+px, OY=el.y+py;
+    const baseText=colorToCSS(t.normal.text), defSize=t.font.size;
+    const csOf=c=>typeof c==='string'?c:colorToCSS(c);
+    const para=(lines,ox,oy,base)=>{ for(const ln of lines){ const ly=oy+ln.yOff, baseY=ly+rb._baselineOff(ln);
+      for(const sg of ln.segs){ const sx=ox+ln.dx+sg.x;
+        if(sg.type==='tab')continue;
+        if(sg.type==='img'||sg.type==='widget'){ const iy=ly+(ln.h-sg.h)/2;
+          if(sg.type==='img'&&sg.tok&&sg.tok.src)out.push({kind:'image',x:sx,y:iy,w:sg.w,h:sg.h,src:sg.tok.src,fit:'stretch'});
+          else out.push({kind:'rect',x:sx,y:iy,w:sg.w,h:sg.h,fill:'#eceff3'});
+          continue; }
+        const st=sg.style, ff=rb._fontFor(st,base), sz=ff.size;
+        const cy = st.sup?baseY-sz*0.42 : st.sub?baseY+sz*0.16 : baseY;
+        const col = st.link?'#0645AD' : (st.color?csOf(st.color):baseText);
+        if(st.bg)out.push({kind:'rect',x:sx,y:Math.round(cy-sz),w:sg.w,h:Math.round(sz*1.3),fill:csOf(st.bg)});
+        const mk=(tx,str,ww)=>({kind:'text',x:tx,y:cy-sz,w:ww,h:sz*1.3,text:str,color:col,font:ff.family,
+          size:sz,bold:ff.weight==='bold',italic:ff.style==='italic',align:'left',valign:'top'});
+        // paragraphe justifié : les espaces sont élargis, on repositionne caractère par caractère
+        if(ln.just){ const b0=sg.pos-ln.startPos; let k=0; for(const ch of sg.str){ out.push(mk(ox+ln.dx+ln.caretX[b0+k],ch,sz*2)); k++; } }
+        else out.push(mk(sx,sg.str,sg.w+6));
+        if(st.u||st.link)out.push({kind:'line',x1:sx,y1:cy+sz*0.14,x2:sx+sg.w,y2:cy+sz*0.14,color:col,width:Math.max(1,sz/14)});
+        if(st.s)out.push({kind:'line',x1:sx,y1:cy-sz*0.30,x2:sx+sg.w,y2:cy-sz*0.30,color:col,width:Math.max(1,sz/16)});
+        if(st.link)out.push({kind:'link',x:sx,y:cy-sz,w:sg.w,h:sz*1.3,uri:st.link});
+      } } };
+    for(const bl of L.blocks){
+      if(bl.kind==='p'){
+        if(bl.marker){ const l0=bl.lines[0], by=bl.y+l0.yOff+rb._baselineOff(l0);
+          out.push({kind:'text',x:bl.x+(l0.dx||0)-16,y:by-defSize,w:20,h:defSize*1.3,
+            text:bl.marker==='ul'?'•':(bl.num+'.'),color:baseText,size:defSize,align:'left',valign:'top'}); }
+        para(bl.lines,bl.x,bl.y,bl.base);
+      } else {
+        const tb=bl.t, blk=rb.blocks[bl.bi]||{}; const cb=blk.cellBg||{}, cbd=blk.cellBorder||{};
+        for(let r=0;r<tb.rows;r++)for(let c=0;c<tb.cols;c++){ if(tb.covered.has(r+','+c))continue;
+          const key=r+','+c, cx=bl.x+tb.colX[c], cy=bl.y+tb.rowY[r], cw2=tb.cellW(r,c), ch2=tb.cellH(r,c);
+          if(cb[key])out.push({kind:'rect',x:cx,y:cy,w:cw2,h:ch2,fill:csOf(cb[key])});
+          const bc=cbd[key]?csOf(cbd[key]):'#9aa0a8';
+          out.push({kind:'line',x1:cx,y1:cy,x2:cx+cw2,y2:cy,color:bc,width:1});
+          out.push({kind:'line',x1:cx,y1:cy+ch2,x2:cx+cw2,y2:cy+ch2,color:bc,width:1});
+          out.push({kind:'line',x1:cx,y1:cy,x2:cx,y2:cy+ch2,color:bc,width:1});
+          out.push({kind:'line',x1:cx+cw2,y1:cy,x2:cx+cw2,y2:cy+ch2,color:bc,width:1});
+          const lp=tb.cellLay[r][c]; if(lp)para(lp.lines,cx+tb.padX,cy+tb.padY,lp.base); }
+      } }
+    // translation vers la position réelle de l'élément
+    for(const e of out){ if(e.kind==='line'){ e.x1+=OX; e.x2+=OX; e.y1+=OY; e.y2+=OY; } else { e.x+=OX; e.y+=OY; } }
+  }catch(e){ return [{kind:'line',x1:el.x,y1:el.y,x2:el.x+el.w,y2:el.y+el.h,color:'#c00',width:1}]; }
+  return [{kind:'group', clip:{x:el.x,y:el.y,w:el.w,h:el.h}, items:out}];
+}
 
 // ── Formes vectorielles : réutilise le catalogue de 136 formes (SHAPE_REG/makeShape) ──
 const _rptShapeCache=new Map();
@@ -14383,7 +15267,17 @@ function rptDrawPage(ctx,page,ox,oy,scale,opts={}){
   ctx.save(); ctx.translate(ox,oy); ctx.scale(scale,scale);
   if(opts.paper!==false){ ctx.fillStyle='#fff'; ctx.fillRect(0,0,page.w,page.h);
     ctx.strokeStyle='#c8c8c8'; ctx.lineWidth=1/scale; ctx.strokeRect(0,0,page.w,page.h); }
-  for(const el of page.elements){ switch(el.kind){
+  _rptDrawEls(ctx,page.elements,opts);
+  ctx.restore();
+}
+function _rptDrawEls(ctx,els,opts={}){
+  for(const el of els){ switch(el.kind){
+    case 'group': { ctx.save();
+      if(el.opacity!=null)ctx.globalAlpha=el.opacity;
+      if(el.clip){ ctx.beginPath(); ctx.rect(el.clip.x,el.clip.y,el.clip.w,el.clip.h); ctx.clip(); }
+      if(el.rot){ ctx.translate(el.cx,el.cy); ctx.rotate(el.rot*Math.PI/180); ctx.translate(-el.cx,-el.cy); }
+      _rptDrawEls(ctx,el.items,opts); ctx.restore(); break; }
+    case 'link': break;   // annotation PDF uniquement
     case 'rect': ctx.fillStyle=el.fill||'#000'; ctx.fillRect(el.x,el.y,el.w,el.h); break;
     case 'line': ctx.strokeStyle=el.color||'#000'; ctx.lineWidth=el.width||1; ctx.beginPath(); ctx.moveTo(el.x1,el.y1); ctx.lineTo(el.x2,el.y2); ctx.stroke(); break;
     case 'text': rptDrawText(ctx,el); break;
@@ -14396,11 +15290,11 @@ function rptDrawPage(ctx,page,ox,oy,scale,opts={}){
         ctx.drawImage(im,dx,dy,dw,dh); ctx.restore(); } else { ctx.strokeStyle='#bbb'; ctx.strokeRect(el.x,el.y,el.w,el.h); } break; }
     case 'chart': _rptDrawChart(ctx,el); break;
   } }
-  ctx.restore();
 }
 
-// ── Écrivain PDF vectoriel minimal (PDF 1.4, flux non compressés, images JPEG) ──
+// ── Écrivain PDF vectoriel minimal (PDF 1.7, flux non compressés, images JPEG) ──
 class PDFWriter {
+  static VERSION='1.7';
   // caractères typographiques hors Latin-1 → code d'octet WinAnsi (0x80-0x9F)
   static _WINANSI={ 8364:0x80, 8218:0x82, 402:0x83, 8222:0x84, 8230:0x85, 8224:0x86, 8225:0x87, 710:0x88, 8240:0x89, 352:0x8A, 8249:0x8B, 338:0x8C, 381:0x8E, 8216:0x91, 8217:0x92, 8220:0x93, 8221:0x94, 8226:0x95, 8211:0x96, 8212:0x97, 732:0x98, 8482:0x99, 353:0x9A, 8250:0x9B, 339:0x9C, 382:0x9E, 376:0x9F };
   constructor(){ this.objs=[]; this.fontObj={}; }
@@ -14411,79 +15305,122 @@ class PDFWriter {
     if(fam.includes('times')||fam.includes('serif')&&!fam.includes('sans')) return b&&i?'Times-BoldItalic':b?'Times-Bold':i?'Times-Italic':'Times-Roman';
     if(fam.includes('courier')||fam.includes('mono')||fam.includes('consol')) return b&&i?'Courier-BoldOblique':b?'Courier-Bold':i?'Courier-Oblique':'Courier';
     return b&&i?'Helvetica-BoldOblique':b?'Helvetica-Bold':i?'Helvetica-Oblique':'Helvetica'; }
+  // état graphique nommé pour la transparence (filigrane)
+  _gs(pe,a){ const key='GS'+String(a).replace(/[^0-9]/g,''); if(pe.gsAlpha[key])return key;
+    pe.gsAlpha[key]=this._add(`<</Type/ExtGState/CA ${a}/ca ${a}>>`); return key; }
+  _xobjImg(pe,jpg){ const on=this._add(`<</Type/XObject/Subtype/Image/Width ${jpg.w}/Height ${jpg.h}/ColorSpace/DeviceRGB/BitsPerComponent 8/Filter/DCTDecode/Length ${jpg.bytes.length}>>\nstream\n${jpg.bytes}\nendstream`);
+    const nm='Im'+pe.xobjs.length; pe.xobjs.push([nm,on]); return nm; }
+  // flux de contenu d'une liste de primitives (récursif : `group` = q/cm/Q)
+  _content(els,K,Hp,pe){
+    let cs=''; const toY=y=>Hp-y*K;
+    for(const el of els){ switch(el.kind){
+      case 'group': {
+        cs+='q\n';
+        if(el.opacity!=null)cs+=`/${this._gs(pe,el.opacity)} gs\n`;
+        if(el.clip)cs+=`${(el.clip.x*K).toFixed(2)} ${(toY(el.clip.y+el.clip.h)).toFixed(2)} ${(el.clip.w*K).toFixed(2)} ${(el.clip.h*K).toFixed(2)} re W n\n`;
+        if(el.rot){ const th=el.rot*Math.PI/180, co=Math.cos(th), si=Math.sin(th), cx=el.cx*K, cy=toY(el.cy);
+          cs+=`${co.toFixed(6)} ${(-si).toFixed(6)} ${si.toFixed(6)} ${co.toFixed(6)} ${(cx-cx*co-cy*si).toFixed(3)} ${(cy+cx*si-cy*co).toFixed(3)} cm\n`; }
+        cs+=this._content(el.items,K,Hp,pe); cs+='Q\n'; break; }
+      // lien hypertexte → annotation /Link (pas de contenu dessiné)
+      case 'link': if(el.uri)pe.annots.push({uri:el.uri,
+        rect:`${(el.x*K).toFixed(2)} ${(toY(el.y+el.h)).toFixed(2)} ${((el.x+el.w)*K).toFixed(2)} ${(toY(el.y)).toFixed(2)}`}); break;
+      // texte riche : converti en vrai texte vectoriel (plus d'image rastérisée)
+      case 'richtext': cs+=this._content(rptRichPrims(el),K,Hp,pe); break;
+      case 'rect': { const c=_rptHexN(el.fill); cs+=`${c.r} ${c.g} ${c.b} rg\n${(el.x*K).toFixed(2)} ${(toY(el.y+el.h)).toFixed(2)} ${(el.w*K).toFixed(2)} ${(el.h*K).toFixed(2)} re f\n`; break; }
+      case 'line': { const c=_rptHexN(el.color); cs+=`${c.r} ${c.g} ${c.b} RG ${((el.width||1)*K).toFixed(3)} w\n${(el.x1*K).toFixed(2)} ${(toY(el.y1)).toFixed(2)} m ${(el.x2*K).toFixed(2)} ${(toY(el.y2)).toFixed(2)} l S\n`; break; }
+      case 'ellipse': case 'shape': {
+        const k=el.shapeKind||el.shape||'rect';
+        // rect / ellipse simples → vectoriel ; les 130+ autres formes du catalogue → rastérisées
+        if(el.kind==='shape' && k!=='rect' && k!=='ellipse' && k!=='roundRect'){
+          const jpg=_rptRasterShape(el);
+          if(jpg){ const nm=this._xobjImg(pe,jpg);
+            cs+=`q ${(el.w*K).toFixed(2)} 0 0 ${(el.h*K).toFixed(2)} ${(el.x*K).toFixed(2)} ${(toY(el.y+el.h)).toFixed(2)} cm /${nm} Do Q\n`; }
+          break; }
+        const c=_rptHexN(el.stroke||'#000'); const f=el.fill&&el.fill!=='none'?_rptHexN(el.fill):null;
+        if(k==='ellipse'||el.kind==='ellipse'){ cs+=_pdfEllipse(el.x*K,toY(el.y+el.h),el.w*K,el.h*K); }
+        else cs+=`${(el.x*K).toFixed(2)} ${(toY(el.y+el.h)).toFixed(2)} ${(el.w*K).toFixed(2)} ${(el.h*K).toFixed(2)} re\n`;
+        if(f){ cs+=`${f.r} ${f.g} ${f.b} rg\n`; } cs+=`${c.r} ${c.g} ${c.b} RG ${((el.sw||1)*K).toFixed(3)} w\n${f?'B':'S'}\n`; break; }
+      case 'text': { if(!el.text)break; const bf=PDFWriter._baseFont(el); pe.usedFonts[bf]=this._font(bf);
+        const c=_rptHexN(el.color||'#000'); const sz=(el.size||12)*K;
+        this._pdfText(el,bf,sz,c,K,Hp,s=>cs+=s); break; }
+      case 'image': { const jpg=_rptImgJpeg(el.src); if(jpg){ const nm=this._xobjImg(pe,jpg);
+        cs+=`q ${(el.w*K).toFixed(2)} 0 0 ${(el.h*K).toFixed(2)} ${(el.x*K).toFixed(2)} ${(toY(el.y+el.h)).toFixed(2)} cm /${nm} Do Q\n`; } break; }
+      case 'chart': { const jpg=_rptRasterChart(el); if(jpg){ const nm=this._xobjImg(pe,jpg);
+        cs+=`q ${(el.w*K).toFixed(2)} 0 0 ${(el.h*K).toFixed(2)} ${(el.x*K).toFixed(2)} ${(toY(el.y+el.h)).toFixed(2)} cm /${nm} Do Q\n`; } break; }
+    } }
+    return cs; }
   // pages: [{w,h,elements}] en px (origine haut-gauche). Convertit en pt (origine bas-gauche).
-  build(pages){
-    const K=RPT_PXPT; const pageObjNums=[]; const kids=[];
-    const pagesObjNum = this.objs.length+1 /*placeholder*/;
-    // on réserve d'abord les objets contenu+page, puis Pages, puis Catalog
-    const pageEntries=[];
+  build(pages,opts={}){
+    const K=RPT_PXPT; const pageEntries=[];
     for(const pg of pages){ const Wp=pg.w*K, Hp=pg.h*K;
-      const usedFonts={}; const xobjs=[]; let cs='';
-      const toY=y=>Hp-y*K;
-      for(const el of pg.elements){ switch(el.kind){
-        case 'rect': { const c=_rptHexN(el.fill); cs+=`${c.r} ${c.g} ${c.b} rg\n${(el.x*K).toFixed(2)} ${(toY(el.y+el.h)).toFixed(2)} ${(el.w*K).toFixed(2)} ${(el.h*K).toFixed(2)} re f\n`; break; }
-        case 'line': { const c=_rptHexN(el.color); cs+=`${c.r} ${c.g} ${c.b} RG ${(el.width||1)*K} w\n${(el.x1*K).toFixed(2)} ${(toY(el.y1)).toFixed(2)} m ${(el.x2*K).toFixed(2)} ${(toY(el.y2)).toFixed(2)} l S\n`; break; }
-        case 'ellipse': case 'shape': {
-          const k=el.shapeKind||el.shape||'rect';
-          // rect / ellipse simples → vectoriel ; les 130+ autres formes du catalogue → rastérisées
-          if(el.kind==='shape' && k!=='rect' && k!=='ellipse' && k!=='roundRect'){
-            const jpg=_rptRasterShape(el);
-            if(jpg){ const on=this._add(`<</Type/XObject/Subtype/Image/Width ${jpg.w}/Height ${jpg.h}/ColorSpace/DeviceRGB/BitsPerComponent 8/Filter/DCTDecode/Length ${jpg.bytes.length}>>\nstream\n${jpg.bytes}\nendstream`);
-              const nm='Im'+xobjs.length; xobjs.push([nm,on]);
-              cs+=`q ${(el.w*K).toFixed(2)} 0 0 ${(el.h*K).toFixed(2)} ${(el.x*K).toFixed(2)} ${(toY(el.y+el.h)).toFixed(2)} cm /${nm} Do Q\n`; }
-            break; }
-          const c=_rptHexN(el.stroke||'#000'); const f=el.fill&&el.fill!=='none'?_rptHexN(el.fill):null;
-          if(k==='ellipse'||el.kind==='ellipse'){ cs+=_pdfEllipse(el.x*K,toY(el.y+el.h),el.w*K,el.h*K); }
-          else cs+=`${(el.x*K).toFixed(2)} ${(toY(el.y+el.h)).toFixed(2)} ${(el.w*K).toFixed(2)} ${(el.h*K).toFixed(2)} re\n`;
-          if(f){ cs+=`${f.r} ${f.g} ${f.b} rg\n`; } cs+=`${c.r} ${c.g} ${c.b} RG ${(el.sw||1)*K} w\n${f?'B':'S'}\n`; break; }
-        case 'text': { const bf=PDFWriter._baseFont(el); usedFonts[bf]=this._font(bf); const c=_rptHexN(el.color||'#000'); const sz=(el.size||12)*K;
-          this._pdfText(el,bf,sz,c,K,Hp,s=>cs+=s); break; }
-        case 'image': { const jpg=_rptImgJpeg(el.src); if(jpg){ const on=this._add(`<</Type/XObject/Subtype/Image/Width ${jpg.w}/Height ${jpg.h}/ColorSpace/DeviceRGB/BitsPerComponent 8/Filter/DCTDecode/Length ${jpg.bytes.length}>>\nstream\n${jpg.bytes}\nendstream`);
-          const nm='Im'+xobjs.length; xobjs.push([nm,on]); const dw=el.w*K,dh=el.h*K; cs+=`q ${dw.toFixed(2)} 0 0 ${dh.toFixed(2)} ${(el.x*K).toFixed(2)} ${(toY(el.y+el.h)).toFixed(2)} cm /${nm} Do Q\n`; } break; }
-        case 'richtext': { const jpg=_rptRasterRich(el); if(jpg){ const on=this._add(`<</Type/XObject/Subtype/Image/Width ${jpg.w}/Height ${jpg.h}/ColorSpace/DeviceRGB/BitsPerComponent 8/Filter/DCTDecode/Length ${jpg.bytes.length}>>\nstream\n${jpg.bytes}\nendstream`);
-          const nm='Im'+xobjs.length; xobjs.push([nm,on]);
-          cs+=`q ${(el.w*K).toFixed(2)} 0 0 ${(el.h*K).toFixed(2)} ${(el.x*K).toFixed(2)} ${(toY(el.y+el.h)).toFixed(2)} cm /${nm} Do Q\n`; } break; }
-        case 'chart': { const jpg=_rptRasterChart(el); if(jpg){ const on=this._add(`<</Type/XObject/Subtype/Image/Width ${jpg.w}/Height ${jpg.h}/ColorSpace/DeviceRGB/BitsPerComponent 8/Filter/DCTDecode/Length ${jpg.bytes.length}>>\nstream\n${jpg.bytes}\nendstream`);
-          const nm='Im'+xobjs.length; xobjs.push([nm,on]); const dw=el.w*K,dh=el.h*K; cs+=`q ${dw.toFixed(2)} 0 0 ${dh.toFixed(2)} ${(el.x*K).toFixed(2)} ${(toY(el.y+el.h)).toFixed(2)} cm /${nm} Do Q\n`; } break; }
-      } }
-      const contentNum=this._add(`<</Length ${cs.length}>>\nstream\n${cs}endstream`);
-      pageEntries.push({contentNum,usedFonts,xobjs,Wp,Hp});
+      const pe={usedFonts:{},xobjs:[],annots:[],gsAlpha:{},Wp,Hp};
+      const cs=this._content(pg.elements,K,Hp,pe);
+      pe.contentNum=this._add(`<</Length ${cs.length}>>\nstream\n${cs}endstream`);
+      pageEntries.push(pe);
     }
-    // objet Pages (n° connu après coup)
-    const pagesNum=this.objs.length+1+pages.length+1-1; // sera recalculé : on ajoute les pages puis Pages
-    // créer les objets Page
     const pageNums=[];
-    for(const pe of pageEntries){ const fonts=Object.entries(pe.usedFonts).map(([bf,n])=>`/${bf.replace(/[^A-Za-z0-9-]/g,'')} ${n} 0 R`).join('');
+    for(const pe of pageEntries){
       const fontRes=Object.entries(pe.usedFonts).map(([bf,n])=>`/${bf.replace(/[^A-Za-z0-9-]/g,'')} ${n} 0 R`).join(' ');
       const xobjRes=pe.xobjs.map(([nm,n])=>`/${nm} ${n} 0 R`).join(' ');
-      const res=`<</Font<<${fontRes}>>${pe.xobjs.length?`/XObject<<${xobjRes}>>`:''}/ProcSet[/PDF/Text/ImageC]>>`;
-      const pn=this._add(`<</Type/Page/Parent __PAGES__ 0 R/MediaBox[0 0 ${pe.Wp.toFixed(2)} ${pe.Hp.toFixed(2)}]/Resources${res}/Contents ${pe.contentNum} 0 R>>`);
+      const gsRes=Object.entries(pe.gsAlpha).map(([nm,n])=>`/${nm} ${n} 0 R`).join(' ');
+      const res=`<</Font<<${fontRes}>>${pe.xobjs.length?`/XObject<<${xobjRes}>>`:''}${gsRes?`/ExtGState<<${gsRes}>>`:''}/ProcSet[/PDF/Text/ImageC]>>`;
+      const annotNums=pe.annots.map(a=>this._add(`<</Type/Annot/Subtype/Link/Rect[${a.rect}]/Border[0 0 0]/A<</Type/Action/S/URI/URI(${PDFWriter._esc(a.uri)})>>>>`));
+      const annotRes=annotNums.length?`/Annots[${annotNums.map(n=>n+' 0 R').join(' ')}]`:'';
+      const pn=this._add(`<</Type/Page/Parent __PAGES__ 0 R/MediaBox[0 0 ${pe.Wp.toFixed(2)} ${pe.Hp.toFixed(2)}]/Resources${res}${annotRes}/Contents ${pe.contentNum} 0 R>>`);
       pageNums.push(pn); }
     const pagesObj=this._add(`<</Type/Pages/Kids[${pageNums.map(n=>n+' 0 R').join(' ')}]/Count ${pageNums.length}>>`);
-    // remplacer __PAGES__
     for(const pn of pageNums){ this.objs[pn-1]=this.objs[pn-1].replace('__PAGES__',pagesObj); }
-    const catalog=this._add(`<</Type/Catalog/Pages ${pagesObj} 0 R>>`);
-    return this._serialize(catalog);
+    // ── signets (plan du document) : un par en-tête de groupe ──
+    let outRef=''; const bm=(opts.bookmarks||[]).filter(b=>b&&b.title);
+    if(bm.length&&pageNums.length){
+      const itemNums=bm.map(()=>this._add(''));            // objets réservés
+      const outlines=this._add(`<</Type/Outlines/First ${itemNums[0]} 0 R/Last ${itemNums[itemNums.length-1]} 0 R/Count ${bm.length}>>`);
+      bm.forEach((b,i)=>{ const pi=Math.min(pageNums.length-1,Math.max(0,b.page|0));
+        const parts=[`/Title (${PDFWriter._esc(b.title)})`,`/Parent ${outlines} 0 R`,
+          `/Dest[${pageNums[pi]} 0 R /XYZ 0 ${pageEntries[pi].Hp.toFixed(2)} 0]`];
+        if(i>0)parts.push(`/Prev ${itemNums[i-1]} 0 R`);
+        if(i<bm.length-1)parts.push(`/Next ${itemNums[i+1]} 0 R`);
+        this.objs[itemNums[i]-1]=`<<${parts.join('')}>>`; });
+      outRef=`/Outlines ${outlines} 0 R/PageMode/UseOutlines`;
+    }
+    const catalog=this._add(`<</Type/Catalog/Version/${PDFWriter.VERSION}/Pages ${pagesObj} 0 R${outRef}>>`);
+    const info=this._add(`<</Title (${PDFWriter._esc(opts.title||'Rapport')})/Author (${PDFWriter._esc(opts.author||'')})/Creator (Canvas GUI Report Designer)/Producer (Canvas GUI Report Designer)/CreationDate (D:${_rptPdfDate()})>>`);
+    return this._serialize(catalog,info);
   }
-  _pdfText(el,bf,sz,c,K,Hp,emit){ // gère align + wrap simple + multiligne
-    const fam=bf.replace(/[^A-Za-z0-9-]/g,''); const lh=(el.size||12)*1.28*K;
+  _pdfText(el,bf,sz,c,K,Hp,emit){ // gère align + wrap simple + multiligne + souligné
+    const fam=bf.replace(/[^A-Za-z0-9-]/g,'');
     const _m=_rptMeasureCtx; _m.font=_rptFontCSS(el); const lines=_rptWrap(_m,el.text||'',el.w);
-    const totalH=lines.length*(el.size||12)*1.28;
+    const fs=el.size||12, totalH=lines.length*fs*1.28;
     let topY; if(el.valign==='top')topY=el.y; else if(el.valign==='bottom')topY=el.y+el.h-totalH; else topY=el.y+(el.h-totalH)/2;
     emit(`${c.r} ${c.g} ${c.b} rg\nBT /${fam} ${sz.toFixed(2)} Tf\n`);
-    let ly=topY+(el.size||12);
-    for(const ln of lines){ const w=_m.measureText(ln).width; let tx=el.x; if(el.align==='center')tx=el.x+(el.w-w)/2; else if(el.align==='right')tx=el.x+el.w-w;
-      const py=Hp-ly*K; emit(`1 0 0 1 ${(tx*K).toFixed(2)} ${py.toFixed(2)} Tm (${PDFWriter._esc(ln)}) Tj\n`); ly+=(el.size||12)*1.28; }
+    const unders=[]; let ly=topY+fs;
+    for(const ln of lines){ const w=_m.measureText(ln).width; let tx=el.x;
+      if(el.align==='center')tx=el.x+(el.w-w)/2; else if(el.align==='right')tx=el.x+el.w-w;
+      emit(`1 0 0 1 ${(tx*K).toFixed(2)} ${(Hp-ly*K).toFixed(2)} Tm (${PDFWriter._esc(ln)}) Tj\n`);
+      if(el.underline)unders.push([tx,ly+fs*0.16,w]);
+      ly+=fs*1.28; }
     emit('ET\n');
+    // le soulignement est un tracé : il doit sortir du bloc BT/ET
+    for(const u of unders)emit(`${c.r} ${c.g} ${c.b} rg\n${(u[0]*K).toFixed(2)} ${(Hp-u[1]*K).toFixed(2)} ${(u[2]*K).toFixed(2)} ${Math.max(0.4,fs/14*K).toFixed(2)} re f\n`);
   }
-  _serialize(catalogNum){ let out='%PDF-1.4\n%\xE2\xE3\xCF\xD3\n'; const offs=[];
+  _serialize(catalogNum,infoNum){ let out='%PDF-'+PDFWriter.VERSION+'\n%\xE2\xE3\xCF\xD3\n'; const offs=[];
     for(let i=0;i<this.objs.length;i++){ offs[i]=out.length; out+=`${i+1} 0 obj\n${this.objs[i]}\nendobj\n`; }
     const xref=out.length; out+=`xref\n0 ${this.objs.length+1}\n0000000000 65535 f \n`;
     for(let i=0;i<this.objs.length;i++){ out+=String(offs[i]).padStart(10,'0')+' 00000 n \n'; }
-    out+=`trailer\n<</Size ${this.objs.length+1}/Root ${catalogNum} 0 R>>\nstartxref\n${xref}\n%%EOF`;
+    out+=`trailer\n<</Size ${this.objs.length+1}/Root ${catalogNum} 0 R${infoNum?`/Info ${infoNum} 0 R`:''}>>\nstartxref\n${xref}\n%%EOF`;
     return out; }
 }
-function _rptHexN(hex){ if(!hex)return {r:0,g:0,b:0}; const h=String(hex).replace('#',''); if(h.length<6)return {r:0,g:0,b:0};
+function _rptPdfDate(d){ d=d||new Date(); const p=x=>String(x).padStart(2,'0');
+  return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`; }
+// couleur PDF (0..1) depuis '#rgb', '#rrggbb' ou 'rgb()/rgba()' — les couleurs de
+// thème arrivent sous forme rgb(), il faut donc les accepter aussi.
+function _rptHexN(col){ if(!col)return {r:0,g:0,b:0};
+  const s=String(col).trim();
+  const m=s.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/i);
+  if(m)return { r:(+m[1]/255).toFixed(3), g:(+m[2]/255).toFixed(3), b:(+m[3]/255).toFixed(3) };
+  let h=s.replace('#','');
+  if(h.length===3)h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+  if(h.length<6)return {r:0,g:0,b:0};
   return { r:(parseInt(h.slice(0,2),16)/255).toFixed(3), g:(parseInt(h.slice(2,4),16)/255).toFixed(3), b:(parseInt(h.slice(4,6),16)/255).toFixed(3) }; }
 function _pdfEllipse(x,y,w,h){ const kx=w/2*0.5523, ky=h/2*0.5523, cx=x+w/2, cy=y+h/2, rx=w/2, ry=h/2;
   return `${(cx-rx).toFixed(2)} ${cy.toFixed(2)} m `+
@@ -14500,20 +15437,56 @@ function _u8FromLatin1(str){ const u=new Uint8Array(str.length); for(let i=0;i<s
 
 // ── export / impression ─────────────────────────────────────────────────────
 function rptBuildPDFBytes(reportOrReports){ const reports=Array.isArray(reportOrReports)?reportOrReports:[reportOrReports];
-  let all=[]; for(const r of reports){ all=all.concat(ReportEngine.layout(r).pages); }
-  const w=new PDFWriter(); return _u8FromLatin1(w.build(all)); }
+  let all=[], bms=[];
+  for(const r of reports){ const L=ReportEngine.layout(r); const off=all.length;
+    all=all.concat(L.pages);
+    for(const b of (L.bookmarks||[]))bms.push({title:b.title,page:off+b.page,level:b.level}); }
+  const w=new PDFWriter();
+  return _u8FromLatin1(w.build(all,{bookmarks:bms, title:reports[0]&&reports[0].name, author:(reports[0]&&reports[0].author)||''})); }
+// ── autres formats d'export : CSV et HTML (jeu de données mis en forme) ──────
+function _rptDownload(text,mime,filename){ const blob=new Blob([text],{type:mime});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000); return blob; }
+// colonnes du 1er tableau du rapport, sinon toutes les clés du jeu de données
+function _rptExportCols(report){ for(const b of report.bands||[]){ for(const it of (b.items||[])){
+    if(it.type==='table'&&it.columns&&it.columns.length)return it.columns.map(c=>({h:c.header||c.expr||'',e:c.expr||'',f:c.format||''})); } }
+  return rptFields(report).map(f=>({h:f,e:f,f:''})); }
+function _rptExportRows(report){ const cols=_rptExportCols(report), data=rptData(report);
+  const base={ report, params:report.parameters||{}, data, aggData:data, vars:{page:1,total:1} }; base.calc=_rptCalcProxy(report,base);
+  const fmt=(v,f)=>{ if(f&&f[0]==='n')return _rptFmtNum(_rptNum(v),parseInt(f.slice(1))||0);
+    if(f==='cur')return _rptFmtNum(_rptNum(v),2)+' €'; if(f&&f[0]==='d')return _rptFmtDate(v,'dd/MM/yyyy'); return _rptStr(v); };
+  return { cols, rows:data.map((r,i)=>cols.map(c=>fmt(c.e?rptEvalExpr(c.e,{...base,row:r,index:i}):'',c.f))) }; }
+function rptExportCSV(report,filename,sep){ const S=sep||';'; const {cols,rows}=_rptExportRows(report);
+  const q=v=>{ const s=_rptStr(v); return /["\n;,\t]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
+  const txt='﻿'+[cols.map(c=>q(c.h)).join(S)].concat(rows.map(r=>r.map(q).join(S))).join('\r\n');
+  return _rptDownload(txt,'text/csv;charset=utf-8',filename||((report.name||'rapport')+'.csv')); }
+function rptExportHTML(report,filename){ const {cols,rows}=_rptExportRows(report);
+  const esc=s=>_rptStr(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  const html=`<!doctype html><meta charset="utf-8"><title>${esc(report.name||'Rapport')}</title>`+
+    `<style>body{font:14px system-ui;margin:24px;color:#222}h1{font-size:20px;color:#1a3b6e}`+
+    `table{border-collapse:collapse;width:100%}th{background:#1a3b6e;color:#fff;text-align:left}`+
+    `th,td{border:1px solid #ccd;padding:5px 8px}tr:nth-child(even) td{background:#f4f7fc}</style>`+
+    `<h1>${esc(report.name||'Rapport')}</h1><table><thead><tr>${cols.map(c=>`<th>${esc(c.h)}</th>`).join('')}</tr></thead>`+
+    `<tbody>${rows.map(r=>`<tr>${r.map(v=>`<td>${esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+  return _rptDownload(html,'text/html;charset=utf-8',filename||((report.name||'rapport')+'.html')); }
 function rptExportPDF(reportOrReports,filename){ const bytes=rptBuildPDFBytes(reportOrReports);
   const blob=new Blob([bytes],{type:'application/pdf'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename||'rapport.pdf'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),4000); return blob; }
 function rptPrint(report){ const {pages}=ReportEngine.layout(report); const scale=2;
-  const imgs=[]; for(const pg of pages){ const cv=document.createElement('canvas'); cv.width=pg.w*scale; cv.height=pg.h*scale; const cx=cv.getContext('2d'); cx.scale(scale,scale); rptDrawPage(cx,pg,0,0,1,{paper:true}); imgs.push(cv.toDataURL('image/png')); }
-  const land=report.page.orientation==='landscape';
-  const win=window.open('','_print'); if(!win)return; const html=`<html><head><title>${report.name||'Rapport'}</title><style>@page{size:${land?'landscape':'portrait'};margin:0}body{margin:0}img{width:100%;display:block;page-break-after:always}</style></head><body>${imgs.map(u=>`<img src="${u}">`).join('')}</body></html>`;
+  // chaque page porte sa propre taille (l'orientation peut changer en cours de rapport)
+  const imgs=[]; for(const pg of pages){ const cv=document.createElement('canvas'); cv.width=pg.w*scale; cv.height=pg.h*scale;
+    const cx=cv.getContext('2d'); cx.scale(scale,scale); rptDrawPage(cx,pg,0,0,1,{paper:true});
+    imgs.push({u:cv.toDataURL('image/png'), w:pg.w/RPT_MM, h:pg.h/RPT_MM}); }
+  const win=window.open('','_print'); if(!win)return;
+  const html=`<html><head><title>${report.name||'Rapport'}</title><style>@page{size:auto;margin:0}body{margin:0}`+
+    `img{display:block;page-break-after:always}</style></head><body>`+
+    imgs.map(i=>`<img src="${i.u}" style="width:${i.w.toFixed(1)}mm;height:${i.h.toFixed(1)}mm">`).join('')+
+    `</body></html>`;
   win.document.write(html); win.document.close(); setTimeout(()=>{ win.focus(); win.print(); },400); }
 
 // ============================================================================
 //  DESIGNER  (WYSIWYG à bandes)
 // ============================================================================
-const RPT_ITEM_TYPES=[ ['text','Texte','🅣'],['richtext','Texte riche','✎'],['pageInfo','N° de page','#'],['line','Ligne','─'],['image','Image','🖼'],['shape','Forme','▭'],['chart','Graphique','📊'],['table','Tableau','▦'] ];
+const RPT_ITEM_TYPES=[ ['text','Texte','🅣'],['richtext','Texte riche','✎'],['pageInfo','N° de page','#'],['line','Ligne','─'],['image','Image','🖼'],['shape','Forme','▭'],['chart','Graphique','📊'],['table','Tableau','▦'],['barcode','Code-barres','▮'] ];
 class ReportDesignerWidget extends BaseWidget {
   constructor(bounds,report){ super('rptdes_'+(++_idCounter),bounds); this.report=report||rptDefaultReport();
     this.zoom=1; this.scrollY=0; this.scrollX=0; this.GUT=104; this.PAD=24;
@@ -14533,7 +15506,13 @@ class ReportDesignerWidget extends BaseWidget {
   // it.x est relatif à la zone imprimable (le moteur fait inner.x+it.x) → le designer
   // doit décaler de la marge gauche, sinon les éléments paraissent collés au bord.
   _mx(){ return (this.report.page.margins.left||0)*RPT_MM; }
-  _itemRect(bl,it){ const ox=this._ox(),oy=this._oy(),z=this.zoom; return { x:ox+(this._mx()+it.x)*z, y:oy+(bl.top+it.y)*z, w:it.w*z, h:it.h*z }; }
+  // largeur affichée : `fullWidth` étire l'élément sur toute la largeur imprimable de la bande.
+  // Utilisée par la sélection, les poignées, le hit-test ET le dessin — sinon le cadre de
+  // sélection n'englobe pas l'élément réellement imprimé.
+  _effW(it){ if(!it.fullWidth)return it.w;
+    if(it.type==='table')return this._tblWidth(it);
+    return Math.max(4,this._bandInnerW()-(it.x||0)); }
+  _itemRect(bl,it){ const ox=this._ox(),oy=this._oy(),z=this.zoom; return { x:ox+(this._mx()+it.x)*z, y:oy+(bl.top+it.y)*z, w:this._effW(it)*z, h:it.h*z }; }
   _bandAtY(py){ const L=this._bandLayout(); for(const bl of L){ if(py>=bl.top&&py<bl.top+bl.height)return bl; } return null; }
   _toPage(sx,sy){ return { x:(sx-this._ox())/this.zoom-this._mx(), y:(sy-this._oy())/this.zoom }; }
   _hitItem(sx,sy){ const L=this._bandLayout();
@@ -14546,14 +15525,21 @@ class ReportDesignerWidget extends BaseWidget {
   _sepAtY(sy){ const L=this._bandLayout(); const oy=this._oy(),z=this.zoom; for(const bl of L){ const sepY=oy+(bl.top+bl.height)*z; if(Math.abs(sy-sepY)<4 && sy>=this.bounds.y)return bl; } return null; }
   _snap(v){ return this.snap?Math.round(v/this.grid)*this.grid:Math.round(v); }
   // ── tableaux : bords de colonnes / lignes (portage de richtextbox.html) ──────
-  _tblWidth(it){ return (it.columns||[]).reduce((s,c)=>s+(c.width||0),0); }
+  // largeur imprimable d'une bande (page moins marges) — référence de `fullWidth`
+  _bandInnerW(){ const m=this.report.page.margins; return this._pageW()-(m.left+m.right)*RPT_MM; }
+  // largeurs effectives : `fullWidth` étire proportionnellement sur toute la bande
+  _colWidths(it){ const cols=it.columns||[], raw=cols.map(c=>c.width||0);
+    if(!it.fullWidth)return raw;
+    const sum=raw.reduce((a,b)=>a+b,0)||1, avail=Math.max(20,this._bandInnerW()-(it.x||0));
+    return raw.map(w=>w*avail/sum); }
+  _tblWidth(it){ return this._colWidths(it).reduce((s,w)=>s+w,0); }
   _tblRows(it,z){ const rh=(it.rowHeight||22)*z; return Math.max(1,Math.floor((it.h*z)/Math.max(1,rh))); }
   _tblEdgeAt(sx,sy){ const M=4, z=this.zoom, L=this._bandLayout();
     for(let bi=L.length-1;bi>=0;bi--){ const bl=L[bi];
       for(let i=bl.band.items.length-1;i>=0;i--){ const it=bl.band.items[i]; if(it.type!=='table')continue;
-        const r=this._itemRect(bl,it), cols=it.columns||[], rh=(it.rowHeight||22)*z, tw=this._tblWidth(it)*z;
+        const r=this._itemRect(bl,it), cols=it.columns||[], W=this._colWidths(it), rh=(it.rowHeight||22)*z, tw=this._tblWidth(it)*z;
         if(sy>=r.y-M&&sy<=r.y+r.h+M){ let cx=r.x;
-          for(let c=0;c<cols.length;c++){ cx+=(cols[c].width||0)*z; if(Math.abs(sx-cx)<=M)return {it,bl,type:'col',index:c}; } }
+          for(let c=0;c<cols.length;c++){ cx+=W[c]*z; if(Math.abs(sx-cx)<=M)return {it,bl,type:'col',index:c}; } }
         if(sx>=r.x-M&&sx<=r.x+tw+M){ const n=this._tblRows(it,z);
           for(let k=1;k<=n;k++){ const by=r.y+k*rh; if(by>r.y+r.h+M)break; if(Math.abs(sy-by)<=M)return {it,bl,type:'row',index:k-1}; } }
       } }
@@ -14563,8 +15549,8 @@ class ReportDesignerWidget extends BaseWidget {
     for(let bi=L.length-1;bi>=0;bi--){ const bl=L[bi];
       for(let i=bl.band.items.length-1;i>=0;i--){ const it=bl.band.items[i]; if(it.type!=='table')continue;
         const r=this._itemRect(bl,it); if(sy<r.y||sy>r.y+r.h)continue;
-        let cx=r.x; const cols=it.columns||[];
-        for(let c=0;c<cols.length;c++){ const w=(cols[c].width||0)*z; if(sx>=cx&&sx<cx+w)return {it,bl,index:c}; cx+=w; } } }
+        let cx=r.x; const cols=it.columns||[], W=this._colWidths(it);
+        for(let c=0;c<cols.length;c++){ const w=W[c]*z; if(sx>=cx&&sx<cx+w)return {it,bl,index:c}; cx+=w; } } }
     return null; }
   _onDown(e){ const sx=e.x,sy=e.y;
     if(sx<this.bounds.x+this.GUT){ // gutter : sélectionne la bande
@@ -14572,15 +15558,15 @@ class ReportDesignerWidget extends BaseWidget {
     // ordre : coin de l'élément > séparateur de bande > bord de colonne/ligne > poignée latérale > élément
     // (le bas d'un tableau coïncide avec le bas de sa bande — le coin doit rester saisissable)
     const hk=this._handleAt(sx,sy);
-    if(hk&&hk.length===2){ this._drag={mode:'resize',hk,bl:this._selBL(),startX:sx,startY:sy,o:{...this.sel}}; return; }
+    if(hk&&hk.length===2){ this._drag={mode:'resize',hk,bl:this._selBL(),startX:sx,startY:sy,o:{...this.sel,w:this._effW(this.sel)}}; return; }
     const sep=this._sepAtY(sy); if(sep){ this._drag={mode:'band',bl:sep,startY:sy,startH:sep.band.height}; return; }
     const te=this._tblEdgeAt(sx,sy);
     if(te){ this.sel=te.it; this.selBand=null; this._notify();
       this._drag = te.type==='col'
-        ? {mode:'col',it:te.it,index:te.index,startX:sx,widths:(te.it.columns||[]).map(c=>c.width||0)}
+        ? {mode:'col',it:te.it,index:te.index,startX:sx,widths:this._colWidths(te.it)}
         : {mode:'row',it:te.it,index:te.index,startY:sy,startH:te.it.rowHeight||22};
       this.markDirty(); return; }
-    if(hk){ this._drag={mode:'resize',hk,bl:this._selBL(),startX:sx,startY:sy,o:{...this.sel}}; return; }
+    if(hk){ this._drag={mode:'resize',hk,bl:this._selBL(),startX:sx,startY:sy,o:{...this.sel,w:this._effW(this.sel)}}; return; }
     const hit=this._hitItem(sx,sy);
     if(hit){ this.sel=hit.it; this.selBand=null; this._notify();
       this._drag={mode:'move',bl:hit.bl,startX:sx,startY:sy,ox:hit.it.x,oy:hit.it.y}; this.markDirty(); }
@@ -14607,6 +15593,8 @@ class ReportDesignerWidget extends BaseWidget {
     if(d.mode==='row'){ const n=d.index+1; d.it.rowHeight=Math.max(10,Math.round(d.startH+(sy-d.startY)/z/n)); this.markDirty(); this._notify(true); return; }
     if(d.mode==='move'){ this.sel.x=this._snap(d.ox+(sx-d.startX)/z); this.sel.y=this._snap(d.oy+(sy-d.startY)/z); this.markDirty(); this._notify(true); return; }
     if(d.mode==='resize'){ const dx=(sx-d.startX)/z, dy=(sy-d.startY)/z, o=d.o, hk=d.hk; let x=o.x,y=o.y,w=o.w,h=o.h;
+      // redimensionner horizontalement = l'utilisateur reprend la main sur la largeur
+      if(this.sel.fullWidth&&(hk.includes('e')||hk.includes('w')))this.sel.fullWidth=false;
       if(hk.includes('e'))w=o.w+dx; if(hk.includes('s'))h=o.h+dy; if(hk.includes('w')){ x=o.x+dx; w=o.w-dx; } if(hk.includes('n')){ y=o.y+dy; h=o.h-dy; }
       this.sel.x=this._snap(x); this.sel.y=this._snap(y); this.sel.w=Math.max(4,this._snap(w)); this.sel.h=Math.max(this.sel.type==='line'?0:4,this._snap(h)); this.markDirty(); this._notify(true); return; }
   }
@@ -14626,7 +15614,8 @@ class ReportDesignerWidget extends BaseWidget {
   addItem(type,extra){ let band=this.selBand||(this.sel&&this._selBL()&&this._selBL().band)||this.report.bands.find(b=>b.type==='detail')||this.report.bands[0];
     const defs={ text:{w:160,h:22,text:'Texte'}, richtext:{w:280,h:80,blocks:null}, pageInfo:{w:140,h:16,text:'Page {PageNumber}/{TotalPages}',align:'right'}, line:{w:200,h:0,borderColor:'#000000',borderWidth:1},
       image:{w:120,h:80}, shape:{w:120,h:60,shape:'rect',bg:'#eef2fb',borderColor:'#1a3b6e'}, chart:{w:240,h:150,chartType:'Bar'},
-      table:{w:this._pageW()-(this.report.page.margins.left+this.report.page.margins.right)*RPT_MM,h:120,repeat:true,rowHeight:22,headerBg:'#1a3b6e',headerColor:'#ffffff',columns:[{header:'Colonne',expr:rptFields(this.report)[0]||'',width:160,align:'left'}]} };
+      barcode:{w:180,h:60,barcodeType:'Code128',text:'123456789012',barcodeText:true},
+      table:{w:this._bandInnerW(),h:120,repeat:true,rowHeight:22,fullWidth:true,headerBg:'#1a3b6e',headerColor:'#ffffff',columns:[{header:'Colonne',expr:rptFields(this.report)[0]||'',width:160,align:'left'}]} };
     const it=rptItem(type,Object.assign({x:20,y:6},defs[type]||{},extra||{}));
     if(type==='shape'&&it.shapeKind&&it.shapeKind!=='rect')it.bg=it.bg||'#eef2fb';
     band.items.push(it); this.sel=it; this.selBand=null; this._notify(); this.markDirty(); return it; }
@@ -14673,13 +15662,23 @@ class ReportDesignerWidget extends BaseWidget {
       for(const h of this._handles(r)){ ctx.fillStyle='#fff'; ctx.strokeStyle='#2f7bff'; ctx.lineWidth=1; ctx.fillRect(h.x-3,h.y-3,6,6); ctx.strokeRect(h.x-3,h.y-3,6,6); } } }
     ctx.restore();
   }
-  _drawItem(ctx,bl,it){ const ox=this._ox(),oy=this._oy(),z=this.zoom; const x=ox+(this._mx()+it.x)*z, y=oy+(bl.top+it.y)*z, w=it.w*z, h=it.h*z;
+  _drawItem(ctx,bl,it){ const rot=+it.rot||0;
+    if(rot){ // aperçu de la rotation : même centre que le moteur de mise en page
+      const ox=this._ox(),oy=this._oy(),z=this.zoom;
+      const cx=ox+(this._mx()+it.x+it.w/2)*z, cy=oy+(bl.top+it.y+it.h/2)*z;
+      ctx.save(); ctx.translate(cx,cy); ctx.rotate(rot*Math.PI/180); ctx.translate(-cx,-cy);
+      this._drawItemRaw(ctx,bl,it); ctx.restore(); return; }
+    this._drawItemRaw(ctx,bl,it); }
+  _drawItemRaw(ctx,bl,it){ const ox=this._ox(),oy=this._oy(),z=this.zoom; const ew=this._effW(it);
+    const x=ox+(this._mx()+it.x)*z, y=oy+(bl.top+it.y)*z, w=ew*z, h=it.h*z;
     const scope={ report:this.report, params:this.report.parameters||{}, data:rptData(this.report), aggData:rptData(this.report), row:rptData(this.report)[0]||{}, index:0, vars:{page:1,total:1} };
+    if(it.type==='barcode'){ const val=it.expr?_rptStr(rptEvalExpr(it.expr,scope)):rptInterp(it.text,scope);
+      ctx.save(); ctx.translate(x,y); ctx.scale(z,z); _rptDrawEls(ctx,rptBarcodePrims(it,val,0,0,ew,it.h)); ctx.restore(); return; }
     if(it.bg && it.type!=='shape'){ ctx.fillStyle=it.bg; ctx.fillRect(x,y,w,h); }
     if(it.type==='line'){ ctx.strokeStyle=it.borderColor||'#000'; ctx.lineWidth=(it.borderWidth||1)*z; ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+w,y+h); ctx.stroke(); return; }
     if(it.type==='table'){ this._drawTablePreview(ctx,it,x,y,w,h,z); return; }
     if(it.type==='richtext'){
-      if(it.blocks&&it.blocks.length){ ctx.save(); ctx.translate(x,y); ctx.scale(z,z); rptDrawRich(ctx,{x:0,y:0,w:it.w,h:it.h,blocks:it.blocks}); ctx.restore(); }
+      if(it.blocks&&it.blocks.length){ ctx.save(); ctx.translate(x,y); ctx.scale(z,z); rptDrawRich(ctx,{x:0,y:0,w:ew,h:it.h,blocks:it.blocks}); ctx.restore(); }
       else { ctx.strokeStyle='#b9c0c9'; ctx.setLineDash([3,3]); ctx.strokeRect(x,y,w,h); ctx.setLineDash([]);
         ctx.fillStyle='#8d94a0'; ctx.font='11px system-ui'; ctx.textAlign='center'; ctx.textBaseline='middle';
         ctx.fillText('✎ texte riche — double-clic pour éditer',x+w/2,y+h/2); ctx.textAlign='left'; }
@@ -14689,23 +15688,40 @@ class ReportDesignerWidget extends BaseWidget {
         legend:it.legend,grid:it.grid,valueLabels:it.valueLabels,bg:it.bg}); return; }
     if(it.type==='image'){ if(it.src){ const im=_rptGetImg(it.src,()=>this.markDirty()); if(im._ok)ctx.drawImage(im,x,y,w,h); else { ctx.strokeStyle='#bbb'; ctx.strokeRect(x,y,w,h); } } else { ctx.strokeStyle='#bbb'; ctx.setLineDash([3,3]); ctx.strokeRect(x,y,w,h); ctx.setLineDash([]); ctx.fillStyle='#999'; ctx.font='11px system-ui'; ctx.textAlign='center'; ctx.fillText('🖼 image',x+w/2,y+h/2); } return; }
     if(it.type==='shape'){ rptDrawShape(ctx,{x,y,w,h,shapeKind:it.shapeKind||it.shape||'rect',
-      fill:it.bg||'none', stroke:it.borderColor||'#000', sw:(it.borderWidth==null?1:it.borderWidth)*z, dash:it.dash, rot:it.rot||0,
+      fill:it.bg||'none', stroke:it.borderColor||'#000', sw:(it.borderWidth==null?1:it.borderWidth)*z, dash:it.dash,
       text:rptInterp(it.text,scope), textColor:it.color}); return; }
     // text / pageInfo
     const raw= it.expr?_rptStr(rptEvalExpr(it.expr,scope)) : rptInterp(it.text,scope);
     rptDrawText(ctx,{x,y,w,h,text:raw,color:it.color,font:it.font,size:(it.size||12)*z,bold:it.bold,italic:it.italic,underline:it.underline,align:it.align,valign:it.valign});
   }
-  _drawTablePreview(ctx,it,x,y,w,h,z){ const cols=it.columns||[]; const rowH=(it.rowHeight||22)*z; let cx=x;
+  _drawTablePreview(ctx,it,x,y,w,h,z){ const cols=it.columns||[], W=this._colWidths(it); const rowH=(it.rowHeight||22)*z;
     ctx.textBaseline='middle'; ctx.font=(it.size||11)*z+'px system-ui';
-    for(const c of cols){ const cw=c.width*z;
-      ctx.fillStyle=it.headerBg||'#1a3b6e'; ctx.fillRect(cx,y,cw,rowH); ctx.fillStyle=it.headerColor||'#fff'; ctx.textAlign='left'; ctx.fillText(String(c.header||'').slice(0,20),cx+4,y+rowH/2);
-      ctx.strokeStyle='#ccc'; ctx.strokeRect(cx,y,cw,rowH); cx+=cw; }
-    const data=rptData(this.report); let ry=y+rowH;
-    for(let i=0;i<data.length&&ry+rowH<=y+h;i++){ cx=x; const sc={report:this.report,params:this.report.parameters,data,aggData:data,row:data[i],index:i,vars:{page:1,total:1}};
-      for(const c of cols){ const cw=c.width*z; ctx.fillStyle='#fff'; ctx.fillRect(cx,ry,cw,rowH); ctx.strokeStyle='#e2e2e2'; ctx.strokeRect(cx,ry,cw,rowH);
-        ctx.fillStyle=c.color||'#222'; ctx.textAlign=c.align==='right'?'right':(c.align==='center'?'center':'left');
-        const v=c.expr?rptEvalExpr(c.expr,sc):(c.text||''); const tx=c.align==='right'?cx+cw-4:(c.align==='center'?cx+cw/2:cx+4);
-        ctx.fillText(String(v instanceof Date?_rptFmtDate(v,'dd/MM/yyyy'):v).slice(0,24),tx,ry+rowH/2); cx+=cw; }
+    // en-tête : les fusions horizontales sont rendues comme à l'impression
+    const hm={}; for(const m of (it.headerMerges||[]))hm[m.c|0]={cs:Math.max(1,m.cs|0),text:m.text};
+    let i=0, cx=x;
+    while(i<cols.length){ const sp=hm[i], cs=sp?Math.min(sp.cs,cols.length-i):1;
+      let cw=0; for(let k=0;k<cs;k++)cw+=W[i+k]*z;
+      const label=(sp&&sp.text!=null)?sp.text:(cols[i].header||'');
+      ctx.fillStyle=it.headerBg||'#1a3b6e'; ctx.fillRect(cx,y,cw,rowH);
+      ctx.fillStyle=it.headerColor||'#fff'; ctx.textAlign=(sp&&cs>1)?'center':'left';
+      ctx.fillText(String(label).slice(0,28),(sp&&cs>1)?cx+cw/2:cx+4,y+rowH/2);
+      ctx.strokeStyle='#ccc'; ctx.strokeRect(cx,y,cw,rowH); cx+=cw; i+=cs; }
+    const data=rptData(this.report); let ry=y+rowH; const prev={};
+    for(let r=0;r<data.length&&ry+rowH<=y+h;r++){ cx=x;
+      const sc={report:this.report,params:this.report.parameters,data,aggData:data,row:data[r],index:r,vars:{page:1,total:1}};
+      for(let k=0;k<cols.length;k++){ const c=cols[k], cw=W[k]*z;
+        const v=c.expr?rptEvalExpr(c.expr,sc):(c.text||'');
+        const txt=String(v instanceof Date?_rptFmtDate(v,'dd/MM/yyyy'):v);
+        const dup=!!(c.mergeDup&&prev[k]===txt);
+        ctx.fillStyle='#fff'; ctx.fillRect(cx,ry,cw,rowH);
+        ctx.strokeStyle='#e2e2e2';
+        // cellule fusionnée : pas de filet supérieur, pas de valeur réimprimée
+        if(dup){ ctx.beginPath(); ctx.moveTo(cx,ry); ctx.lineTo(cx,ry+rowH); ctx.moveTo(cx+cw,ry); ctx.lineTo(cx+cw,ry+rowH); ctx.moveTo(cx,ry+rowH); ctx.lineTo(cx+cw,ry+rowH); ctx.stroke(); }
+        else { ctx.strokeRect(cx,ry,cw,rowH);
+          ctx.fillStyle=c.color||'#222'; ctx.textAlign=c.align==='right'?'right':(c.align==='center'?'center':'left');
+          const tx=c.align==='right'?cx+cw-4:(c.align==='center'?cx+cw/2:cx+4);
+          ctx.fillText(txt.slice(0,24),tx,ry+rowH/2); }
+        prev[k]=txt; cx+=cw; }
       ry+=rowH; }
     ctx.textAlign='left';
   }
@@ -14771,24 +15787,55 @@ window.openReportDesignerWindow=function(report){ report=report||rptDefaultRepor
   const propGrid=new PropertyGrid({x:ca.bounds.width-RP,y:0,width:RP,height:ca.bounds.height*0.62},{}); ca.addChild(propGrid);
   const tree=new TreeView({x:ca.bounds.width-RP,y:ca.bounds.height*0.62,width:RP,height:ca.bounds.height*0.38},{nodes:[]}); ca.addChild(tree);
 
+  // setNodes() (et non `tree.nodes=`) : c'est lui qui reconstruit les lignes affichées.
+  // Icônes : 🗃 = champ lié aux données, ƒ = champ calculé, • = élément statique.
   const rebuildTree=()=>{
-    tree.nodes=[ {label:'Champs de données',icon:'🗂',expanded:true,children:rptFields(report).map(f=>({label:f,icon:'ƒ',_field:f}))},
-      {label:'Bandes',icon:'▤',expanded:true,children:report.bands.map(bd=>({label:RPT_BAND_LABEL[bd.type]||bd.type,icon:'▬',children:bd.items.map(it=>({label:it.type+' · '+((it.text||it.expr||'').slice(0,14)),icon:'•',_item:it}))}))} ];
-    tree.markDirty&&tree.markDirty(); };
-  tree.on&&tree.on('select',()=>{ const n=tree.selected||tree._selNode; });
+    const calc=(report.calculatedFields||[]).map(c=>c.name);
+    const bound=rptFields(report).filter(f=>!calc.includes(f));
+    const itemIcon=it=>it.expr?'ƒ':(/\{[^}]+\}/.test(String(it.text||''))?'🗃':'•');
+    tree.setNodes([
+      {label:'Champs de données',icon:'🗂',expanded:true,children:bound.map(f=>({label:f,icon:'🗃',_field:f}))},
+      {label:'Champs calculés',icon:'ƒ',expanded:true,children:calc.map(f=>({label:f,icon:'ƒ',_field:f}))},
+      {label:'Bandes',icon:'▤',expanded:true,children:report.bands.map(bd=>({label:RPT_BAND_LABEL[bd.type]||bd.type,icon:'▬',expanded:true,_band:bd,
+        children:(bd.items||[]).map(it=>({label:it.type+' · '+String(it.text||it.expr||'').slice(0,14),icon:itemIcon(it),_item:it}))}))} ]); };
+  // sélectionner un nœud de l'arbre sélectionne l'élément / la bande dans le designer
+  let _fromTree=false;
+  tree.on&&tree.on('change',()=>{ const n=tree._sel; if(!n||(!n._item&&!n._band))return;
+    _fromTree=true;
+    if(n._item){ des.sel=n._item; des.selBand=null; } else { des.selBand=n._band; des.sel=null; }
+    des._notify(); des.markDirty(); _fromTree=false; });
 
   // panneau propriétés : descripteurs selon la sélection
   const descFor=(it,band)=>{ const D=[]; const push=(cat,label,type,obj,key,extra={})=>D.push(Object.assign({cat,label,type,get:()=>obj[key],set:v=>{obj[key]=v; des.markDirty();}},extra));
     if(band&&!it){ push('Bande','type','string',band,'type',{readonly:true}); push('Bande','height','number',band,'height',{min:4}); push('Bande','visible','bool',band,'visible');
       if(band.type==='detail')push('Bande','répéter par ligne','bool',band,'repeat');
+      push('Bande','imprimer si (expr.)','string',band,'printWhen');
+      push('Saut de page','avant la bande','bool',band,'startNewPage');
+      push('Saut de page','après la bande','bool',band,'newPageAfter');
+      push('Saut de page','orientation page','enum',band,'orientation',{options:['','portrait','landscape']});
+      push('Saut de page','garder groupé','bool',band,'keepTogether');
       if(band.type==='groupHeader'||band.type==='groupFooter'){
         const fs=rptFields(report); push('Groupe','grouper par','enum',band,'groupBy',{options:fs.length?fs:['']});
         push('Groupe','expression','string',band,'groupBy');
-        if(band.type==='groupHeader'){ push('Groupe','saut de page','bool',band,'startNewPage'); push('Groupe','répéter en-tête tableau','bool',band,'repeatTableHeader'); } }
+        if(band.type==='groupHeader')push('Groupe','répéter en-tête tableau','bool',band,'repeatTableHeader'); }
       return D; }
     if(!it)return D;
     push('Général','type','string',it,'type',{readonly:true});
     push('Position','x','number',it,'x'); push('Position','y','number',it,'y'); push('Position','w','number',it,'w',{min:0}); push('Position','h','number',it,'h',{min:0});
+    push('Position','rotation (°)','number',it,'rot',{min:-360,max:360,step:5,decimals:1});
+    D.push({cat:'Position',label:'pleine largeur de bande',type:'bool',get:()=>!!it.fullWidth,
+      set:v=>{ it.fullWidth=!!v;
+        if(v)it.w=des._effW(it);
+        else if(it.type==='table')it.w=(it.columns||[]).reduce((s,c)=>s+(c.width||0),0);
+        des.markDirty(); des._notify(true); }});
+    push('Impression','imprimer si (expr.)','string',it,'printWhen');
+    push('Impression','hauteur auto','bool',it,'canGrow');
+    push('Impression','masquer si identique','bool',it,'suppressDup');
+    push('Impression','lien (URL/expr.)','string',it,'link');
+    push('Format cond.','condition','string',it,'condExpr');
+    push('Format cond.','couleur texte','string',it,'condColor');
+    push('Format cond.','couleur fond','string',it,'condBg');
+    push('Format cond.','gras','bool',it,'condBold');
     if(it.type==='text'||it.type==='pageInfo'){ push('Contenu','text','string',it,'text'); push('Contenu','expr','string',it,'expr');
       push('Texte','police','enum',it,'font',{options:['Segoe UI','Arial','Times New Roman','Courier New','Georgia','Verdana']});
       push('Texte','taille','number',it,'size',{min:5,max:96}); push('Texte','gras','bool',it,'bold'); push('Texte','italique','bool',it,'italic'); push('Texte','souligné','bool',it,'underline');
@@ -14796,8 +15843,16 @@ window.openReportDesignerWindow=function(report){ report=report||rptDefaultRepor
       push('Couleur','texte','string',it,'color'); push('Couleur','fond','string',it,'bg'); }
     if(it.type==='line'||it.type==='shape'){ push('Trait','couleur','string',it,'borderColor'); push('Trait','épaisseur','number',it,'borderWidth',{min:0,step:0.5,decimals:1}); }
     if(it.type==='shape'){ push('Forme','forme','string',it,'shapeKind',{readonly:true});
-      push('Forme','rotation (rad)','number',it,'rot',{step:0.1,decimals:2});
       push('Forme','texte','string',it,'text'); push('Couleur','fond','string',it,'bg'); }
+    if(it.type==='barcode'){
+      // l'enum affiche le libellé, la valeur stockée reste la clé technique
+      D.push({cat:'Code-barres',label:'symbologie',type:'enum',options:RPT_BARCODE_TYPES.map(t=>RPT_BARCODE_LABEL[t]||t),
+        get:()=>RPT_BARCODE_LABEL[it.barcodeType||'Code128']||it.barcodeType,
+        set:v=>{ const k=RPT_BARCODE_TYPES.find(t=>(RPT_BARCODE_LABEL[t]||t)===v); if(k)it.barcodeType=k; des.markDirty(); }});
+      push('Code-barres','valeur','string',it,'text'); push('Code-barres','expression','string',it,'expr');
+      push('Code-barres','texte visible','bool',it,'barcodeText');
+      push('Code-barres','correction QR','enum',it,'qrEcc',{options:['L','M','Q','H']});
+      push('Couleur','barres','string',it,'color'); }
     if(it.type==='chart'){ push('Graphique','type','enum',it,'chartType',{options:RPT_CHART_TYPES}); push('Graphique','titre','string',it,'chartTitle');
       const fs=rptFields(report);
       push('Graphique','champ libellé','enum',it,'labelField',{options:fs});
@@ -14810,10 +15865,13 @@ window.openReportDesignerWindow=function(report){ report=report||rptDefaultRepor
     if(it.type==='image'){ push('Image','ajustement','enum',it,'fit',{options:['contain','stretch']});
       D.push({cat:'Image',label:'source',type:'string',readonly:true,get:()=>it.src?('image ('+Math.round(it.src.length/1024)+' Ko) — double-clic pour changer'):'(vide) — double-clic pour choisir',set:()=>{}}); }
     if(it.type==='table'){ push('Tableau','hauteur ligne','number',it,'rowHeight',{min:8}); push('Tableau','répéter','bool',it,'repeat'); push('Tableau','en-tête ch. page','bool',it,'headerOnEachPage');
+      push('Tableau','filets horizontaux','bool',it,'gridLines');
       D.push({cat:'Tableau',label:'colonnes',type:'string',readonly:true,get:()=>(it.columns||[]).length+' — double-clic sur une colonne',set:()=>{}});
       push('Tableau','lignes alternées','string',it,'rowAltBg'); push('Couleur','fond en-tête','string',it,'headerBg'); push('Couleur','texte en-tête','string',it,'headerColor'); push('Tableau','pied total','bool',it,'showFooter'); }
     return D; };
-  des.onSelChange=(it,band,quiet)=>{ if(quiet){ propGrid._refresh&&propGrid._refresh(); propGrid.markDirty(); return; } propGrid.setTarget(des,descFor(it,band)); if(!it&&!band)propGrid.setTarget(des,[]); rebuildTree(); };
+  des.onSelChange=(it,band,quiet)=>{ if(quiet){ propGrid._refresh&&propGrid._refresh(); propGrid.markDirty(); return; }
+    propGrid.setTarget(des,descFor(it,band)); if(!it&&!band)propGrid.setTarget(des,[]);
+    if(!_fromTree)rebuildTree(); };   // reconstruire depuis l'arbre effacerait sa sélection
 
   // ── MenuBar ──
   const mb=new MenuBar({x:0,y:0,width:b.width,height:26},{menus:[
@@ -14826,6 +15884,8 @@ window.openReportDesignerWindow=function(report){ report=report||rptDefaultRepor
       {separator:true},
       {label:'Aperçu…',icon:'👁',action:()=>openReportViewerWindow(report)},
       {label:'Exporter en PDF',icon:'📕',action:()=>rptExportPDF(report,(report.name||'rapport')+'.pdf')},
+      {label:'Exporter en CSV',icon:'📑',action:()=>rptExportCSV(report)},
+      {label:'Exporter en HTML',icon:'🌐',action:()=>rptExportHTML(report)},
       {label:'Imprimer',icon:'🖨',action:()=>rptPrint(report)},
     ]},
     {label:'Insertion',items:[
@@ -14837,6 +15897,8 @@ window.openReportDesignerWindow=function(report){ report=report||rptDefaultRepor
           const sz=(SHAPE_REG[x[0]]||{}).size||[120,80];
           des.addItem('shape',{shapeKind:x[0], w:sz[0], h:sz[1]}); } }) })) },
       {label:'Graphique',icon:'📊',submenu:RPT_CHART_TYPES.map(t=>({label:t,action:()=>des.addItem('chart',{chartType:t})}))},
+      {label:'Code-barres',icon:'▮',submenu:RPT_BARCODE_TYPES.map(t=>({label:RPT_BARCODE_LABEL[t]||t,
+        action:()=>{ const d2=RPT_BARCODE_2D.includes(t); des.addItem('barcode',{barcodeType:t, w:d2?90:200, h:d2?90:60}); }}))},
       {separator:true},
       {label:'Bande',icon:'▤',submenu:RPT_BANDS.map(([t,lab])=>({label:lab,action:()=>des.addBand(t)}))},
     ]},
@@ -14853,7 +15915,15 @@ window.openReportDesignerWindow=function(report){ report=report||rptDefaultRepor
       {label:'Orientation',submenu:[ {label:'Portrait',get checked(){return report.page.orientation!=='landscape';},action:()=>{report.page.orientation='portrait';des.markDirty();}}, {label:'Paysage',get checked(){return report.page.orientation==='landscape';},action:()=>{report.page.orientation='landscape';des.markDirty();}} ]},
       {separator:true},
       {label:'Marges…',action:()=>_rptMarginsDialog(report,()=>des.markDirty())},
+      {label:'Colonnes (journal)…',icon:'▥',action:()=>_rptColumnsDialog(report,()=>des.markDirty())},
+      {label:'Filigrane…',icon:'💧',action:()=>_rptWatermarkDialog(report,()=>des.markDirty())},
       {label:'Grille magnétique',get checked(){return des.snap;},action:()=>{des.snap=!des.snap;}},
+    ]},
+    {label:'Rapport',items:[
+      {label:'Trier…',icon:'⇅',action:()=>_rptSortDialog(report,()=>des.markDirty())},
+      {label:'Filtrer…',icon:'⧩',action:()=>_rptFilterDialog(report,()=>des.markDirty())},
+      {separator:true},
+      {label:'Signets PDF par groupe',get checked(){return report.bookmarks!==false;},action:()=>{report.bookmarks=report.bookmarks===false;}},
     ]},
     {label:'Élément',items:[
       {label:'Colonnes du tableau…',icon:'▦',action:()=>{ const it=des.sel&&des.sel.type==='table'?des.sel:null;
@@ -14863,6 +15933,14 @@ window.openReportDesignerWindow=function(report){ report=report||rptDefaultRepor
       {label:'Éditer le texte riche…',icon:'✎',action:()=>{ const it=des.sel&&des.sel.type==='richtext'?des.sel:null;
         if(it)openRichTextDialog(des,it); else Dialogs.alert('Sélectionnez d’abord un élément « texte riche ».'); }},
       {label:'Supprimer la bande',icon:'▤',action:()=>{ if(des.selBand)des.deleteBand(des.selBand); else Dialogs.alert('Sélectionnez d’abord une bande (colonne de gauche).'); }},
+      {separator:true},
+      {label:'Fusionner les cellules du tableau…',icon:'⛶',action:()=>{ const it=des.sel&&des.sel.type==='table'?des.sel:null;
+        if(it)_rptMergeDialog(des,it); else Dialogs.alert('Sélectionnez d’abord un tableau.'); }},
+      {label:'Étirer le tableau sur la bande',icon:'↔',action:()=>{ const it=des.sel&&des.sel.type==='table'?des.sel:null;
+        if(!it){ Dialogs.alert('Sélectionnez d’abord un tableau.'); return; }
+        it.fullWidth=true; it.x=0; it.w=des._bandInnerW(); des.markDirty(); des._notify(); }},
+      {label:'Rotation',icon:'⟳',submenu:[0,15,30,45,90,180,270,-15,-45,-90].map(a=>({label:a+'°',
+        action:()=>{ if(des.sel){ des.sel.rot=a; des.markDirty(); des._notify(); } else Dialogs.alert('Sélectionnez d’abord un élément.'); }}))},
       {separator:true},
       {label:'Supprimer',icon:'🗑',shortcut:'Suppr',action:()=>des.deleteSel()},
       {label:'Couleur du texte…',action:()=>_rptPickColor(wm,des,'color')},
@@ -14968,6 +16046,8 @@ function openRichTextDialog(des,it){
   tb.addButton({text:'1.',tooltip:'Liste numérotée',minWidth:26,onClick:()=>{rb.cmdList('ol');F();}});
   tb.addButton({text:'🖼',tooltip:'Image',minWidth:28,onClick:()=>rb.cmdInsertImage()});
   tb.addButton({text:'▦',tooltip:'Tableau',minWidth:28,onClick:()=>{rb.cmdInsertTable(3,3);F();}});
+  tb.addButton({text:'⛶',tooltip:'Fusionner les cellules',minWidth:28,onClick:()=>{rb.cmdMergeCells();F();}});
+  tb.addButton({text:'⿴',tooltip:'Annuler la fusion',minWidth:28,onClick:()=>{rb.cmdUnmergeCells();F();}});
   tb.setSize(dc.bounds.width,34); dw.setToolbar(tb,tb.fitHeight());
   const bOk=new Button('Appliquer',{x:dc.bounds.width-190,y:dc.bounds.height-36,width:90,height:28});
   const bNo=new Button('Fermer',{x:dc.bounds.width-94,y:dc.bounds.height-36,width:86,height:28});
@@ -15006,6 +16086,7 @@ function openColumnsDialog(des,it,startIndex){
   lab('Largeur :',X,126); const inW=new InputNumber({x:X+86,y:124,width:100,height:26},{min:16,max:2000,step:5}); dc.addChild(inW);
   lab('Alignement :',X,158); const ddAlign=new DropDown(['left','center','right'],{x:X+86,y:156,width:120,height:26}); dc.addChild(ddAlign);
   lab('Format :',X,190); const ddFmt=new DropDown(RPT_COL_FORMATS.map(f=>f[1]),{x:X+86,y:188,width:W-86,height:26}); dc.addChild(ddFmt);
+  const cbMerge=new CheckBox('Fusionner les valeurs identiques consécutives',{x:X,y:220,width:W,height:22}); dc.addChild(cbMerge);
 
   let cur=null, loading=false;
   const load=()=>{ const i=lb.selectedIndex; cur=cols[i]||null; if(!cur)return; loading=true;
@@ -15013,18 +16094,20 @@ function openColumnsDialog(des,it,startIndex){
     const fi=fields.indexOf(cur.expr); ddField.selectedIndex=fi>=0?fi+1:0;
     inW.value=cur.width||100; ddAlign.selectedIndex=Math.max(0,['left','center','right'].indexOf(cur.align||'left'));
     ddFmt.selectedIndex=Math.max(0,RPT_COL_FORMATS.findIndex(f=>f[0]===(cur.format||'')));
+    cbMerge.checked=!!cur.mergeDup; cbMerge.markDirty();
     [tbHead,tbExpr,inW].forEach(w2=>w2.markDirty()); loading=false; };
   const apply=()=>{ if(!cur||loading)return;
     cur.header=tbHead.value; cur.expr=tbExpr.value; cur.width=Math.max(16,Number(inW.value)||100);
     cur.align=['left','center','right'][ddAlign.selectedIndex]||'left';
     cur.format=RPT_COL_FORMATS[ddFmt.selectedIndex][0];
+    cur.mergeDup=!!cbMerge.checked;
     it.w=(it.columns||[]).reduce((s,c)=>s+(c.width||0),0);
     refreshList(); des.markDirty(); des._notify(true); };
 
   lb.on('change',load);
   tbHead.on('change',apply); tbHead.on('submit',apply);
   tbExpr.on('change',apply); tbExpr.on('submit',apply);
-  inW.on('change',apply); ddAlign.on('change',apply); ddFmt.on('change',apply);
+  inW.on('change',apply); ddAlign.on('change',apply); ddFmt.on('change',apply); cbMerge.on('change',apply);
   ddField.on('change',()=>{ if(loading)return; const i=ddField.selectedIndex;
     if(i>0){ tbExpr.value=fields[i-1]; if(!tbHead.value||fields.includes(tbHead.value))tbHead.value=fields[i-1]; tbExpr.markDirty(); tbHead.markDirty(); apply(); } });
 
@@ -15066,6 +16149,42 @@ function _rptCalcFieldsDialog(report,cb){ const cur=(report.calculatedFields||[]
 function _rptParamsDialog(report,cb){ const cur=Object.entries(report.parameters||{}).map(([k,v])=>k+' = '+v).join('\n');
   Dialogs.prompt('Paramètres','Un par ligne : Nom = valeur',cur).then(r=>{ if(r&&r.result==='ok'){ const o={}; for(const line of String(r.value).split('\n')){ const m=line.split('='); if(m.length>=2&&m[0].trim())o[m[0].trim()]=m.slice(1).join('=').trim(); } report.parameters=o; cb&&cb(); } }); }
 function _rptMarginsDialog(report,cb){ const m=report.page.margins; Dialogs.prompt('Marges (mm)','haut,droite,bas,gauche',[m.top,m.right,m.bottom,m.left].join(',')).then(r=>{ if(r&&r.result==='ok'){ const p=String(r.value).split(',').map(x=>parseFloat(x)||0); if(p.length>=4){ report.page.margins={top:p[0],right:p[1],bottom:p[2],left:p[3]}; cb&&cb(); } } }); }
+// mise en page « journal » : N colonnes, le contenu passe en colonne suivante avant de changer de page
+function _rptColumnsDialog(report,cb){ const cur=(report.page.columns||1)+','+(report.page.columnGap==null?18:report.page.columnGap);
+  Dialogs.prompt('Colonnes','nombre de colonnes, écart en px',cur).then(r=>{ if(r&&r.result==='ok'){
+    const p=String(r.value).split(',').map(x=>parseFloat(x)); report.page.columns=Math.max(1,Math.min(6,p[0]|0||1));
+    if(!isNaN(p[1]))report.page.columnGap=Math.max(0,p[1]); cb&&cb(); } }); }
+// filigrane : texte (ou image déjà chargée) répété sur chaque page, tourné et translucide
+function _rptWatermarkDialog(report,cb){ const w=report.watermark||{};
+  const cur=[w.text||'',w.size||64,w.rot==null?-30:w.rot,w.opacity==null?0.12:w.opacity,w.color||'#888888'].join(' | ');
+  Dialogs.prompt('Filigrane','texte | taille | rotation° | opacité 0-1 | couleur  (texte vide = aucun)',cur).then(r=>{
+    if(!r||r.result!=='ok')return; const p=String(r.value).split('|').map(s=>s.trim());
+    if(!p[0]){ report.watermark=null; cb&&cb(); return; }
+    report.watermark={ text:p[0], size:parseFloat(p[1])||64, rot:p[2]===''?-30:parseFloat(p[2]),
+      opacity:p[3]===''?0.12:Math.max(0,Math.min(1,parseFloat(p[3]))), color:p[4]||'#888888', image:w.image||null };
+    cb&&cb(); }); }
+function _rptSortDialog(report,cb){ const cur=(report.sortBy||[]).map(s=>s.expr+(s.dir==='desc'?' desc':'')).join('\n');
+  Dialogs.prompt('Tri','Un critère par ligne : expression [desc]  (vide = tri par groupes)',cur).then(r=>{ if(r&&r.result==='ok'){
+    const list=[]; for(const line of String(r.value).split('\n')){ const t=line.trim(); if(!t)continue;
+      const m=t.match(/^(.*?)(\s+(desc|asc))?$/i); list.push({expr:(m[1]||t).trim(), dir:(m[3]||'asc').toLowerCase()}); }
+    report.sortBy=list; cb&&cb(); } }); }
+function _rptFilterDialog(report,cb){ Dialogs.prompt('Filtre','Expression booléenne évaluée par ligne (vide = aucun filtre)',report.filter||'')
+  .then(r=>{ if(r&&r.result==='ok'){ report.filter=String(r.value).trim(); cb&&cb(); } }); }
+// Fusion de cellules d'un tableau : plages de colonnes pour l'en-tête et le pied.
+// Syntaxe d'une ligne : `1-3 = Libellé` (colonnes 1-indexées) ; préfixe `pied:` pour le pied.
+function _rptMergeDialog(des,it){
+  const fmt=(list,pre)=>(list||[]).map(m=>pre+((m.c|0)+1)+'-'+((m.c|0)+(m.cs|0))+(m.text?(' = '+m.text):'')).join('\n');
+  const cur=[fmt(it.headerMerges,''),fmt(it.footerMerges,'pied:')].filter(Boolean).join('\n');
+  Dialogs.prompt('Fusionner les cellules',
+    'Une fusion par ligne : « 1-3 = Libellé » (colonnes numérotées à partir de 1).\nPréfixer par « pied: » pour le pied de tableau. Ligne vide = aucune fusion.',cur)
+  .then(r=>{ if(!r||r.result!=='ok')return;
+    const H=[], F=[];
+    for(const raw of String(r.value).split('\n')){ let line=raw.trim(); if(!line)continue;
+      const foot=/^pied\s*:/i.test(line); if(foot)line=line.replace(/^pied\s*:/i,'').trim();
+      const m=/^(\d+)\s*-\s*(\d+)\s*(?:=\s*(.*))?$/.exec(line); if(!m)continue;
+      const a=Math.max(1,+m[1]), b=Math.max(a,+m[2]);
+      (foot?F:H).push({c:a-1, cs:b-a+1, text:m[3]!==undefined?m[3].trim():undefined}); }
+    it.headerMerges=H; it.footerMerges=F; des.markDirty(); des._notify(true); }); }
 
 // ============================================================================
 //  API PROGRAMMATIQUE
@@ -15085,10 +16204,21 @@ class Report {
   addTable(bandType,columns,opts){ const b=this.band(bandType||'detail'); const it=rptItem('table',Object.assign({columns,repeat:true,rowHeight:22,headerBg:'#1a3b6e',headerColor:'#ffffff'},opts||{})); b.items.push(it); return it; }
   addChart(bandType,chartType,labelField,valueField,opts){ const b=this.band(bandType); const it=rptItem('chart',Object.assign({chartType:chartType||'Bar',labelField,valueField,w:260,h:160},opts||{})); b.items.push(it); return it; }
   addImage(bandType,src,opts){ const b=this.band(bandType); const it=rptItem('image',Object.assign({src},opts||{})); b.items.push(it); return it; }
+  addBarcode(bandType,value,opts){ const b=this.band(bandType); const it=rptItem('barcode',Object.assign({text:value,barcodeType:'Code128',w:180,h:60},opts||{})); b.items.push(it); return it; }
+  addRichText(bandType,blocks,opts){ const b=this.band(bandType); const it=rptItem('richtext',Object.assign({blocks,w:280,h:100},opts||{})); b.items.push(it); return it; }
+  // saut de page / orientation propre à une bande (comme richtextbox.html)
+  pageBreak(bandType,where){ const b=this.band(bandType); if(where==='after')b.newPageAfter=true; else b.startNewPage=true; return b; }
+  setBandOrientation(bandType,orient){ const b=this.band(bandType); b.orientation=orient||''; return b; }
+  setColumns(n,gap){ this.def.page.columns=Math.max(1,n|0||1); if(gap!=null)this.def.page.columnGap=gap; return this; }
+  setWatermark(o){ this.def.watermark=o||null; return this; }
+  setSort(list){ this.def.sortBy=list||[]; return this; }
+  setFilter(expr){ this.def.filter=expr||''; return this; }
   render(){ return ReportEngine.layout(this.def); }
   pageCount(){ return this.render().total; }
   toJSON(){ return JSON.parse(JSON.stringify(this.def)); }
   exportPDF(filename){ return rptExportPDF(this.def,filename); }
+  exportCSV(filename){ return rptExportCSV(this.def,filename); }
+  exportHTML(filename){ return rptExportHTML(this.def,filename); }
   print(){ return rptPrint(this.def); }
   openDesigner(){ return openReportDesignerWindow(this.def); }
   openViewer(){ return openReportViewerWindow(this.def); }
@@ -15102,6 +16232,16 @@ window.ReportAPI = {
   toPDFBytes:(defOrReports)=>rptBuildPDFBytes(Array.isArray(defOrReports)?defOrReports.map(r=>r instanceof Report?r.def:r):(defOrReports instanceof Report?defOrReports.def:defOrReports)),
   merge:(reports,file)=>rptExportPDF(reports.map(r=>r instanceof Report?r.def:r),file||'fusion.pdf'),
   print:(def)=>rptPrint(def),
+  exportCSV:(def,file)=>rptExportCSV(def instanceof Report?def.def:def,file),
+  exportHTML:(def,file)=>rptExportHTML(def instanceof Report?def.def:def,file),
+  barcode:(value,opts)=>rptBarcodePrims(Object.assign({barcodeType:'Code128'},opts||{}),value,0,0,(opts&&opts.w)||180,(opts&&opts.h)||60),
+  barcodeTypes:()=>RPT_BARCODE_TYPES.slice(),
+  barcodeLabels:()=>Object.assign({},RPT_BARCODE_LABEL),
+  barcodeSymbol:(type,value)=>(RPT_BC[type]?RPT_BC[type](String(value)):null),
+  qrMatrix:(text,ecc,opts)=>rptQRMatrix(text,ecc,opts),
+  dataMatrix:(text,opts)=>rptDataMatrix(text,opts),
+  aztec:(text,opts)=>rptAztec(text,opts),
+  richTextPrims:(el)=>rptRichPrims(el),
   openDesigner:(def)=>openReportDesignerWindow(def),
   openViewer:(def)=>openReportViewerWindow(def),
   defaultReport:()=>rptDefaultReport(),
