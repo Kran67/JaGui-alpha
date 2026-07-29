@@ -14113,7 +14113,9 @@ function _rptSampleData(){ return [
 ]; }
 // Taille de page pour une orientation donnée (défaut : celle du rapport).
 // `orient` explicite = orientation propre à une bande (saut de page automatique).
-function rptPagePxFor(report,orient){ const f=PAGE_FORMATS[report.page.format]||PAGE_FORMATS.A4; let w=f[0],h=f[1];
+function rptPagePxFor(report,orient){
+  if(report.page.customPx)return { w:report.page.customPx.w, h:report.page.customPx.h };  // sous-rapports
+  const f=PAGE_FORMATS[report.page.format]||PAGE_FORMATS.A4; let w=f[0],h=f[1];
   if((orient||report.page.orientation)==='landscape'){ const t=w; w=h; h=t; } return { w:w*RPT_MM, h:h*RPT_MM }; }
 function rptInnerRectFor(report,orient){ const pg=rptPagePxFor(report,orient); const m=report.page.margins;
   return { x:m.left*RPT_MM, y:m.top*RPT_MM, w:pg.w-(m.left+m.right)*RPT_MM, h:pg.h-(m.top+m.bottom)*RPT_MM, pageW:pg.w, pageH:pg.h }; }
@@ -14175,7 +14177,11 @@ class ReportEngine {
       for(const it of band.items){ if(!it.canGrow||it.visible===false)continue;
         if(it.printWhen&&!_rptBool(rptEvalExpr(it.printWhen,scope)))continue;
         const w=it.fullWidth?Math.max(4,colW()-(it.x||0)):it.w;
-        const ih=Math.max(it.h,_rptTextGrowH({...it,w},scope)); if(it.y+ih>h)h=it.y+ih; }
+        let ih=it.h;
+        if(it.type==='crosstab')ih=Math.max(ih,rptCrosstabPrims(it,report,scope,0,0,w).__h||0);
+        else if(it.type==='subreport')ih=Math.max(ih,rptSubreportPrims(it,report,scope,0,0,w).__h||0);
+        else ih=Math.max(ih,_rptTextGrowH({...it,w},scope));
+        if(it.y+ih>h)h=it.y+ih; }
       return h; }
     function fmtCell(v,fmt){ if(fmt&&fmt[0]==='n'){ return _rptFmtNum(_rptNum(v),parseInt(fmt.slice(1))||0); } if(fmt==='cur'){ return _rptFmtNum(_rptNum(v),2)+' €'; } if(fmt&&fmt.startsWith('d')){ return _rptFmtDate(v,'dd/MM/yyyy'); } return _rptStr(v); }
     function emitItem(it, ax, ay, scope){
@@ -14206,6 +14212,17 @@ class ReportEngine {
         case 'image': if(it.src) push({kind:'image', x:ax,y:ay,w:W,h, src:it.src, fit:it.fit||'contain'}); break;
         case 'barcode': { const val=it.expr?_rptStr(rptEvalExpr(it.expr,scope)):rptInterp(it.text,scope);
           for(const e of rptBarcodePrims(it,val,ax,ay,W,h))push(e); break; }
+        case 'gauge': { const v=it.expr?rptEvalExpr(it.expr,scope):_rptNum(it.text);
+          for(const e of rptGaugePrims(it,v,ax,ay,W,h))push(e); break; }
+        case 'signature': for(const e of rptSignaturePrims(it,ax,ay,W,h))push(e); break;
+        case 'widget': for(const e of rptWidgetPrims(it,ax,ay,W,h,scope))push(e); break;
+        case 'crosstab': { const p=rptCrosstabPrims(it,report,scope,ax,ay,W);
+          if(it.canGrow&&p.__h)h=Math.max(h,p.__h);
+          for(const e of p)push(e); break; }
+        case 'subreport': { const p=rptSubreportPrims(it,report,scope,ax,ay,W);
+          if(it.canGrow&&p.__h)h=Math.max(h,p.__h);
+          const clipped=(it.canGrow||p.__h<=it.h)?p:[{kind:'group',clip:{x:ax,y:ay,w:W,h:it.h},items:p}];
+          for(const e of clipped)push(e); break; }
         case 'shape': push({kind:'shape', x:ax,y:ay,w:W,h, shape:it.shape||'rect', shapeKind:it.shapeKind||it.shape||'rect',
           fill:bg||'', stroke:it.borderColor||'#000', sw:it.borderWidth||1, dash:it.dash,
           text:rptInterp(it.text,scope), textColor:color}); break;
@@ -14380,6 +14397,269 @@ class ReportEngine {
   }
 }
 function _rptCalcProxy(report,scope){ const o={}; if(report.calculatedFields)for(const c of report.calculatedFields){ Object.defineProperty(o,c.name,{ enumerable:true, get(){ return rptEvalExpr(c.expr,{...scope,calc:undefined}); } }); } return o; }
+// ────────────────────────────────────────────────────────────────────────────
+//  TABLEAU CROISÉ (crosstab / matrice)
+//  Lignes × colonnes calculées depuis les données, valeurs agrégées, totaux.
+// ────────────────────────────────────────────────────────────────────────────
+const RPT_XTAB_AGG=['sum','count','avg','min','max'];
+function _rptCrosstabData(it,report,scope){
+  const rows=(scope&&scope.data)||rptData(report);
+  const rk=[], ck=[], cells=new Map();
+  const K=(r,c)=>r+' '+c;
+  rows.forEach((row,i)=>{ const sc={...scope,row,index:i};
+    const r=_rptStr(rptEvalExpr(it.rowField||'""',sc));
+    const c=_rptStr(rptEvalExpr(it.colField||'""',sc));
+    const v=_rptNum(rptEvalExpr(it.valueField||'0',sc));
+    if(!rk.includes(r))rk.push(r);
+    if(!ck.includes(c))ck.push(c);
+    const k=K(r,c), cur=cells.get(k)||{sum:0,n:0,min:Infinity,max:-Infinity};
+    cur.sum+=v; cur.n++; cur.min=Math.min(cur.min,v); cur.max=Math.max(cur.max,v); cells.set(k,cur); });
+  if(it.sortRows!==false)rk.sort();
+  if(it.sortCols!==false)ck.sort();
+  const agg=a=>{ if(!a)return null; switch(it.aggregate||'sum'){
+    case 'count': return a.n; case 'avg': return a.n?a.sum/a.n:0;
+    case 'min': return a.min===Infinity?0:a.min; case 'max': return a.max===-Infinity?0:a.max;
+    default: return a.sum; } };
+  const get=(r,c)=>agg(cells.get(K(r,c)));
+  const rowTotal=r=>{ let a={sum:0,n:0,min:Infinity,max:-Infinity};
+    for(const c of ck){ const x=cells.get(K(r,c)); if(!x)continue;
+      a.sum+=x.sum; a.n+=x.n; a.min=Math.min(a.min,x.min); a.max=Math.max(a.max,x.max); } return agg(a); };
+  const colTotal=c=>{ let a={sum:0,n:0,min:Infinity,max:-Infinity};
+    for(const r of rk){ const x=cells.get(K(r,c)); if(!x)continue;
+      a.sum+=x.sum; a.n+=x.n; a.min=Math.min(a.min,x.min); a.max=Math.max(a.max,x.max); } return agg(a); };
+  const grand=()=>{ let a={sum:0,n:0,min:Infinity,max:-Infinity};
+    for(const x of cells.values()){ a.sum+=x.sum; a.n+=x.n; a.min=Math.min(a.min,x.min); a.max=Math.max(a.max,x.max); } return agg(a); };
+  return {rk,ck,get,rowTotal,colTotal,grand};
+}
+// primitives absolues d'un tableau croisé — partagées par le moteur ET l'aperçu du designer
+function rptCrosstabPrims(it,report,scope,x,y,w){
+  const out=[]; const d=_rptCrosstabData(it,report,scope);
+  const rh=it.rowHeight||20, hw=it.rowHeaderWidth||110, sz=it.size||10;
+  const showRT=it.showRowTotals!==false, showCT=it.showColTotals!==false;
+  const nCols=d.ck.length+(showRT?1:0);
+  const cw=it.colWidth||Math.max(40,(w-hw)/Math.max(1,nCols));
+  const fmt=v=>v==null?'':(it.format?_rptFmtNum(v,it.format[0]==='n'?(parseInt(it.format.slice(1))||0):2):_rptFmtNum(v,0));
+  const hb=it.headerBg||'#1a3b6e', hc=it.headerColor||'#ffffff', tb=it.totalBg||'#e8eef7';
+  const cell=(cx,cy,cwid,txt,o)=>{ o=o||{};
+    if(o.bg)out.push({kind:'rect',x:cx,y:cy,w:cwid,h:rh,fill:o.bg});
+    out.push({kind:'text',x:cx+3,y:cy,w:cwid-6,h:rh,text:txt,size:sz,bold:!!o.bold,
+      color:o.color||'#000000',align:o.align||'left',valign:'middle'});
+    out.push({kind:'line',x1:cx,y1:cy+rh,x2:cx+cwid,y2:cy+rh,color:'#cccccc',width:0.5});
+    out.push({kind:'line',x1:cx+cwid,y1:cy,x2:cx+cwid,y2:cy+rh,color:'#cccccc',width:0.5}); };
+  // en-tête de colonnes
+  let cy=y;
+  cell(x,cy,hw,it.cornerText||'',{bg:hb,color:hc,bold:true});
+  d.ck.forEach((c,i)=>cell(x+hw+i*cw,cy,cw,c,{bg:hb,color:hc,bold:true,align:'center'}));
+  if(showRT)cell(x+hw+d.ck.length*cw,cy,cw,it.totalText||'Total',{bg:hb,color:hc,bold:true,align:'center'});
+  cy+=rh;
+  // corps
+  for(const r of d.rk){
+    cell(x,cy,hw,r,{bg:it.rowHeaderBg||'#f2f5fa',bold:true});
+    d.ck.forEach((c,i)=>cell(x+hw+i*cw,cy,cw,fmt(d.get(r,c)),{align:'right'}));
+    if(showRT)cell(x+hw+d.ck.length*cw,cy,cw,fmt(d.rowTotal(r)),{bg:tb,bold:true,align:'right'});
+    cy+=rh; }
+  // ligne des totaux
+  if(showCT){
+    cell(x,cy,hw,it.totalText||'Total',{bg:tb,bold:true});
+    d.ck.forEach((c,i)=>cell(x+hw+i*cw,cy,cw,fmt(d.colTotal(c)),{bg:tb,bold:true,align:'right'}));
+    if(showRT)cell(x+hw+d.ck.length*cw,cy,cw,fmt(d.grand()),{bg:tb,bold:true,align:'right'});
+    cy+=rh; }
+  out.push({kind:'line',x1:x,y1:y,x2:x+hw+nCols*cw,y2:y,color:'#cccccc',width:0.5});
+  out.push({kind:'line',x1:x,y1:y,x2:x,y2:cy,color:'#cccccc',width:0.5});
+  out.__h=cy-y; out.__w=hw+nCols*cw;
+  return out;
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+//  SOUS-RAPPORTS
+//  `report.subreports = {nom: définition}` ; un item `subreport` met en page la
+//  définition enfant sur la largeur de l'item et incruste ses primitives.
+// ────────────────────────────────────────────────────────────────────────────
+function _rptShiftEls(els,dx,dy){ return els.map(e=>{
+  if(e.kind==='group'){ const g={...e, items:_rptShiftEls(e.items,dx,dy)};
+    if(g.cx!=null)g.cx+=dx; if(g.cy!=null)g.cy+=dy;
+    if(g.clip)g.clip={...g.clip,x:g.clip.x+dx,y:g.clip.y+dy};
+    return g; }
+  if(e.kind==='line')return {...e,x1:e.x1+dx,x2:e.x2+dx,y1:e.y1+dy,y2:e.y2+dy};
+  return {...e,x:e.x+dx,y:e.y+dy}; }); }
+function _rptElsBottom(els){ let m=0; for(const e of els){
+  if(e.kind==='group'){ m=Math.max(m,_rptElsBottom(e.items)); continue; }
+  m=Math.max(m, e.kind==='line'?Math.max(e.y1,e.y2):(e.y+(e.h||0))); } return m; }
+function _rptSubData(it,report,scope){
+  if(it.dataExpr){ const v=rptEvalExpr(it.dataExpr,scope);
+    if(Array.isArray(v))return v; if(v&&typeof v==='object')return [v]; return []; }
+  const def=(report.subreports||{})[it.subreport];
+  let rows=def?rptData(def):[];
+  if(it.linkChild&&it.linkMaster){ const mv=_rptStr(rptEvalExpr(it.linkMaster,scope));
+    rows=rows.filter(r=>_rptStr(r[it.linkChild])===mv); }
+  return rows; }
+function rptSubreportPrims(it,report,scope,x,y,w){
+  const def=(report.subreports||{})[it.subreport];
+  if(!def){ const o=[{kind:'text',x,y,w,h:16,text:'sous-rapport « '+(it.subreport||'')+' » introuvable',
+    size:9,color:'#cc3333',align:'left',valign:'top'}]; o.__h=16; return o; }
+  const child=JSON.parse(JSON.stringify(def));
+  child.dataSources={main:{type:'json',data:_rptSubData(it,report,scope)}};
+  child.dataSource='main';
+  child.parameters=Object.assign({},report.parameters,child.parameters);
+  // page « infinie » à la largeur de l'item : tout tient sur une page, sans marge
+  child.page={format:'A4',orientation:'portrait',margins:{top:0,right:0,bottom:0,left:0},
+    customPx:{w:Math.max(20,w), h:200000}};
+  child.bands=(child.bands||[]).filter(b=>b.type!=='pageHeader'&&b.type!=='pageFooter');
+  child.watermark=null; child.bookmarks=false;
+  let els=[];
+  try{ const L=ReportEngine.layout(child); for(const pg of L.pages)els=els.concat(pg.elements); }
+  catch(e){ els=[{kind:'text',x:0,y:0,w,h:16,text:'sous-rapport : '+e.message,size:9,color:'#cc3333',valign:'top'}]; }
+  const h=_rptElsBottom(els);
+  const out=_rptShiftEls(els,x,y);
+  out.__h=h;
+  return out; }
+
+// ────────────────────────────────────────────────────────────────────────────
+//  JAUGES VECTORIELLES  (radiale / linéaire / bullet) — primitives `path`
+// ────────────────────────────────────────────────────────────────────────────
+const RPT_GAUGE_TYPES=['radial','linear','bullet'];
+// arc → segments de Bézier cubiques (max 90° par segment)
+function _arcOps(cx,cy,r,a0,a1,move){
+  const ops=[]; const n=Math.max(1,Math.ceil(Math.abs(a1-a0)/(Math.PI/2)));
+  const da=(a1-a0)/n; const k=4/3*Math.tan(da/4);
+  let x0=cx+r*Math.cos(a0), y0=cy+r*Math.sin(a0);
+  if(move!==false)ops.push(['M',x0,y0]);
+  for(let i=0;i<n;i++){ const b0=a0+i*da, b1=b0+da;
+    const c0x=cx+r*Math.cos(b0), c0y=cy+r*Math.sin(b0);
+    const c1x=cx+r*Math.cos(b1), c1y=cy+r*Math.sin(b1);
+    ops.push(['C', c0x-k*r*Math.sin(b0), c0y+k*r*Math.cos(b0),
+                   c1x+k*r*Math.sin(b1), c1y-k*r*Math.cos(b1), c1x, c1y]); }
+  return ops; }
+// anneau plein (secteur épais) entre deux rayons
+function _ringOps(cx,cy,rOut,rIn,a0,a1){
+  const ops=_arcOps(cx,cy,rOut,a0,a1);
+  ops.push(['L', cx+rIn*Math.cos(a1), cy+rIn*Math.sin(a1)]);
+  for(const o of _arcOps(cx,cy,rIn,a1,a0,false))ops.push(o);
+  ops.push(['Z']); return ops; }
+const RPT_GAUGE_PAL=['#43b581','#e6b800','#e5546a'];
+function rptGaugePrims(it,val,x,y,w,h){
+  const out=[]; const min=+it.gMin||0, max=(it.gMax==null?100:+it.gMax);
+  const v=Math.max(min,Math.min(max,_rptNum(val)));
+  const t=(max>min)?(v-min)/(max-min):0;
+  const bands=(it.gBands&&it.gBands.length)?it.gBands
+    :[{to:min+(max-min)*0.6,color:RPT_GAUGE_PAL[0]},{to:min+(max-min)*0.85,color:RPT_GAUGE_PAL[1]},{to:max,color:RPT_GAUGE_PAL[2]}];
+  const fmt=n=>_rptFmtNum(n, it.format&&it.format[0]==='n'?(parseInt(it.format.slice(1))||0):0);
+  const fg=it.color||'#1a3b6e', track=it.gTrack||'#e3e7ee';
+  const type=it.gaugeType||'radial';
+  if(type==='radial'){
+    const cx=x+w/2, cy=y+h*0.72, r=Math.min(w/2,h*0.72)*0.92, th=r*0.26;
+    const A0=Math.PI, A1=2*Math.PI;                       // demi-cercle supérieur
+    out.push({kind:'path',ops:_ringOps(cx,cy,r,r-th,A0,A1),fill:track,stroke:'none'});
+    let prev=min;
+    for(const b of bands){ const b0=A0+(A1-A0)*((prev-min)/(max-min||1));
+      const b1=A0+(A1-A0)*((Math.min(b.to,max)-min)/(max-min||1));
+      if(b1>b0)out.push({kind:'path',ops:_ringOps(cx,cy,r,r-th*0.35,b0,b1),fill:b.color,stroke:'none'});
+      prev=b.to; }
+    const ang=A0+(A1-A0)*t;
+    out.push({kind:'path',ops:_ringOps(cx,cy,r-th*0.4,r-th,A0,ang),fill:fg,stroke:'none'});
+    // aiguille
+    const nl=r-th*1.15, nw=Math.max(1.5,r*0.05);
+    out.push({kind:'path',ops:[['M',cx+nl*Math.cos(ang),cy+nl*Math.sin(ang)],
+      ['L',cx+nw*Math.cos(ang+Math.PI/2),cy+nw*Math.sin(ang+Math.PI/2)],
+      ['L',cx+nw*Math.cos(ang-Math.PI/2),cy+nw*Math.sin(ang-Math.PI/2)],['Z']],fill:'#333333',stroke:'none'});
+    out.push({kind:'path',ops:_arcOps(cx,cy,nw*1.6,0,Math.PI*2).concat([['Z']]),fill:'#333333',stroke:'none'});
+    if(it.showValue!==false)out.push({kind:'text',x,y:cy+2,w,h:h-(cy-y)-2,text:fmt(v)+(it.gUnit||''),
+      size:it.size||12,bold:true,color:fg,align:'center',valign:'top'});
+    if(it.gLabels!==false){ out.push({kind:'text',x:cx-r,y:cy+1,w:th*2,h:12,text:fmt(min),size:7,color:'#777',align:'center',valign:'top'});
+      out.push({kind:'text',x:cx+r-th*2,y:cy+1,w:th*2,h:12,text:fmt(max),size:7,color:'#777',align:'center',valign:'top'}); }
+  } else {
+    const lab=(it.showValue!==false)?Math.max(28,w*0.18):0;
+    const bx=x, bw=Math.max(10,w-lab), bh=(type==='bullet')?h*0.5:Math.min(h,Math.max(8,h*0.55));
+    const by=y+(h-bh)/2;
+    out.push({kind:'rect',x:bx,y:by,w:bw,h:bh,fill:track});
+    let prev=min;
+    for(const b of bands){ const x0=bx+bw*((prev-min)/(max-min||1)), x1=bx+bw*((Math.min(b.to,max)-min)/(max-min||1));
+      if(x1>x0)out.push({kind:'rect',x:x0,y:by,w:x1-x0,h:bh,fill:b.color});
+      prev=b.to; }
+    const fh=(type==='bullet')?bh*0.45:bh;
+    out.push({kind:'rect',x:bx,y:by+(bh-fh)/2,w:bw*t,h:fh,fill:fg});
+    if(type==='bullet'&&it.gTarget!=null){ const tx=bx+bw*((_rptNum(it.gTarget)-min)/(max-min||1));
+      out.push({kind:'rect',x:tx-1,y:by-3,w:2,h:bh+6,fill:'#333333'}); }
+    out.push({kind:'path',ops:[['M',bx,by],['L',bx+bw,by],['L',bx+bw,by+bh],['L',bx,by+bh],['Z']],
+      fill:'none',stroke:'#9aa0a8',sw:0.6});
+    if(lab)out.push({kind:'text',x:bx+bw+4,y,w:lab-4,h,text:fmt(v)+(it.gUnit||''),
+      size:it.size||10,bold:true,color:fg,align:'left',valign:'middle'});
+  }
+  return out; }
+
+// ────────────────────────────────────────────────────────────────────────────
+//  SIGNATURE  — traits normalisés 0..1, rendus en `path` (vectoriels en PDF)
+// ────────────────────────────────────────────────────────────────────────────
+function rptSignaturePrims(it,x,y,w,h){
+  const out=[]; const col=it.color||'#12233f';
+  const lineH=(it.sigLabel||it.sigDate)?Math.min(16,h*0.28):0;
+  const drawH=Math.max(4,h-lineH-(it.sigLine===false?0:6));
+  for(const st of (it.strokes||[])){
+    if(!st||st.length<1)continue;
+    const ops=[]; st.forEach((p,i)=>ops.push([i?'L':'M', x+p[0]*w, y+p[1]*drawH]));
+    if(st.length===1)ops.push(['L', x+st[0][0]*w+0.6, y+st[0][1]*drawH]);
+    out.push({kind:'path',ops,fill:'none',stroke:col,sw:it.sigWidth||1.4,cap:'round'}); }
+  if(it.sigLine!==false)out.push({kind:'line',x1:x,y1:y+drawH+2,x2:x+w,y2:y+drawH+2,color:'#555555',width:0.8});
+  if(lineH){ const lbl=[it.sigLabel||'',it.sigDate?('  —  '+_rptFmtDate(new Date(),'dd/MM/yyyy')):''].join('');
+    out.push({kind:'text',x,y:y+drawH+4,w,h:lineH,text:lbl,size:it.size||8,color:'#555555',align:it.align||'left',valign:'top'}); }
+  return out; }
+// bloc de saisie : trace à la souris, coordonnées normalisées 0..1
+class SignaturePad extends BaseWidget {
+  constructor(bounds,opts={}){ super('sigpad_'+(++_idCounter),bounds);
+    this.strokes=opts.strokes?JSON.parse(JSON.stringify(opts.strokes)):[];
+    this.color=opts.color||'#12233f'; this.lineWidth=opts.lineWidth||1.6;
+    this._cur=null; this.cursor='crosshair'; this.tabIndex=0; this.capturesDrag=true;
+    this.on('mousedown',e=>{ this._cur=[this._n(e)]; this.strokes.push(this._cur); this.markDirty(); });
+    this.on('mousemove',e=>{ if(this._cur){ this._cur.push(this._n(e)); this.markDirty(); } });
+    this.on('mouseup',()=>{ this._cur=null; this._emit&&this._emit('change'); }); }
+  _n(e){ const b=this.bounds; return [ (e.x-b.x)/Math.max(1,b.width), (e.y-b.y)/Math.max(1,b.height) ]; }
+  clear(){ this.strokes=[]; this._cur=null; this.markDirty(); this._emit&&this._emit('change'); }
+  render(ctx){ const b=this.bounds; ctx.save();
+    ctx.fillStyle='#ffffff'; ctx.fillRect(b.x,b.y,b.width,b.height);
+    ctx.strokeStyle='#b9c0c9'; ctx.lineWidth=1; ctx.strokeRect(b.x+.5,b.y+.5,b.width-1,b.height-1);
+    ctx.strokeStyle=this.color; ctx.lineWidth=this.lineWidth; ctx.lineCap='round'; ctx.lineJoin='round';
+    for(const st of this.strokes){ if(!st.length)continue; ctx.beginPath();
+      st.forEach((p,i)=>{ const px=b.x+p[0]*b.width, py=b.y+p[1]*b.height;
+        if(i)ctx.lineTo(px,py); else ctx.moveTo(px,py); });
+      if(st.length===1)ctx.lineTo(b.x+st[0][0]*b.width+0.5,b.y+st[0][1]*b.height);
+      ctx.stroke(); }
+    ctx.restore(); } }
+window.SignaturePad=SignaturePad;
+
+// ────────────────────────────────────────────────────────────────────────────
+//  WIDGET QUELCONQUE dans un rapport
+//  Registre extensible ; rendu vectoriel si le widget sait produire des
+//  primitives (`prims()`), sinon rastérisé (le PDF n'a pas de notion de widget).
+// ────────────────────────────────────────────────────────────────────────────
+const RPT_WIDGETS={
+  Button:      o=>new Button(o.text||'Bouton',{x:0,y:0,width:100,height:28}),
+  Label:       o=>new Label(o.text||'Libellé',{x:0,y:0,width:120,height:20}),
+  CheckBox:    o=>{ const c=new CheckBox(o.text||'Case',{x:0,y:0,width:120,height:22}); if(o.checked)c.checked=true; return c; },
+  RadioButton: o=>{ const c=new RadioButton(o.text||'Option',{x:0,y:0,width:120,height:22}); if(o.checked)c._checked=true; return c; },
+  ProgressBar: o=>{ const p=new ProgressBar({x:0,y:0,width:160,height:16}); p.max=o.max||100; p.value=o.value||0; return p; },
+  Gauge:       o=>{ const g=new Gauge({x:0,y:0,width:160,height:160}); g.min=o.min||0; g.max=o.max==null?100:o.max;
+                    g.value=o.value||0; g._dispValue=g.value; if(o.dialText)g.dialText=o.dialText; return g; },
+  Barcode:     o=>new BarcodeWidget({x:0,y:0,width:180,height:60},o||{}),
+  Signature:   o=>new SignaturePad({x:0,y:0,width:200,height:80},o||{}),
+};
+function rptWidgetPrims(it,x,y,w,h,scope){
+  const f=RPT_WIDGETS[it.widgetClass];
+  if(!f)return [{kind:'text',x,y,w,h,text:'widget inconnu : '+(it.widgetClass||''),size:9,color:'#cc3333',align:'center',valign:'middle'}];
+  let wd; try{ wd=f(Object.assign({},it.widgetOpts||{},
+      it.expr?{value:_rptNum(rptEvalExpr(it.expr,scope)),text:_rptStr(rptEvalExpr(it.expr,scope))}:{})); }
+  catch(e){ return [{kind:'text',x,y,w,h,text:'widget : '+e.message,size:9,color:'#cc3333',align:'center',valign:'middle'}]; }
+  wd.setBounds?wd.setBounds({x,y,width:w,height:h}):(wd.bounds={x,y,width:w,height:h});
+  if(typeof wd.prims==='function'){ try{ return wd.prims(); }catch(e){} }   // vectoriel si possible
+  // repli : rastérisation ×2 puis image JPEG
+  try{ const s=2, cv=document.createElement('canvas');
+    cv.width=Math.max(2,Math.round(w*s)); cv.height=Math.max(2,Math.round(h*s));
+    const cx=cv.getContext('2d'); cx.fillStyle='#ffffff'; cx.fillRect(0,0,cv.width,cv.height);
+    cx.scale(s,s); cx.translate(-x,-y);
+    wd.render(cx);
+    const url=cv.toDataURL('image/jpeg',0.92);
+    return [{kind:'image',x,y,w,h,src:url,fit:'stretch',__jpeg:_dataURLtoJpeg(url,cv.width,cv.height)}];
+  }catch(e){ return [{kind:'text',x,y,w,h,text:'widget : '+e.message,size:9,color:'#cc3333',align:'center',valign:'middle'}]; } }
+
 // hauteur nécessaire à un texte replié sur la largeur de l'élément (option « hauteur auto »)
 function _rptTextGrowH(it,scope){ const raw=it.expr?_rptStr(rptEvalExpr(it.expr,scope)):rptInterp(it.text,scope);
   const m=_rptMeasureCtx; m.font=_rptFontCSS(it); const lines=_rptWrap(m,raw,it.w);
@@ -14392,7 +14672,7 @@ function _rptTextGrowH(it,scope){ const raw=it.expr?_rptStr(rptEvalExpr(it.expr,
 // Familles proposées dans l'UI (le rendu est le même pour toutes : des rectangles).
 const RPT_BARCODE_TYPES=['Code128','EAN128','SSCC18','Code39','Code39Ext','Code93','Code93Ext','Code11',
   'Codabar','MSI','Std2of5','Inter2of5','Matrix2of5','ITF14','Identcode','Leitcode',
-  'EAN13','EAN8','UPCA','UPCE0','UPCE1','UPCSup2','UPCSup5','Pharmacode','PostNet',
+  'EAN13','EAN8','UPCA','UPCE0','UPCE1','UPCSup2','UPCSup5','Pharmacode','PostNet','IMail','IMailPkg',
   'QR','QRGS1','EPCQR','DataMatrix','DataMatrixGS1','Aztec'];
 const RPT_BARCODE_LABEL={ Code128:'Code 128', EAN128:'EAN 128 / GS1-128', SSCC18:'SSCC-18',
   Code39:'Code 39', Code39Ext:'Code 39 étendu', Code93:'Code 93', Code93Ext:'Code 93 étendu',
@@ -14401,7 +14681,8 @@ const RPT_BARCODE_LABEL={ Code128:'Code 128', EAN128:'EAN 128 / GS1-128', SSCC18
   Identcode:'Deutsche Post Identcode', Leitcode:'Deutsche Post Leitcode',
   EAN13:'EAN 13', EAN8:'EAN 8', UPCA:'UPC A', UPCE0:'UPC E0', UPCE1:'UPC E1',
   UPCSup2:'UPC Supplemental 2', UPCSup5:'UPC Supplemental 5', Pharmacode:'Pharmacode',
-  PostNet:'PostNet', QR:'QR Code', QRGS1:'QR Code GS1', EPCQR:'EPC QR Code',
+  PostNet:'PostNet', IMail:'Intelligent Mail', IMailPkg:'Intelligent Mail Package',
+  QR:'QR Code', QRGS1:'QR Code GS1', EPCQR:'EPC QR Code',
   DataMatrix:'Data Matrix', DataMatrixGS1:'Data Matrix GS1', Aztec:'Aztec Code' };
 // symbologies matricielles (rendu carré, pas de texte lisible sous le code)
 const RPT_BARCODE_2D=['QR','QRGS1','EPCQR','DataMatrix','DataMatrixGS1','Aztec'];
@@ -14620,6 +14901,9 @@ const RPT_BC={
   UPCSup5:  v=>_bcSup(v,5),
   Pharmacode:v=>_bcPharma(v),
   PostNet:  v=>_bcPostnet(v),
+  IMail:    v=>rptIntelligentMail(v),
+  // Intelligent Mail Package = un GS1-128 porteur des AI 92/93/94/95 + 420/421
+  IMailPkg: v=>({bits:_bcW2Bits(_c128Widths(String(v).replace(/[()]/g,''),true)), text:String(v)}),
 };
 // Charge utile EPC QR (virement SEPA) — 12 lignes normalisées.
 function _bcEPCPayload(it,value){ const s=String(value==null?'':value);
@@ -14668,7 +14952,16 @@ function rptBarcodePrims(it,value,x,y,w,h){
     const top=(showTxt&&sym.textTop)?th+2:0;                     // suppléments UPC : texte au-dessus
     const bh=Math.max(4,h-top-(showTxt&&!sym.textTop?th+2:0));
     const by=y+top;
-    if(sym.heights){                                             // hauteur modulée (PostNet)
+    if(sym.states){                                              // 4 états (Intelligent Mail)
+      const n=sym.states.length, pitch=w/n, bw=Math.max(0.6,pitch*0.45);
+      const third=bh/3;
+      sym.states.forEach((st,i)=>{ let top,hgt;
+        if(st===0){ top=0; hgt=bh; }                              // pleine
+        else if(st===1){ top=0; hgt=third*2; }                    // ascendante
+        else if(st===2){ top=third; hgt=third*2; }                // descendante
+        else { top=third; hgt=third; }                            // médiane
+        out.push({kind:'rect',x:x+i*pitch+(pitch-bw)/2,y:by+top,w:bw,h:hgt,fill:fg}); });
+    } else if(sym.heights){                                      // hauteur modulée (PostNet)
       const n=sym.heights.length, pitch=w/Math.max(1,n*2-1);
       sym.heights.forEach((hh,i)=>{ const barH=hh?bh:bh*0.45;
         out.push({kind:'rect',x:x+i*pitch*2,y:by+bh-barH,w:pitch,h:barH,fill:fg}); });
@@ -14896,6 +15189,61 @@ function rptAztec(text,opts){
       for(let k=ce&1;k<size;k+=2){ set(ce-j,k); set(ce+j,k); set(k,ce-j); set(k,ce+j); } } }
   return m; }
 
+// ── USPS Intelligent Mail (code à 4 états, USPS-B-3200) ─────────────────────
+// Table d'affectation des 65 barres (annexe D-IV de la norme) : permutation de 1..130.
+const _IM_D4=[
+   67,  6, 78, 16, 86, 95, 34, 40, 45,113,117,121, 62, 87, 18,104, 41, 76, 57,119,
+  115, 72, 97,  2,127, 26,105, 35,122, 52,114,  7, 24, 82, 68, 63, 94, 44, 77,112,
+   70,100, 39, 30,107, 15,125, 85, 10, 65, 54, 88, 20,106, 46, 66,  8,116, 29, 61,
+   99, 80, 90, 37,123, 51, 25, 84,129, 56,  4,109, 96, 28, 36, 47, 11, 71, 33,102,
+   21,  9, 17, 49,124, 79, 64, 91, 42, 69, 53, 60, 14,  1, 27,103,126, 75, 89, 50,
+  120, 19, 32,110, 92,111,130, 59, 31, 12, 81, 43, 55,  5, 74, 22,101,128, 58,118,
+   48,108, 38, 98, 93, 23, 83, 13, 73,  3];
+// Tables « N parmi 13 » générées par l'algorithme de la norme (pas de table figée) :
+// les valeurs non palindromes vont par paires en tête, les palindromes en queue.
+function _imTable(n,len){ const t=new Array(len); let lo=0, hi=len-1;
+  const rev=v=>{ let r=0; for(let i=0;i<13;i++)if(v&(1<<i))r|=1<<(12-i); return r; };
+  for(let c=0;c<8192;c++){ let b=0,x=c; while(x){ b+=x&1; x>>=1; }
+    if(b!==n)continue;
+    const r=rev(c); if(r<c)continue;
+    if(r===c)t[hi--]=c; else { t[lo++]=c; t[lo++]=r; } }
+  return t; }
+const _IM_T5=_imTable(5,1287), _IM_T2=_imTable(2,78);
+// CRC-11 (FCS) sur 102 bits, polynôme 0x0F35 ; les 2 bits de poids fort sont ignorés
+function _imCRC(bytes){ const G=0x0F35; let fcs=0x07FF;
+  let data=(bytes[0]<<5)&0xFFFF;
+  for(let bit=2;bit<8;bit++){ fcs=((fcs^data)&0x400)?(((fcs<<1)^G)&0x7FF):((fcs<<1)&0x7FF); data=(data<<1)&0xFFFF; }
+  for(let i=1;i<13;i++){ data=(bytes[i]<<3)&0xFFFF;
+    for(let bit=0;bit<8;bit++){ fcs=((fcs^data)&0x400)?(((fcs<<1)^G)&0x7FF):((fcs<<1)&0x7FF); data=(data<<1)&0xFFFF; } }
+  return fcs; }
+// renvoie 65 états : 0 = pleine, 1 = ascendante, 2 = descendante, 3 = médiane
+function rptIntelligentMail(value){
+  const d=String(value==null?'':value).replace(/\D/g,'');
+  const track=d.slice(0,20).padEnd(20,'0'), route=d.slice(20);
+  if(route.length!==0&&route.length!==5&&route.length!==9&&route.length!==11)
+    throw new Error('routage : 0, 5, 9 ou 11 chiffres');
+  let v=0n;
+  if(route.length===5)v=BigInt(route)+1n;
+  else if(route.length===9)v=BigInt(route)+100001n;
+  else if(route.length===11)v=BigInt(route)+1000100001n;
+  v=v*10n+BigInt(track[0]);
+  v=v*5n+BigInt(track[1]);
+  for(let i=2;i<20;i++)v=v*10n+BigInt(track[i]);
+  const bytes=new Array(13).fill(0); let t=v;
+  for(let i=12;i>=0;i--){ bytes[i]=Number(t&0xFFn); t>>=8n; }
+  const crc=_imCRC(bytes);
+  const cw=new Array(10).fill(0); let x=v;
+  cw[9]=Number(x%636n); x/=636n;
+  for(let i=8;i>=0;i--){ cw[i]=Number(x%1365n); x/=1365n; }
+  if(crc&0x400)cw[0]+=659;
+  const ch=cw.map(c=>c<1287?_IM_T5[c]:_IM_T2[c-1287]);
+  for(let i=0;i<10;i++)if(crc&(1<<i))ch[i]=0x1FFF-ch[i];
+  const map=new Array(130).fill(0);
+  for(let i=0;i<10;i++)for(let j=0;j<13;j++)map[_IM_D4[13*i+j]-1]=(ch[i]>>j)&1;
+  const states=[];
+  for(let i=0;i<65;i++){ let j=0; if(map[i]===0)j+=1; if(map[i+65]===0)j+=2; states.push(j); }
+  return {states, text:track+(route?' '+route:'')}; }
+
 // ── Widget code-barres réutilisable (framework Canvas GUI) ──────────────────
 // Rend le code dans ses bounds via les mêmes primitives que le rapport.
 class BarcodeWidget extends BaseWidget {
@@ -14942,7 +15290,8 @@ window.openBarcodeWindow=function(){
     Code11:'1234567890', MSI:'1234567', QR:'https://example.com', QRGS1:'(01)09501101530003',
     EPCQR:'BCD\n002\n1\nSCT\nBPOTBEB1\nRed Cross\nBE72000000001616\nEUR12.50',
     DataMatrix:'Data Matrix 123', DataMatrixGS1:'(01)09501101530003(17)260731',
-    Aztec:'Aztec Code — 2026' };
+    Aztec:'Aztec Code — 2026', IMail:'0123456709498765432101234567891',
+    IMailPkg:'(92)1234567890(93)12345' };
   const dd=new DropDown(RPT_BARCODE_TYPES.map(t=>RPT_BARCODE_LABEL[t]||t),{x:10,y:10,width:220,height:26});
   dd.selectedIndex=0;
   const tb2=new TextBox({x:240,y:10,width:300,height:26}); tb2.placeholder='valeur à encoder';
@@ -15278,6 +15627,16 @@ function _rptDrawEls(ctx,els,opts={}){
       if(el.rot){ ctx.translate(el.cx,el.cy); ctx.rotate(el.rot*Math.PI/180); ctx.translate(-el.cx,-el.cy); }
       _rptDrawEls(ctx,el.items,opts); ctx.restore(); break; }
     case 'link': break;   // annotation PDF uniquement
+    // tracé vectoriel générique : ops = [['M',x,y],['L',x,y],['C',x1,y1,x2,y2,x,y],['Z']]
+    case 'path': { ctx.save(); ctx.beginPath();
+      for(const op of el.ops){ if(op[0]==='M')ctx.moveTo(op[1],op[2]);
+        else if(op[0]==='L')ctx.lineTo(op[1],op[2]);
+        else if(op[0]==='C')ctx.bezierCurveTo(op[1],op[2],op[3],op[4],op[5],op[6]);
+        else if(op[0]==='Z')ctx.closePath(); }
+      if(el.fill&&el.fill!=='none'){ ctx.fillStyle=el.fill; ctx.fill(); }
+      if(el.stroke&&el.stroke!=='none'){ ctx.strokeStyle=el.stroke; ctx.lineWidth=el.sw||1;
+        ctx.lineCap=el.cap||'butt'; ctx.lineJoin=el.join||'round'; ctx.stroke(); }
+      ctx.restore(); break; }
     case 'rect': ctx.fillStyle=el.fill||'#000'; ctx.fillRect(el.x,el.y,el.w,el.h); break;
     case 'line': ctx.strokeStyle=el.color||'#000'; ctx.lineWidth=el.width||1; ctx.beginPath(); ctx.moveTo(el.x1,el.y1); ctx.lineTo(el.x2,el.y2); ctx.stroke(); break;
     case 'text': rptDrawText(ctx,el); break;
@@ -15326,6 +15685,19 @@ class PDFWriter {
         rect:`${(el.x*K).toFixed(2)} ${(toY(el.y+el.h)).toFixed(2)} ${((el.x+el.w)*K).toFixed(2)} ${(toY(el.y)).toFixed(2)}`}); break;
       // texte riche : converti en vrai texte vectoriel (plus d'image rastérisée)
       case 'richtext': cs+=this._content(rptRichPrims(el),K,Hp,pe); break;
+      // tracé vectoriel générique (jauges, signatures, formes calculées)
+      case 'path': { let s='q\n';
+        const f=(el.fill&&el.fill!=='none')?_rptHexN(el.fill):null;
+        const st=(el.stroke&&el.stroke!=='none')?_rptHexN(el.stroke):null;
+        if(f)s+=`${f.r} ${f.g} ${f.b} rg\n`;
+        if(st)s+=`${st.r} ${st.g} ${st.b} RG ${((el.sw||1)*K).toFixed(3)} w\n`;
+        if(el.cap==='round')s+='1 J 1 j\n';
+        for(const op of el.ops){
+          if(op[0]==='M')s+=`${(op[1]*K).toFixed(2)} ${toY(op[2]).toFixed(2)} m\n`;
+          else if(op[0]==='L')s+=`${(op[1]*K).toFixed(2)} ${toY(op[2]).toFixed(2)} l\n`;
+          else if(op[0]==='C')s+=`${(op[1]*K).toFixed(2)} ${toY(op[2]).toFixed(2)} ${(op[3]*K).toFixed(2)} ${toY(op[4]).toFixed(2)} ${(op[5]*K).toFixed(2)} ${toY(op[6]).toFixed(2)} c\n`;
+          else if(op[0]==='Z')s+='h\n'; }
+        s+=(f&&st?'B\n':f?'f\n':'S\n')+'Q\n'; cs+=s; break; }
       case 'rect': { const c=_rptHexN(el.fill); cs+=`${c.r} ${c.g} ${c.b} rg\n${(el.x*K).toFixed(2)} ${(toY(el.y+el.h)).toFixed(2)} ${(el.w*K).toFixed(2)} ${(el.h*K).toFixed(2)} re f\n`; break; }
       case 'line': { const c=_rptHexN(el.color); cs+=`${c.r} ${c.g} ${c.b} RG ${((el.width||1)*K).toFixed(3)} w\n${(el.x1*K).toFixed(2)} ${(toY(el.y1)).toFixed(2)} m ${(el.x2*K).toFixed(2)} ${(toY(el.y2)).toFixed(2)} l S\n`; break; }
       case 'ellipse': case 'shape': {
@@ -15343,7 +15715,8 @@ class PDFWriter {
       case 'text': { if(!el.text)break; const bf=PDFWriter._baseFont(el); pe.usedFonts[bf]=this._font(bf);
         const c=_rptHexN(el.color||'#000'); const sz=(el.size||12)*K;
         this._pdfText(el,bf,sz,c,K,Hp,s=>cs+=s); break; }
-      case 'image': { const jpg=_rptImgJpeg(el.src); if(jpg){ const nm=this._xobjImg(pe,jpg);
+      // `__jpeg` : image déjà encodée (widget rastérisé) — pas de passage par le cache d'images
+      case 'image': { const jpg=el.__jpeg||_rptImgJpeg(el.src); if(jpg){ const nm=this._xobjImg(pe,jpg);
         cs+=`q ${(el.w*K).toFixed(2)} 0 0 ${(el.h*K).toFixed(2)} ${(el.x*K).toFixed(2)} ${(toY(el.y+el.h)).toFixed(2)} cm /${nm} Do Q\n`; } break; }
       case 'chart': { const jpg=_rptRasterChart(el); if(jpg){ const nm=this._xobjImg(pe,jpg);
         cs+=`q ${(el.w*K).toFixed(2)} 0 0 ${(el.h*K).toFixed(2)} ${(el.x*K).toFixed(2)} ${(toY(el.y+el.h)).toFixed(2)} cm /${nm} Do Q\n`; } break; }
@@ -15486,7 +15859,8 @@ function rptPrint(report){ const {pages}=ReportEngine.layout(report); const scal
 // ============================================================================
 //  DESIGNER  (WYSIWYG à bandes)
 // ============================================================================
-const RPT_ITEM_TYPES=[ ['text','Texte','🅣'],['richtext','Texte riche','✎'],['pageInfo','N° de page','#'],['line','Ligne','─'],['image','Image','🖼'],['shape','Forme','▭'],['chart','Graphique','📊'],['table','Tableau','▦'],['barcode','Code-barres','▮'] ];
+const RPT_ITEM_TYPES=[ ['text','Texte','🅣'],['richtext','Texte riche','✎'],['pageInfo','N° de page','#'],['line','Ligne','─'],['image','Image','🖼'],['shape','Forme','▭'],['chart','Graphique','📊'],['table','Tableau','▦'],['barcode','Code-barres','▮'],['crosstab','Tableau croisé','⊞'],['subreport','Sous-rapport','⧉'],
+  ['gauge','Jauge','◒'],['signature','Signature','✍'],['widget','Widget','🧩'] ];
 class ReportDesignerWidget extends BaseWidget {
   constructor(bounds,report){ super('rptdes_'+(++_idCounter),bounds); this.report=report||rptDefaultReport();
     this.zoom=1; this.scrollY=0; this.scrollX=0; this.GUT=104; this.PAD=24;
@@ -15607,6 +15981,7 @@ class ReportDesignerWidget extends BaseWidget {
     const hit=this._hitItem(e.x,e.y);
     if(hit&&hit.it.type==='richtext'){ this.sel=hit.it; this.selBand=null; this._notify(); openRichTextDialog(this,hit.it); return; }
     if(hit&&hit.it.type==='image'){ this.sel=hit.it; this.selBand=null; this._notify(); this.pickImage(hit.it); return; }
+    if(hit&&hit.it.type==='signature'){ this.sel=hit.it; this.selBand=null; this._notify(); openSignatureDialog(this,hit.it); return; }
     if(hit&&hit.it.type==='table'){ const col=this._tblColAt(e.x,e.y);
       if(col&&col.it===hit.it){ this.sel=col.it; this.selBand=null; this._notify(); openColumnsDialog(this,col.it,col.index); return; } }
     if(hit&&(hit.it.type==='text'||hit.it.type==='pageInfo')){ const cur=hit.it.text||hit.it.expr||''; Dialogs.prompt('Texte de l’élément','Texte (utilisez {champ} ou {expr}) :',cur).then(r=>{ if(r&&r.result==='ok'){ hit.it.text=r.value; hit.it.expr=''; this.markDirty(); this._notify(); } }); } }
@@ -15615,6 +15990,13 @@ class ReportDesignerWidget extends BaseWidget {
     const defs={ text:{w:160,h:22,text:'Texte'}, richtext:{w:280,h:80,blocks:null}, pageInfo:{w:140,h:16,text:'Page {PageNumber}/{TotalPages}',align:'right'}, line:{w:200,h:0,borderColor:'#000000',borderWidth:1},
       image:{w:120,h:80}, shape:{w:120,h:60,shape:'rect',bg:'#eef2fb',borderColor:'#1a3b6e'}, chart:{w:240,h:150,chartType:'Bar'},
       barcode:{w:180,h:60,barcodeType:'Code128',text:'123456789012',barcodeText:true},
+      crosstab:{w:420,h:120,canGrow:true,rowHeight:20,rowHeaderWidth:110,aggregate:'sum',
+        rowField:rptFields(this.report)[0]||'', colField:rptFields(this.report)[1]||'',
+        valueField:rptFields(this.report)[2]||'1', format:'n2', cornerText:''},
+      subreport:{w:400,h:120,canGrow:true,subreport:Object.keys(this.report.subreports||{})[0]||''},
+      gauge:{w:150,h:110,gaugeType:'radial',gMin:0,gMax:100,text:'72',format:'n0',showValue:true},
+      signature:{w:200,h:80,sigLabel:'Signature',sigDate:true,strokes:[]},
+      widget:{w:160,h:90,widgetClass:'ProgressBar',widgetOpts:{value:60,max:100}},
       table:{w:this._bandInnerW(),h:120,repeat:true,rowHeight:22,fullWidth:true,headerBg:'#1a3b6e',headerColor:'#ffffff',columns:[{header:'Colonne',expr:rptFields(this.report)[0]||'',width:160,align:'left'}]} };
     const it=rptItem(type,Object.assign({x:20,y:6},defs[type]||{},extra||{}));
     if(type==='shape'&&it.shapeKind&&it.shapeKind!=='rect')it.bg=it.bg||'#eef2fb';
@@ -15677,6 +16059,18 @@ class ReportDesignerWidget extends BaseWidget {
     if(it.bg && it.type!=='shape'){ ctx.fillStyle=it.bg; ctx.fillRect(x,y,w,h); }
     if(it.type==='line'){ ctx.strokeStyle=it.borderColor||'#000'; ctx.lineWidth=(it.borderWidth||1)*z; ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+w,y+h); ctx.stroke(); return; }
     if(it.type==='table'){ this._drawTablePreview(ctx,it,x,y,w,h,z); return; }
+    // crosstab / sous-rapport / jauge / signature / widget : mêmes primitives qu'à l'impression
+    if(it.type==='crosstab'||it.type==='subreport'||it.type==='gauge'||it.type==='signature'||it.type==='widget'){
+      let p; try{
+        p = it.type==='crosstab' ? rptCrosstabPrims(it,this.report,scope,0,0,ew)
+          : it.type==='subreport'? rptSubreportPrims(it,this.report,scope,0,0,ew)
+          : it.type==='gauge'    ? rptGaugePrims(it,it.expr?rptEvalExpr(it.expr,scope):_rptNum(it.text),0,0,ew,it.h)
+          : it.type==='signature'? rptSignaturePrims(it,0,0,ew,it.h)
+          :                        rptWidgetPrims(it,0,0,ew,it.h,scope); }
+      catch(e){ p=[{kind:'text',x:0,y:0,w:ew,h:16,text:String(e.message),size:9,color:'#c33',valign:'top'}]; }
+      ctx.save(); ctx.beginPath(); ctx.rect(x,y,w,Math.max(h,(p.__h||0)*z)); ctx.clip();
+      ctx.translate(x,y); ctx.scale(z,z); _rptDrawEls(ctx,p,{onImg:()=>this.markDirty()}); ctx.restore();
+      return; }
     if(it.type==='richtext'){
       if(it.blocks&&it.blocks.length){ ctx.save(); ctx.translate(x,y); ctx.scale(z,z); rptDrawRich(ctx,{x:0,y:0,w:ew,h:it.h,blocks:it.blocks}); ctx.restore(); }
       else { ctx.strokeStyle='#b9c0c9'; ctx.setLineDash([3,3]); ctx.strokeRect(x,y,w,h); ctx.setLineDash([]);
@@ -15862,6 +16256,43 @@ window.openReportDesignerWindow=function(report){ report=report||rptDefaultRepor
       push('Graphique','légende','bool',it,'legend'); push('Graphique','grille','bool',it,'grid');
       push('Graphique','étiquettes valeurs','bool',it,'valueLabels');
       push('Graphique','agréger par libellé','bool',it,'aggregate'); }
+    if(it.type==='crosstab'){ const fs=rptFields(report);
+      push('Croisé','champ ligne','enum',it,'rowField',{options:fs});
+      push('Croisé','champ colonne','enum',it,'colField',{options:fs});
+      push('Croisé','champ valeur','enum',it,'valueField',{options:fs});
+      push('Croisé','agrégat','enum',it,'aggregate',{options:RPT_XTAB_AGG});
+      push('Croisé','format','enum',it,'format',{options:['n0','n1','n2']});
+      push('Croisé','hauteur ligne','number',it,'rowHeight',{min:8});
+      push('Croisé','largeur en-tête','number',it,'rowHeaderWidth',{min:20});
+      push('Croisé','largeur colonne','number',it,'colWidth',{min:0});
+      push('Croisé','coin (libellé)','string',it,'cornerText');
+      push('Croisé','totaux lignes','bool',it,'showRowTotals');
+      push('Croisé','totaux colonnes','bool',it,'showColTotals');
+      push('Couleur','fond en-tête','string',it,'headerBg'); push('Couleur','texte en-tête','string',it,'headerColor');
+      push('Couleur','fond totaux','string',it,'totalBg'); }
+    if(it.type==='gauge'){ push('Jauge','type','enum',it,'gaugeType',{options:RPT_GAUGE_TYPES});
+      push('Jauge','valeur','string',it,'text'); push('Jauge','expression','string',it,'expr');
+      push('Jauge','min','number',it,'gMin'); push('Jauge','max','number',it,'gMax');
+      push('Jauge','cible (bullet)','number',it,'gTarget');
+      push('Jauge','unité','string',it,'gUnit'); push('Jauge','format','enum',it,'format',{options:['n0','n1','n2']});
+      push('Jauge','afficher la valeur','bool',it,'showValue');
+      push('Couleur','remplissage','string',it,'color'); push('Couleur','fond de piste','string',it,'gTrack'); }
+    if(it.type==='signature'){ push('Signature','libellé','string',it,'sigLabel');
+      push('Signature','dater','bool',it,'sigDate'); push('Signature','trait de signature','bool',it,'sigLine');
+      push('Signature','épaisseur','number',it,'sigWidth',{min:0.5,step:0.2,decimals:1});
+      D.push({cat:'Signature',label:'tracé',type:'string',readonly:true,
+        get:()=>((it.strokes||[]).length+' trait(s) — double-clic pour signer'),set:()=>{}});
+      push('Couleur','encre','string',it,'color'); }
+    if(it.type==='widget'){ push('Widget','classe','enum',it,'widgetClass',{options:Object.keys(RPT_WIDGETS)});
+      push('Widget','expression (valeur)','string',it,'expr');
+      D.push({cat:'Widget',label:'options (JSON)',type:'string',
+        get:()=>JSON.stringify(it.widgetOpts||{}),
+        set:v=>{ try{ it.widgetOpts=JSON.parse(String(v)||'{}'); }catch(e){} des.markDirty(); }}); }
+    if(it.type==='subreport'){ const subs=Object.keys(report.subreports||{});
+      push('Sous-rapport','définition','enum',it,'subreport',{options:subs.length?subs:['']});
+      push('Sous-rapport','données (expr.)','string',it,'dataExpr');
+      push('Sous-rapport','clé maître','string',it,'linkMaster');
+      push('Sous-rapport','clé enfant','string',it,'linkChild'); }
     if(it.type==='image'){ push('Image','ajustement','enum',it,'fit',{options:['contain','stretch']});
       D.push({cat:'Image',label:'source',type:'string',readonly:true,get:()=>it.src?('image ('+Math.round(it.src.length/1024)+' Ko) — double-clic pour changer'):'(vide) — double-clic pour choisir',set:()=>{}}); }
     if(it.type==='table'){ push('Tableau','hauteur ligne','number',it,'rowHeight',{min:8}); push('Tableau','répéter','bool',it,'repeat'); push('Tableau','en-tête ch. page','bool',it,'headerOnEachPage');
@@ -15924,6 +16355,16 @@ window.openReportDesignerWindow=function(report){ report=report||rptDefaultRepor
       {label:'Filtrer…',icon:'⧩',action:()=>_rptFilterDialog(report,()=>des.markDirty())},
       {separator:true},
       {label:'Signets PDF par groupe',get checked(){return report.bookmarks!==false;},action:()=>{report.bookmarks=report.bookmarks===false;}},
+      {separator:true},
+      {label:'Charger un sous-rapport (JSON)…',icon:'⧉',action:()=>_rptLoadSubreport(report,()=>{des.markDirty();des._notify();})},
+      {label:'Sous-rapports définis…',icon:'📚',action:()=>{ const k=Object.keys(report.subreports||{});
+        Dialogs.alert(k.length?('Sous-rapports : '+k.join(', ')):'Aucun sous-rapport défini.'); }},
+    ]},
+    {label:'Aide',items:[
+      {label:'Documentation (aperçu)',icon:'📖',action:()=>rptOpenDoc()},
+      {label:'Documentation (PDF)',icon:'📕',action:()=>rptExportDoc()},
+      {separator:true},
+      {label:'Galerie de codes-barres…',icon:'▮',action:()=>openBarcodeWindow()},
     ]},
     {label:'Élément',items:[
       {label:'Colonnes du tableau…',icon:'▦',action:()=>{ const it=des.sel&&des.sel.type==='table'?des.sel:null;
@@ -16063,6 +16504,31 @@ function openRichTextDialog(des,it){
   dw._updateLayout();
   wm.addWindow(dw); wm._setFocus(rb); dw.__rtb=rb; return dw;
 }
+// ── Saisie de signature (SignaturePad + boutons) ─────────────────────────────
+function openSignatureDialog(des,it){
+  if(!it||it.type!=='signature')return;
+  const wm=engine.windowManager;
+  const dw=new GUIWindow('✍ Signature', winBounds(520,320,160,110));
+  const dc=dw.contentArea; dc._contentSize=()=>({w:0,h:0});
+  const pad=new SignaturePad({x:12,y:12,width:dc.bounds.width-24,height:dc.bounds.height-64},
+    {strokes:it.strokes,color:it.color||'#12233f',lineWidth:it.sigWidth||1.6});
+  dc.addChild(pad);
+  const bClear=new Button('Effacer',{x:12,y:dc.bounds.height-44,width:90,height:28});
+  const bOk=new Button('Appliquer',{x:dc.bounds.width-200,y:dc.bounds.height-44,width:94,height:28});
+  const bNo=new Button('Fermer',{x:dc.bounds.width-98,y:dc.bounds.height-44,width:86,height:28});
+  [bClear,bOk,bNo].forEach(b=>dc.addChild(b));
+  const apply=()=>{ it.strokes=JSON.parse(JSON.stringify(pad.strokes)); des.markDirty(); des._notify(true); };
+  bClear.on('click',()=>pad.clear());
+  bOk.on('click',apply);
+  bNo.on('click',()=>{ apply(); wm.removeWindow(dw); });
+  const orig=dw._updateLayout.bind(dw); dw._updateLayout=function(){ orig();
+    pad.setBounds({x:12,y:12,width:dc.bounds.width-24,height:dc.bounds.height-64});
+    bClear.bounds.y=dc.bounds.height-44;
+    bOk.bounds.x=dc.bounds.width-200; bOk.bounds.y=dc.bounds.height-44;
+    bNo.bounds.x=dc.bounds.width-98;  bNo.bounds.y=dc.bounds.height-44; dc.markDirty(); };
+  dw._updateLayout();
+  wm.addWindow(dw); wm._setFocus(pad); dw.__pad=pad; return dw;
+}
 // ── Éditeur de colonnes d'un tableau (source de données, format, largeur…) ────
 const RPT_COL_FORMATS=[['','Texte brut'],['n0','Nombre (0 déc.)'],['n2','Nombre (2 déc.)'],['cur','Monétaire (€)'],['d','Date']];
 function openColumnsDialog(des,it,startIndex){
@@ -16163,6 +16629,15 @@ function _rptWatermarkDialog(report,cb){ const w=report.watermark||{};
     report.watermark={ text:p[0], size:parseFloat(p[1])||64, rot:p[2]===''?-30:parseFloat(p[2]),
       opacity:p[3]===''?0.12:Math.max(0,Math.min(1,parseFloat(p[3]))), color:p[4]||'#888888', image:w.image||null };
     cb&&cb(); }); }
+// charge une définition JSON comme sous-rapport nommé
+function _rptLoadSubreport(report,cb){
+  Dialogs.prompt('Sous-rapport','Nom du sous-rapport :','detail').then(r=>{
+    if(!r||r.result!=='ok'||!String(r.value).trim())return;
+    const name=String(r.value).trim();
+    _rptPickFile('.json',txt=>{ try{ const def=JSON.parse(txt);
+      (report.subreports||(report.subreports={}))[name]=def;
+      Dialogs.alert('Sous-rapport « '+name+' » chargé.'); cb&&cb();
+    }catch(e){ Dialogs.alert('JSON invalide : '+e.message); } }); }); }
 function _rptSortDialog(report,cb){ const cur=(report.sortBy||[]).map(s=>s.expr+(s.dir==='desc'?' desc':'')).join('\n');
   Dialogs.prompt('Tri','Un critère par ligne : expression [desc]  (vide = tri par groupes)',cur).then(r=>{ if(r&&r.result==='ok'){
     const list=[]; for(const line of String(r.value).split('\n')){ const t=line.trim(); if(!t)continue;
@@ -16187,6 +16662,126 @@ function _rptMergeDialog(des,it){
     it.headerMerges=H; it.footerMerges=F; des.markDirty(); des._notify(true); }); }
 
 // ============================================================================
+//  DOCUMENTATION — un rapport PDF produit par le moteur lui-même
+//  Chaque ligne porte un niveau ; quatre éléments superposés à `printWhen`
+//  distinct donnent titre / sous-titre / paragraphe / code.
+// ============================================================================
+const RPT_DOC=[
+ ['Prise en main',1,''],
+ ['Prise en main',3,'Le concepteur ouvre un rapport à bandes : chaque bande est une tranche horizontale imprimée à un moment précis. Les éléments sont posés librement dans une bande, en pixels écran (96 ppp) ; le PDF est produit en points (px × 0,75).'],
+ ['Prise en main',3,'Deux façons de travailler : le concepteur visuel (menu Insertion, poignées, panneau Propriétés) ou l’API programmatique window.Report / window.ReportAPI.'],
+ ['Prise en main',4,'const r = Report.create(‘Ventes’).setDataSource(lignes);\nr.addText(‘reportHeader’, ‘Rapport des ventes’, {size:20, bold:true});\nr.addTable(‘detail’, [{header:‘Produit’, expr:‘Produit’, width:200}], {fullWidth:true});\nr.exportPDF(‘ventes.pdf’);'],
+
+ ['Bandes',1,''],
+ ['Bandes',3,'Ordre d’impression : en-tête de rapport, en-tête de page, en-tête de groupe, détail (répété), pied de groupe, pied de page, pied de rapport.'],
+ ['Bandes',2,'Propriétés communes'],
+ ['Bandes',3,'height : hauteur en px. visible : masque la bande. printWhen : expression booléenne conditionnant l’impression. repeat (détail) : à false la bande n’est émise qu’une fois.'],
+ ['Bandes',2,'Sauts de page et orientation'],
+ ['Bandes',3,'startNewPage force une nouvelle page avant la bande, newPageAfter après. orientation (portrait / landscape) provoque un saut vers une page de cette orientation : un même PDF peut donc mélanger les deux, chaque page portant son propre MediaBox. keepTogether évite l’en-tête de groupe orphelin en bas de page.'],
+ ['Bandes',2,'Groupes'],
+ ['Bandes',3,'Les bandes groupHeader et groupFooter s’apparient par ordre d’ajout ; la clé est l’expression groupBy. Les agrégats d’un pied de groupe portent sur les lignes du groupe. Variables : GroupKey, GroupCount, GroupLevel. Chaque en-tête de groupe crée un signet dans le PDF.'],
+
+ ['Éléments',1,''],
+ ['Éléments',3,'Types : text, pageInfo, richtext, line, image, shape (136 formes), chart (30 types), table, crosstab, subreport, barcode, gauge, signature, widget.'],
+ ['Éléments',2,'Propriétés communes'],
+ ['Éléments',3,'x, y, w, h — position dans la bande, relative à la zone imprimable. rot — rotation en degrés, sens horaire, autour du centre. fullWidth — l’élément occupe toute la largeur imprimable de la bande. canGrow — la hauteur s’adapte au contenu et la bande grandit. printWhen — expression booléenne. suppressDup — masque une valeur identique à la précédente. link — expression d’URL, produit une annotation PDF cliquable.'],
+ ['Éléments',2,'Format conditionnel'],
+ ['Éléments',3,'condExpr évaluée par ligne ; si vraie, condColor, condBg et condBold remplacent la mise en forme. Disponible aussi colonne par colonne dans un tableau.'],
+ ['Éléments',2,'Texte riche'],
+ ['Éléments',3,'L’élément richtext embarque un document RichTextBox complet (styles de caractère, listes, images, tableaux avec cellules fusionnées). Il sort en VRAI texte dans le PDF, pas en image : le texte reste sélectionnable et cherchable.'],
+
+ ['Tableaux',1,''],
+ ['Tableaux',3,'Un tableau répéteur (repeat:true) déroule une ligne par enregistrement, avec saut de page automatique et réimpression de l’en-tête si headerOnEachPage.'],
+ ['Tableaux',2,'Largeur'],
+ ['Tableaux',3,'fullWidth étire le tableau sur toute la largeur de la bande : les largeurs de colonnes saisies deviennent des proportions. Menu Élément ▸ Étirer le tableau sur la bande.'],
+ ['Tableaux',2,'Fusion de cellules'],
+ ['Tableaux',3,'headerMerges et footerMerges fusionnent horizontalement (en-têtes groupés) : [{c, cs, text}]. Sur une colonne, mergeDup fusionne verticalement les valeurs identiques consécutives — la valeur n’est imprimée qu’une fois et le filet est supprimé entre les cellules fusionnées.'],
+ ['Tableaux',2,'Tableau croisé'],
+ ['Tableaux',3,'L’élément crosstab construit une matrice lignes × colonnes depuis les données : rowField, colField, valueField et aggregate (sum, count, avg, min, max), avec totaux de lignes, de colonnes et total général.'],
+
+ ['Sous-rapports',1,''],
+ ['Sous-rapports',3,'report.subreports contient des définitions nommées. Un élément subreport met en page la définition enfant sur la largeur de l’élément et incruste le résultat ; avec canGrow, la bande parente s’agrandit.'],
+ ['Sous-rapports',3,'Deux façons d’alimenter l’enfant : dataExpr (expression rendant un tableau, par exemple un champ imbriqué) ou le couple linkMaster / linkChild qui filtre la source de l’enfant sur la valeur courante du maître.'],
+ ['Sous-rapports',4,'master.defineSubreport(‘lignes’, enfant);\nmaster.addSubreport(‘detail’, ‘lignes’, {linkMaster:‘NoCommande’, linkChild:‘NoCommande’, canGrow:true});'],
+
+ ['Codes-barres',1,''],
+ ['Codes-barres',3,'Toutes les symbologies sont rendues en rectangles et tracés : elles sont donc VECTORIELLES dans le PDF, nettes à toute échelle, sans aucune image.'],
+ ['Codes-barres',2,'Symbologies linéaires'],
+ ['Codes-barres',2,'Symbologies 2D et postales'],
+ ['Codes-barres',3,'Le widget BarcodeWidget rend les mêmes codes dans n’importe quelle fenêtre ; prims() renvoie les primitives pour un export. ReportAPI.registerWidget permet d’en ajouter.'],
+
+ ['Jauges et signatures',1,''],
+ ['Jauges et signatures',3,'L’élément gauge existe en radial, linear et bullet : gMin, gMax, gTarget, gUnit, gBands (plages colorées) et expression de valeur. Tout est tracé en courbes de Bézier, donc vectoriel dans le PDF.'],
+ ['Jauges et signatures',3,'L’élément signature stocke des traits normalisés 0..1, saisis à la souris par double-clic sur l’élément (widget SignaturePad). Options : trait de signature, libellé, date automatique.'],
+ ['Jauges et signatures',3,'L’élément widget incruste n’importe quel widget du framework. Si le widget sait produire des primitives (méthode prims), le rendu reste vectoriel ; sinon il est rastérisé en JPEG, la norme PDF ne connaissant pas la notion de widget.'],
+
+ ['Mise en page',1,''],
+ ['Mise en page',3,'Format (A3 à Executive), orientation, marges en millimètres. Colonnes « journal » : report.page.columns et columnGap — le contenu remplit la colonne puis passe à la suivante avant de changer de page.'],
+ ['Mise en page',3,'Filigrane : report.watermark = {text, size, rot, opacity, color} — dessiné sous le contenu de chaque page, avec transparence réelle (ExtGState).'],
+ ['Mise en page',3,'Tri : report.sortBy = [{expr, dir}]. Filtre : report.filter, expression booléenne évaluée par ligne.'],
+
+ ['Expressions',1,''],
+ ['Expressions',3,'Un identifiant désigne un champ de la ligne, un paramètre, un champ calculé ou une variable système. Les crochets permettent les noms avec espaces. & concatène.'],
+ ['Expressions',3,'Variables : PageNumber, TotalPages, RowNumber, Today, GroupKey, GroupCount, GroupLevel.'],
+ ['Expressions',3,'Agrégats : SUM, AVG, COUNT, MIN, MAX, FIRST, LAST — évalués sur le jeu de données courant (les lignes du groupe dans un pied de groupe).'],
+ ['Expressions',3,'Fonctions : IF, AND, OR, NOT, ROUND, ABS, INT, CEIL, FLOOR, MOD, SQRT, POWER, UPPER, LOWER, TRIM, LEN, LEFT, RIGHT, MID, CONCAT, REPLACE, COALESCE, ISBLANK, FORMAT, FORMATNUMBER, CURRENCY, PERCENT, NOW, TODAY, YEAR, MONTH, DAY, FORMATDATE.'],
+ ['Expressions',4,'IF(Qte > 10, "gros", "petit")\nFORMAT(SUM(Qte*PU), 2) & " €"\n[Nom du client] & " — " & FORMATDATE(Today, "dd/MM/yyyy")'],
+
+ ['Exports',1,''],
+ ['Exports',3,'PDF 1.7 vectoriel écrit par le moteur : polices standard en WinAnsi, tracés, images JPEG, transparence, annotations de lien, signets par groupe et dictionnaire Info. La fusion de plusieurs rapports en un seul PDF est possible.'],
+ ['Exports',3,'CSV (séparateur point-virgule, BOM UTF-8) et HTML reprennent les colonnes du premier tableau du rapport, sinon tous les champs. L’impression rend chaque page à sa propre taille en millimètres.'],
+ ['Exports',4,'ReportAPI.exportPDF(def, ‘rapport.pdf’);\nReportAPI.merge([r1, r2], ‘fusion.pdf’);\nReportAPI.exportCSV(def);  ReportAPI.exportHTML(def);'],
+
+ ['API',1,''],
+ ['API',3,'Classe Report : create, fromJSON, setDataSource, setPage, setColumns, setWatermark, setSort, setFilter, setParam, addCalculatedField, band, addText, addField, addPageInfo, addTable, addCrosstab, addChart, addImage, addBarcode, addRichText, addGauge, addSignature, addWidget, defineSubreport, addSubreport, pageBreak, setBandOrientation, render, pageCount, toJSON, exportPDF, exportCSV, exportHTML, print, openDesigner, openViewer.'],
+ ['API',3,'Objet ReportAPI : layout, toPDFBytes, merge, print, exportCSV, exportHTML, barcode, barcodeTypes, barcodeLabels, barcodeSymbol, qrMatrix, dataMatrix, aztec, gaugePrims, crosstab, richTextPrims, widgets, registerWidget, openDesigner, openViewer, defaultReport.'],
+];
+function rptBuildDocReport(){
+  const rows=RPT_DOC.map((r,i)=>({sect:r[0], lvl:r[1], txt:r[2], idx:i}));
+  // les listes de symbologies sont générées, pas recopiées
+  const lin=RPT_BARCODE_TYPES.filter(t=>!RPT_BARCODE_2D.includes(t)).map(t=>RPT_BARCODE_LABEL[t]||t).join(' · ');
+  const d2=RPT_BARCODE_2D.map(t=>RPT_BARCODE_LABEL[t]||t).join(' · ');
+  rows.splice(rows.findIndex(r=>r.sect==='Codes-barres'&&r.lvl===2&&/linéaires/.test(r.txt))+1,0,
+    {sect:'Codes-barres',lvl:3,txt:lin});
+  rows.splice(rows.findIndex(r=>r.sect==='Codes-barres'&&r.lvl===2&&/2D/.test(r.txt))+1,0,
+    {sect:'Codes-barres',lvl:3,txt:d2+'. Data Matrix et Aztec embarquent leur propre correction Reed-Solomon ; QR GS1 ajoute l’indicateur FNC1 ; EPC QR encode un virement SEPA.'});
+  const r={ name:'Documentation du concepteur de rapports',
+    page:{format:'A4',orientation:'portrait',margins:{top:18,right:16,bottom:16,left:18}},
+    dataSources:{main:{type:'json',data:rows}}, dataSource:'main',
+    parameters:{Titre:'Concepteur de rapports PDF', Version:'2026.07'},
+    calculatedFields:[], sortByGroup:false, bands:[] };
+  const rh=rptBand('reportHeader',{height:250});
+  rh.items.push(rptItem('text',{x:0,y:40,w:520,h:40,fullWidth:true,expr:'Titre',size:28,bold:true,color:'#1a3b6e'}));
+  rh.items.push(rptItem('line',{x:0,y:86,w:520,h:0,fullWidth:true,borderColor:'#1a3b6e',borderWidth:2}));
+  rh.items.push(rptItem('text',{x:0,y:94,w:520,h:20,fullWidth:true,text:'Manuel de référence — version {Version}',size:12,color:'#556'}));
+  rh.items.push(rptItem('text',{x:0,y:116,w:520,h:18,fullWidth:true,
+    text:'Édité le {FORMATDATE(Today,"dd/MM/yyyy")} — ce document est lui-même produit par le moteur de rapport.',size:9,color:'#777'}));
+  rh.items.push(rptItem('barcode',{x:0,y:150,w:80,h:80,barcodeType:'QR',barcodeText:false,text:'Concepteur de rapports PDF — documentation'}));
+  rh.items.push(rptItem('gauge',{x:110,y:150,w:150,h:90,gaugeType:'radial',text:'100',gMin:0,gMax:100,gUnit:' %',format:'n0'}));
+  rh.items.push(rptItem('text',{x:270,y:186,w:250,h:30,size:9,color:'#777',
+    text:'Jauge et QR ci-contre : tracés vectoriels, comme tout le contenu de ce manuel.'}));
+  const gh=rptBand('groupHeader',{height:34, groupBy:'sect', startNewPage:true, keepTogether:true});
+  gh.items.push(rptItem('text',{x:0,y:4,w:520,h:22,fullWidth:true,expr:'sect',size:17,bold:true,color:'#1a3b6e'}));
+  gh.items.push(rptItem('line',{x:0,y:28,w:520,h:0,fullWidth:true,borderColor:'#c8d2e4',borderWidth:1}));
+  const det=rptBand('detail',{height:4});
+  det.items.push(rptItem('text',{x:0,y:2,w:520,h:16,fullWidth:true,expr:'txt',printWhen:'lvl=2',
+    canGrow:true,size:12,bold:true,color:'#2b4a7d',valign:'top'}));
+  det.items.push(rptItem('text',{x:0,y:2,w:520,h:14,fullWidth:true,expr:'txt',printWhen:'lvl=3',
+    canGrow:true,size:9.5,color:'#222222',align:'justify',valign:'top'}));
+  det.items.push(rptItem('text',{x:8,y:2,w:504,h:14,expr:'txt',printWhen:'lvl=4',
+    canGrow:true,size:8.5,font:'Courier New',color:'#123',bg:'#f2f5fa',valign:'top'}));
+  const pf=rptBand('pageFooter',{height:22});
+  pf.items.push(rptItem('line',{x:0,y:2,w:520,h:0,fullWidth:true,borderColor:'#c8d2e4',borderWidth:0.7}));
+  pf.items.push(rptItem('text',{x:0,y:6,w:300,h:14,text:'{Titre}',size:8,color:'#888'}));
+  pf.items.push(rptItem('pageInfo',{x:0,y:6,w:520,h:14,fullWidth:true,text:'page {PageNumber} / {TotalPages}',size:8,align:'right',color:'#888'}));
+  r.bands=[rh,gh,det,pf];
+  return r;
+}
+window.rptBuildDocReport=rptBuildDocReport;
+window.rptOpenDoc=function(){ return openReportViewerWindow(rptBuildDocReport()); };
+window.rptExportDoc=function(){ return rptExportPDF(rptBuildDocReport(),'documentation-rapports.pdf'); };
+
+// ============================================================================
 //  API PROGRAMMATIQUE
 // ============================================================================
 class Report {
@@ -16206,6 +16801,25 @@ class Report {
   addImage(bandType,src,opts){ const b=this.band(bandType); const it=rptItem('image',Object.assign({src},opts||{})); b.items.push(it); return it; }
   addBarcode(bandType,value,opts){ const b=this.band(bandType); const it=rptItem('barcode',Object.assign({text:value,barcodeType:'Code128',w:180,h:60},opts||{})); b.items.push(it); return it; }
   addRichText(bandType,blocks,opts){ const b=this.band(bandType); const it=rptItem('richtext',Object.assign({blocks,w:280,h:100},opts||{})); b.items.push(it); return it; }
+  addCrosstab(bandType,rowField,colField,valueField,opts){ const b=this.band(bandType);
+    const it=rptItem('crosstab',Object.assign({rowField,colField,valueField,w:420,h:120,canGrow:true,
+      rowHeight:20,rowHeaderWidth:110,aggregate:'sum',format:'n2'},opts||{})); b.items.push(it); return it; }
+  // définit un sous-rapport réutilisable puis l'insère dans une bande
+  defineSubreport(name,defOrReport){ (this.def.subreports||(this.def.subreports={}))[name]=
+    (defOrReport instanceof Report)?defOrReport.def:defOrReport; return this; }
+  addGauge(bandType,exprOrValue,opts){ const b=this.band(bandType);
+    const it=rptItem('gauge',Object.assign({gaugeType:'radial',gMin:0,gMax:100,w:150,h:110,
+      format:'n0',showValue:true},(typeof exprOrValue==='number')?{text:String(exprOrValue)}:{expr:exprOrValue},opts||{}));
+    b.items.push(it); return it; }
+  addSignature(bandType,label,opts){ const b=this.band(bandType);
+    const it=rptItem('signature',Object.assign({sigLabel:label||'Signature',sigDate:true,w:200,h:80,strokes:[]},opts||{}));
+    b.items.push(it); return it; }
+  addWidget(bandType,widgetClass,widgetOpts,opts){ const b=this.band(bandType);
+    const it=rptItem('widget',Object.assign({widgetClass,widgetOpts:widgetOpts||{},w:160,h:90},opts||{}));
+    b.items.push(it); return it; }
+  addSubreport(bandType,name,opts){ const b=this.band(bandType);
+    const it=rptItem('subreport',Object.assign({subreport:name,w:400,h:120,canGrow:true},opts||{}));
+    b.items.push(it); return it; }
   // saut de page / orientation propre à une bande (comme richtextbox.html)
   pageBreak(bandType,where){ const b=this.band(bandType); if(where==='after')b.newPageAfter=true; else b.startNewPage=true; return b; }
   setBandOrientation(bandType,orient){ const b=this.band(bandType); b.orientation=orient||''; return b; }
@@ -16241,6 +16855,12 @@ window.ReportAPI = {
   qrMatrix:(text,ecc,opts)=>rptQRMatrix(text,ecc,opts),
   dataMatrix:(text,opts)=>rptDataMatrix(text,opts),
   aztec:(text,opts)=>rptAztec(text,opts),
+  imailBarTable:()=>_IM_D4.slice(),
+  // registre de widgets incrustables : ReportAPI.registerWidget('MonWidget', opts=>new MonWidget(...))
+  widgets:()=>Object.keys(RPT_WIDGETS),
+  registerWidget:(name,factory)=>{ RPT_WIDGETS[name]=factory; return name; },
+  gaugePrims:(it,val,x,y,w,h)=>rptGaugePrims(it,val,x,y,w,h),
+  crosstab:(it,def,scope,x,y,w)=>rptCrosstabPrims(it,def,scope||{},x,y,w),
   richTextPrims:(el)=>rptRichPrims(el),
   openDesigner:(def)=>openReportDesignerWindow(def),
   openViewer:(def)=>openReportViewerWindow(def),
