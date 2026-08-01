@@ -1084,6 +1084,7 @@ class CodeEditor extends BaseWidget {
     this.on('mousemove',e=>this._onMove(e));
     this.on('mouseup',()=>{this._selecting=false;this._sbDrag=false;});
     this.on('wheel',e=>this._onWheel(e));
+    this.on('scroll',e=>this._onWheel(e));   // le WindowManager émet 'scroll' pour la molette
   }
   get value(){ return this.lines.join('\n'); }
   set value(v){ this.lines=String(v??'').split('\n'); if(!this.lines.length)this.lines=['']; this.caret={ln:0,col:0}; this.anchor={ln:0,col:0}; this._scrollX=0; this._scrollY=0; this._tokDirty=true; this._acOpen=false; this.markDirty(); }
